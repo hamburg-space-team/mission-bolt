@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "ms-vscode.vscode-serial-monitor",
+        "xaver.clang-format",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "marus25.cortex-debug",
+        "alexnesnes.teleplot"
+    ]
+}

@@ -1,0 +1,15 @@
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# WSL / Windows copy artefacts
+*:Zone.Identifier
+
+# JetBrains
+.idea/
+
+# Local environment overrides
+.env.local
+*.local

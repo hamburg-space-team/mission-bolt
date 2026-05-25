@@ -1,0 +1,152 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug btc",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/btc/btc/Debug/btc.elf",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32l4x.cfg"
+            ],
+            "toolchainPrefix": "arm-none-eabi",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "runToEntryPoint": "app_main",
+            "preLaunchTask": "Build btc.Debug"
+        },
+        {
+            "name": "Debug exp1",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/exp1-space-disco/exp1/Debug/exp1.elf",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32l4x.cfg"
+            ],
+            "toolchainPrefix": "arm-none-eabi",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "runToEntryPoint": "app_main",
+            "preLaunchTask": "Build exp1.Debug"
+        },
+        {
+            "name": "Debug exp2",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/exp2-bouncy-castle/exp2/Debug/exp2.elf",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32l4x.cfg"
+            ],
+            "toolchainPrefix": "arm-none-eabi",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "runToEntryPoint": "app_main",
+            "preLaunchTask": "Build exp2.Debug"
+        },
+        {
+            "name": "Debug exp3",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/exp3-floaty-boi/exp3/Debug/exp3.elf",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32l4x.cfg"
+            ],
+            "toolchainPrefix": "arm-none-eabi",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "runToEntryPoint": "app_main",
+            "preLaunchTask": "Build exp3.Debug"
+        },
+        {
+            "name": "Debug test (Nucleo-H753ZI)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/out/test/test-nucleo-h753zi/Debug/test.elf",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32h7x.cfg"
+            ],
+            "toolchainPrefix": "arm-none-eabi",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "runToEntryPoint": "app_main",
+            "preLaunchTask": "Build test.Debug"
+        },
+        {
+            "name": "CMSIS_DAP@pyOCD (launch)",
+            "type": "gdbtarget",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/",
+            "program": "out/btc/btc/Debug/btc.elf",
+            "gdb": "arm-none-eabi-gdb",
+            "auxiliaryGdb": true,
+            "preLaunchTask": "CMSIS Load",
+            "initCommands": [
+                "monitor reset halt",
+                "tbreak main"
+            ],
+            "customResetCommands": [
+                "monitor reset halt",
+                "maintenance flush register-cache",
+                "maintenance flush dcache",
+                "tbreak main",
+                "continue"
+            ],
+            "target": {
+                "server": "pyocd",
+                "serverParameters": [
+                    "gdbserver",
+                    "--probe",
+                    "cmsisdap:",
+                    "--connect",
+                    "attach",
+                    "--cbuild-run",
+                    "${command:cmsis-csolution.getCbuildRunFile}",
+                    "--quiet",
+                    "--log",
+                    "*.cbuild_run,*server=info"
+                ],
+                "port": "3333"
+            },
+            "cmsis": {
+                "cbuildRunFile": "${command:cmsis-csolution.getCbuildRunFile}",
+                "updateConfiguration": "auto"
+            }
+        },
+        {
+            "name": "CMSIS_DAP@pyOCD (attach)",
+            "type": "gdbtarget",
+            "request": "attach",
+            "cwd": "${workspaceFolder}/",
+            "program": "out/btc/btc/Debug/btc.elf",
+            "gdb": "arm-none-eabi-gdb",
+            "auxiliaryGdb": true,
+            "initCommands": [
+                ""
+            ],
+            "customResetCommands": [
+                "monitor reset halt",
+                "maintenance flush register-cache",
+                "maintenance flush dcache",
+                "tbreak main",
+                "continue"
+            ],
+            "target": {
+                "port": "3333"
+            },
+            "cmsis": {
+                "cbuildRunFile": "${command:cmsis-csolution.getCbuildRunFile}",
+                "updateConfiguration": "auto"
+            }
+        }
+    ]
+}

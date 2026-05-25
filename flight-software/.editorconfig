@@ -1,0 +1,10 @@
+root = true
+
+[*.{cpp,h,hpp,cc,cxx}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+cpp_space_pointer_reference_alignment = left
+
+cpp_indent_namespace_contents = true

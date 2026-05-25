@@ -1,0 +1,47 @@
+project:
+  generators:
+    options:
+      - generator: CubeMX
+        path: ./generated
+        name: test
+
+  packs:
+    - pack: Keil::STM32H7xx_DFP@4.1.3
+
+  components:
+    - component: Device:CubeMX
+    - component: ARM::CMSIS:CORE
+    - component: ARM::CMSIS-Compiler:CORE
+    - component: CMSIS Driver:I2C
+    # NOTE: USART is HAL-only on the test bench (HAL_UART_Transmit via huart3
+    # in main.cpp). CMSIS Driver:USART intentionally NOT included to avoid
+    # duplicate Driver_USARTx symbols and IRQ-handler conflicts.
+
+  linker:
+    - script: generated/STM32CubeMX/STM32CubeIDE/STM32H753ZITX_FLASH.ld
+      for-compiler: GCC
+
+  # NOTE: shared.clayer.yml is intentionally NOT pulled in here. Several files
+  # in shared/ are hard-wired to STM32L4 (sd_store.cpp, timing.hpp, bxcan_transport.cpp).
+  # This test-bench only pulls in the family-agnostic driver sources directly.
+  add-path:
+    - ../shared/bus
+    - ../shared/sensors
+    - ../shared/led
+    - ../shared/utils
+
+  groups:
+    - group: Application
+      files:
+        - file: app/main.cpp
+
+    - group: Shared (driver subset)
+      files:
+        - file: ../shared/bus/cmsis_i2c_bus.cpp
+        - file: ../shared/utils/device_base.cpp
+        - file: ../shared/sensors/tmp117.cpp
+        - file: ../shared/sensors/ms5611.cpp
+        - file: ../shared/sensors/as7265x.cpp
+        - file: ../shared/sensors/icm42686.cpp
+        - file: ../shared/sensors/icm42688.cpp
+        - file: ../shared/led/lp5810.cpp

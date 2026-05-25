@@ -1,0 +1,11 @@
+layer:
+  description: Library layer
+
+  add-path:
+    - ./littlefs
+
+  groups:
+    - group: LittleFS
+      files:
+        - file: littlefs/lfs.c
+        - file: littlefs/lfs_util.c

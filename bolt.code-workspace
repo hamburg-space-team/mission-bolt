@@ -1,0 +1,89 @@
+{
+    "folders": [
+        {
+            "name": "Flight Software",
+            "path": "flight-software"
+        },
+        {
+            "name": "Ground Station",
+            "path": "ground-station"
+        },
+        {
+            "name": "Docs",
+            "path": "docs"
+        },
+        {
+            "name": "Repo Root",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "files.associations": {
+            "*.clayer.yml": "yaml",
+            "*.cproject.yml": "yaml",
+            "*.csolution.yml": "yaml",
+            "*.cbuild-pack.yml": "yaml",
+            "*.cbuild-idx.yml": "yaml"
+        },
+        "files.exclude": {
+            "**/out": true,
+            "**/build": true,
+            "**/tmp": true,
+            "**/.venv": true,
+            "**/node_modules": true,
+            "**/RTE": true,
+            "**/generated": true
+        },
+        "search.exclude": {
+            "**/out": true,
+            "**/build": true,
+            "**/tmp": true,
+            "**/.venv": true,
+            "**/node_modules": true,
+            "**/RTE": true,
+            "**/generated": true,
+            "**/*.lock": true,
+            "**/*.cbuild-idx.yml": true
+        },
+        "editor.formatOnSave": false,
+        "[cpp]": {
+            "editor.formatOnSave": true,
+            "editor.defaultFormatter": "xaver.clang-format"
+        },
+        "[c]": {
+            "editor.formatOnSave": true,
+            "editor.defaultFormatter": "xaver.clang-format"
+        },
+        "[python]": {
+            "editor.formatOnSave": true
+        },
+        "[javascript]": {
+            "editor.formatOnSave": true
+        },
+        "[javascriptreact]": {
+            "editor.formatOnSave": true
+        },
+        "debug.hideSlowPreLaunchWarning": true,
+        "debug.showInStatusBar": "never",
+        "clangd.arguments": [
+            "--compile-commands-dir=/home/max/Projects/github.com/hamburg-space-team/mission-bolt/flight-software/out/btc/btc/Debug"
+        ]
+    },
+    "extensions": {
+        "recommendations": [
+            "llvm-vs-code-extensions.vscode-clangd",
+            "xaver.clang-format",
+            "marus25.cortex-debug",
+            "ms-vscode.vscode-serial-monitor",
+            "alexnesnes.teleplot",
+            "ms-python.python",
+            "ms-python.vscode-pylance",
+            "charliermarsh.ruff",
+            "dbaeumer.vscode-eslint",
+            "bradlc.vscode-tailwindcss",
+            "esbenp.prettier-vscode",
+            "tamasfe.even-better-toml",
+            "redhat.vscode-yaml"
+        ]
+    }
+}

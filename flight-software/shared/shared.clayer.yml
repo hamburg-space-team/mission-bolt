@@ -1,0 +1,47 @@
+layer:
+  description: BOLT shared firmware components
+
+  add-path:
+    - ./bus
+    - ./comms
+    - ./core
+    - ./led
+    - ./sensors
+    - ./storage
+    - ./timing
+    - ./utils
+
+  groups:
+    - group: Bus
+      files:
+        - file: bus/cmsis_i2c_bus.cpp
+
+    - group: Utils
+      files:
+        - file: utils/device_base.cpp
+
+    - group: Comms
+      files:
+        - file: comms/bxcan_transport.cpp
+
+    - group: Core
+      files:
+        - file: core/boot_state.cpp
+        - file: core/exp_computer.cpp
+        - file: core/flight_computer.cpp
+        - file: core/node_computer.cpp
+
+    - group: LED
+      files:
+        - file: led/lp5810.cpp
+
+    - group: Sensors
+      files:
+        - file: sensors/as7265x.cpp
+        - file: sensors/icm42686.cpp
+        - file: sensors/ms5611.cpp
+        - file: sensors/tmp117.cpp
+
+    - group: Storage
+      files:
+        - file: storage/sd_store.cpp

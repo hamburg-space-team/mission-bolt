@@ -1,0 +1,28 @@
+CompileFlags:
+  Add:
+    - -std=gnu++17
+    - -xc++
+    - -Ishared/bus
+    - -Ishared/led
+    - -Ishared/comms
+    - -Ishared/core
+    - -Ishared/sensors
+    - -Ishared/storage
+    - -Ishared/timing
+    - -Ishared/utils
+  Remove:
+    - -masm-syntax-unified   # ARM GCC-only flag, not recognized by clangd/clang
+    - -masm=*                # same family
+    - --specs=*              # linker flag leaking into compile commands
+    - -fstack-usage          # GCC-only codegen flag
+    - -std=*                 # replaced by Add above
+
+---
+# Suppress diagnostics in CubeMX-generated and CMSIS RTE folders
+If:
+  PathMatch:
+    - ".*generated/.*"
+    - ".*RTE/.*"
+Diagnostics:
+  Suppress:
+    - "*"

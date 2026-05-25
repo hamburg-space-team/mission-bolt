@@ -1,0 +1,437 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Merge compile_commands.json",
+            "type": "shell",
+            "command": "python3 -c \"import json,glob,os; data=[e for p in glob.glob('out/**/compile_commands.json',recursive=True)+glob.glob('build/**/compile_commands.json',recursive=True) for e in json.load(open(p)) if os.path.isdir(e['directory'])]; json.dump(data,open('compile_commands.json','w'))\"",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build btc.Debug",
+            "type": "shell",
+            "command": "cbuild bolt.csolution.yml --context btc.Debug+btc",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-i",
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build exp1.Debug",
+            "type": "shell",
+            "command": "cbuild bolt.csolution.yml --context exp1.Debug+exp1-space-disco",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-i",
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build exp2.Debug",
+            "type": "shell",
+            "command": "cbuild bolt.csolution.yml --context exp2.Debug+exp2-bouncy-castle",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-i",
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build exp3.Debug",
+            "type": "shell",
+            "command": "cbuild bolt.csolution.yml --context exp3.Debug+exp3-floaty-boi",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-i",
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash btc",
+            "type": "shell",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32h7x.cfg -c \"program ${workspaceFolder}/out/btc/btc/Debug/btc.elf verify reset exit\"",
+            "dependsOn": "Build btc.Debug",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash exp1",
+            "type": "shell",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32h7x.cfg -c \"program ${workspaceFolder}/out/exp1-space-disco/exp1/Debug/exp1.elf verify reset exit\"",
+            "dependsOn": "Build exp1.Debug",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash exp2",
+            "type": "shell",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32h7x.cfg -c \"program ${workspaceFolder}/out/exp2-bouncy-castle/exp2/Debug/exp2.elf verify reset exit\"",
+            "dependsOn": "Build exp2.Debug",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Lint",
+            "type": "shell",
+            "command": "find ./tests ./shared/comms ./shared/utils \\( -name '*.cpp' -o -name '*.c' \\) | xargs clang-tidy -p compile_commands.json '--header-filter=.*(shared|tests/unit).*'",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Analyze",
+            "type": "shell",
+            "command": "find ./tests ./shared/comms ./shared/utils \\( -name '*.cpp' -o -name '*.c' \\) | xargs clang-tidy -p compile_commands.json '--header-filter=.*(shared|tests/unit).*' '--checks=clang-analyzer-*'",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Format",
+            "type": "shell",
+            "command": "find . -type f \\( -name '*.cpp' -o -name '*.hpp' -o -name '*.c' -o -name '*.h' \\) -not -path '*/generated/*' -not -path '*/RTE/*' -not -path './build/*' -not -path './out/*' -not -path './tmp/*' -not -path '*/littlefs/*' | xargs clang-format -i",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Format: Check",
+            "type": "shell",
+            "command": "find . -type f \\( -name '*.cpp' -o -name '*.hpp' -o -name '*.c' -o -name '*.h' \\) -not -path '*/generated/*' -not -path '*/RTE/*' -not -path './build/*' -not -path './out/*' -not -path './tmp/*' -not -path '*/littlefs/*' | xargs clang-format --dry-run --Werror",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: Configure",
+            "type": "shell",
+            "command": "cmake -S . -B build/tests -DCMAKE_BUILD_TYPE=Debug",
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: Build & Run",
+            "type": "shell",
+            "command": "cmake --build build/tests && ctest --test-dir build/tests --output-on-failure",
+            "dependsOn": "Test: Configure",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash exp3",
+            "type": "shell",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32h7x.cfg -c \"program ${workspaceFolder}/out/exp3-floaty-boi/exp3/Debug/exp3.elf verify reset exit\"",
+            "dependsOn": "Build exp3.Debug",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build test.Debug",
+            "type": "shell",
+            "command": "cbuild bolt.csolution.yml --context test.Debug+test-nucleo-h753zi",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-i",
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash test",
+            "type": "shell",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32h7x.cfg -c \"program ${workspaceFolder}/out/test/test-nucleo-h753zi/Debug/test.elf verify reset exit\"",
+            "dependsOn": "Build test.Debug",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "options": {
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMSIS Erase",
+            "type": "shell",
+            "command": "pyocd",
+            "options": {
+                "cwd": "${workspaceFolder}/",
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "args": [
+                "erase",
+                "--probe",
+                "cmsisdap:",
+                "--chip",
+                "--cbuild-run",
+                "${command:cmsis-csolution.getCbuildRunFile}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMSIS Load",
+            "type": "shell",
+            "command": "pyocd",
+            "options": {
+                "cwd": "${workspaceFolder}/",
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "args": [
+                "load",
+                "--probe",
+                "cmsisdap:",
+                "--cbuild-run",
+                "${command:cmsis-csolution.getCbuildRunFile}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMSIS Run",
+            "type": "shell",
+            "command": "pyocd",
+            "options": {
+                "cwd": "${workspaceFolder}/",
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "args": [
+                "gdbserver",
+                "--probe",
+                "cmsisdap:",
+                "--connect",
+                "attach",
+                "--persist",
+                "--reset-run",
+                "--cbuild-run",
+                "${command:cmsis-csolution.getCbuildRunFile}",
+                "--quiet",
+                "--log",
+                "*.cbuild_run,*server=info"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMSIS Load+Run",
+            "dependsOn": [
+                "CMSIS Load",
+                "CMSIS Run"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "CMSIS TargetInfo",
+            "type": "shell",
+            "command": "pyocd",
+            "options": {
+                "cwd": "${workspaceFolder}/",
+                "shell": {
+                    "executable": "/bin/bash",
+                    "args": [
+                        "-c"
+                    ]
+                }
+            },
+            "args": [
+                "list",
+                "--cbuild-run",
+                "${command:cmsis-csolution.getCbuildRunFile}"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

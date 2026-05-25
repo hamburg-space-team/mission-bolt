@@ -1,0 +1,19 @@
+# CODEOWNERS for bolt-thhor
+# Format: pattern  owner1 owner2 ...
+# Owners can be GitHub users (@username) or teams (@org/team-name)
+
+# Default owner for everything (fallback)
+*                                       @maxatslega
+
+# Flight Software
+/flight-software/                       @maxatslega
+
+# Ground Station
+/ground-station/                        @derdiedasoli
+
+# Documentation
+/docs/                                  @maxatslega
+/docs/interfaces                        @maxatslega @derdiedasoli
+
+# CI/CD
+/.github/                               @maxatslega

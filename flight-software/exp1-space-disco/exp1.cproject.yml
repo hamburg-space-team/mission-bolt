@@ -1,0 +1,29 @@
+project:
+  generators:
+    options:
+      - generator: CubeMX
+        path: ./generated
+        name: exp1
+
+  packs:
+    - pack: Keil::STM32L4xx_DFP@3.1.0
+
+  components:
+    - component: Device:CubeMX
+    - component: ARM::CMSIS:CORE
+    - component: ARM::CMSIS-Compiler:CORE
+    - component: CMSIS Driver:I2C
+
+  linker:
+    - script: generated/STM32CubeMX/STM32CubeIDE/STM32L476RGTX_FLASH.ld
+      for-compiler: GCC
+
+  layers:
+    - layer: ../shared/shared.clayer.yml
+    - layer: ../lib/lib.clayer.yml
+
+  groups:
+    - group: Application
+      files:
+        - file: app/main.cpp
+        - file: app/exp1_computer.cpp
