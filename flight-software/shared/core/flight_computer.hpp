@@ -36,6 +36,15 @@ class FlightComputer {
     ///                 > 0 means scheduler overrun.
     virtual void on_tick(uint32_t tick_start_us, uint16_t missed_periods) = 0;
 
+    /// Idle phase between on_tick() and kick_wdg(). Subclass drains
+    /// any pending I/O (e.g. SdStore ring buffer) until the remaining
+    /// tick budget falls below its per-operation safety margin.
+    /// deadline_ms is the wall-clock millisecond at which the next
+    /// tick is scheduled; callees decide how much of the slack to
+    /// consume. Default is a no-op for tests / minimal targets.
+    virtual void on_drain(uint32_t /*deadline_ms*/) {
+    }
+
     const Platform& platform; // NOLINT - borrowed from owning main.cpp
     PacketProtocol::PacketBuilder pkt;
 

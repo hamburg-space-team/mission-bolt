@@ -23,11 +23,19 @@ class NullStore final : public Store {
         return {};
     }
 
+    [[nodiscard]] bool drain_one() override {
+        return false; // never any queued work
+    }
+
     [[nodiscard]] Result<void> flush() override {
         return {};
     }
 
     [[nodiscard]] bool is_mounted() const override {
         return true;
+    }
+
+    [[nodiscard]] uint16_t dropped_count() const override {
+        return 0U;
     }
 };

@@ -25,6 +25,11 @@ FlightComputer::FlightComputer(const Platform& platform) noexcept : platform(pla
         const uint32_t tick_start_us = platform.tick_us();
         on_tick(tick_start_us, missed);
 
+        // Idle phase: drain pending IO (SdStore ring buffer etc.)
+        // until the per-op safety margin would be crossed. Subclass
+        // decides how much of the remaining slack to consume.
+        on_drain(next_ms);
+
         platform.kick_wdg();
     }
 }
