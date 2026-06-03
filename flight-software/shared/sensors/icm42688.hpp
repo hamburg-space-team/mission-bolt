@@ -6,12 +6,12 @@
 #include <array>
 #include <cstdint>
 
-// TDK InvenSense ICM-42688-P — 6-axis IMU.
-// Same register map as ICM-42686-P but different WHO_AM_I and FS-scale encoding:
-//   * 42688 max accel range = ±16g (vs. 42686's ±32g)
-//   * 42688 gyro ±2000 dps is FS_SEL=0b000 (vs. 42686's 0b001)
 constexpr uint8_t ICM42688_ADDR = 0x68U;
 
+/// One raw sample. At the configured ranges: 2048 LSB/g (accel),
+/// 16.384 LSB/(deg/s) (gyro).
+///
+/// @ingroup sensors
 struct ICM42688Result {
     int16_t accel_x;
     int16_t accel_y;
@@ -21,6 +21,14 @@ struct ICM42688Result {
     int16_t gyro_z;
 };
 
+/// TDK InvenSense ICM-42688-P, 6-axis IMU. Same register map as the
+/// ICM-42686-P but different WHO_AM_I and FS-scale encoding:
+///   * 42688 max accel range = +-16g (vs. 42686's +-32g)
+///   * 42688 gyro +-2000 dps is FS_SEL=0b000 (vs. 42686's 0b001)
+/// Driver configures +-16g accel (max sensitivity), +-2000 dps gyro,
+/// 1 kHz ODR.
+///
+/// @ingroup sensors
 class ICM42688 : public DeviceBase {
   public:
     [[nodiscard]] int init(CmsisI2CBus* bus, uint8_t addr = ICM42688_ADDR);

@@ -6,8 +6,14 @@
 #include <array>
 #include <cstdint>
 
+/// @defgroup sensors Sensor drivers
+
 constexpr uint8_t ICM42686_ADDR = 0x68U;
 
+/// One raw sample (6x 16-bit signed registers). Units depend on the
+/// configured full-scale range; see config_accel() / config_gyro().
+///
+/// @ingroup sensors
 struct ICM42686Result {
     int16_t accel_x;
     int16_t accel_y;
@@ -17,9 +23,17 @@ struct ICM42686Result {
     int16_t gyro_z;
 };
 
+/// TDK InvenSense ICM-42686-P, 6-axis IMU. Blocking driver, configures
+/// +-32g accel, +-2000 dps gyro, 1 kHz ODR.
+///
+/// @ingroup sensors
 class ICM42686 : public DeviceBase {
   public:
+    /// Verify WHO_AM_I, configure ranges, power on. Returns 0 on
+    /// success; -1 latches the driver via disable().
     [[nodiscard]] int init(CmsisI2CBus* bus, uint8_t addr = ICM42686_ADDR);
+
+    /// Burst-read the 12 raw register bytes into result.
     [[nodiscard]] int read_sample(ICM42686Result* result);
 
   private:

@@ -18,10 +18,13 @@ Four principles follow from this.
 reset, SD writes fail. We design so that each fault degrades one piece 
 rather than cascading through the system.
 
-**P-2: SD card and downlink are complementary.** Science is recovered 
-from SD after flight. The downlink is for live monitoring and the 
-minimum-success criterion. We do not depend on the downlink for 
-scientific success.
+**P-2: Local data and downlink are complementary.** Every
+measurement that matters scientifically is logged to the
+controller's on-board non-volatile storage. The local log is the
+authoritative source for post-flight analysis. The downlink
+carries the same data in real time so we can monitor the mission
+and demonstrate the minimum success criterion even if a local
+storage backend is lost.
 
 **P-3: Predictability beats performance.** Bounded time per operation, 
 known memory sizes, named error paths. A 40 ms tick is slower than an 
@@ -34,11 +37,12 @@ data of unknown provenance.
 
 ## Invariants
 
-Seven testable properties that must hold in flight. Each one ties back 
+Six testable properties that must hold in flight. Each one ties back 
 to a principle.
 
 **I-1: Deterministic tick budget (P-3).** The critical path of each 
-tick fits in 40 ms, target 35 ms. IWDG enforces this as last resort.
+tick fits in 40 ms, target 35 ms. IWDG enforces this as the last 
+resort with a 600 ms timeout (ADR-007).
 
 **I-2: Bounded blocking on the critical path (P-1, P-3).** Every I2C, 
 UART, and CAN call has a timeout. A misbehaving peripheral loses one 
@@ -60,11 +64,6 @@ experiment continues if the BTC fails.
 **I-6: No silent substitution (P-4).** Invalid sensor reads set their 
 bit in `valid_mask`. Missing packets become `GAP_MARKER` with a reason. 
 Ground can always tell "measured" from "missing or invalid."
-
-**I-7: SD card is the survivor (P-2).** Every scientifically relevant 
-measurement reaches the SD ringbuffer in the same tick it was produced. 
-LittleFS gives power-cut-safe semantics. The SD log is the authoritative 
-record after recovery.
 
 ## How We Use This
 

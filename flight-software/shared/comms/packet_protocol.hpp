@@ -1,8 +1,7 @@
-/**
- * THHOR-BOLT REXUS 37 - Downlink Packet Protocol
- *
- * Wire format: [Header 12B] [Payload ≤50B] [CRC16 2B] = 64B max
- */
+/// THHOR-BOLT REXUS 37 - umbrella include for the downlink packet
+/// protocol. Wire format: [Header 12B] [Payload <= 50B] [CRC16 2B] = 64B max.
+///
+/// @ingroup comms
 
 #pragma once
 

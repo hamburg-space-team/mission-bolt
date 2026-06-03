@@ -1,4 +1,11 @@
-// THHOR-BOLT REXUS 37 -- Downlink Packet Payload Definitions
+/// THHOR-BOLT REXUS 37 - Downlink packet payload definitions.
+///
+/// Each struct is the on-wire representation of one payload variant.
+/// Packed because the layout has to match the byte stream the ground
+/// station parses; trivially copyable and standard-layout, checked by
+/// PACKET_TYPE_CHECK.
+///
+/// @ingroup comms
 
 #pragma once
 
@@ -15,7 +22,10 @@
 
 namespace PacketProtocol {
 
-    // BTC_ENV -- sensors + IMU
+    /// BTC_ENV - sensors + IMU. Sent every tick (25 Hz). Raw register
+    /// values; calibration happens on ground (ADR-009).
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadBtcEnv {
         // bit 0 = ms5611 valid
         // bit 1 = tmp117 valid
@@ -24,26 +34,28 @@ namespace PacketProtocol {
 
         uint8_t reserved[1]; // NOLINT(modernize-avoid-c-arrays)
 
-        // TMP117 -- raw register value, 1 LSB = 1/128 degC (16-bit signed)
+        // TMP117 - raw register value, 1 LSB = 1/128 degC (16-bit signed)
         int16_t temp_raw;
 
-        // MS5611 -- D1 (pressure) and D2 (temperature) raw values
+        // MS5611 - D1 (pressure) and D2 (temperature) raw values
         uint32_t ms_pressure;
         uint32_t ms_temperature;
 
-        // ICM-42686-P accelerometer -- raw 16-bit register values
+        // ICM-42686-P accelerometer - raw 16-bit register values
         int16_t accel_x_raw;
         int16_t accel_y_raw;
         int16_t accel_z_raw;
 
-        // ICM-42686-P gyroscope -- raw 16-bit register values
+        // ICM-42686-P gyroscope - raw 16-bit register values
         int16_t gyro_x_raw;
         int16_t gyro_y_raw;
         int16_t gyro_z_raw;
     };
     PACKET_TYPE_CHECK(PayloadBtcEnv);
 
-    // BTC_STATUS -- system health, sent every 25 ticks (1 Hz)
+    /// BTC_STATUS - system health, sent every 25 ticks (1 Hz).
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadBtcStatus {
         // Seconds since MCU boot (not since LO)
         uint32_t uptime_s;
@@ -68,8 +80,10 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadBtcStatus);
 
-    // EXP1_SPECTRUM_A -- AS7265X channels 1-9
-    // Always paired with SPECTRUM_B (split because 18 channels exceed the 50 B limit).
+    /// EXP1_SPECTRUM_A - AS7265X channels 1-9. Always paired with
+    /// SPECTRUM_B (split because 18 channels exceed the 50B limit).
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp1SpectrumA {
         // AS7265X channels 1-9 (visible/UV range):
         // [0]=410nm  [1]=435nm  [2]=460nm  [3]=485nm  [4]=510nm
@@ -91,7 +105,10 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp1SpectrumA);
 
-    // EXP1_SPECTRUM_B -- AS7265X channels 10-18, sent in the same tick as SPECTRUM_A.
+    /// EXP1_SPECTRUM_B - AS7265X channels 10-18, sent in the same tick
+    /// as SPECTRUM_A.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp1SpectrumB {
         // AS7265X channels 10-18 (visible/NIR range):
         // [0]=585nm  [1]=610nm  [2]=645nm  [3]=680nm  [4]=705nm
@@ -103,8 +120,11 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp1SpectrumB);
 
-    // EXP_ENV -- shared between EXP1 (0x22) and EXP2 (0x32).
-    // Environmental context sampled alongside the controller's primary science.
+    /// EXP_ENV - shared between EXP1 (0x22) and EXP2 (0x32).
+    /// Environmental context sampled alongside the controller's primary
+    /// science.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExpEnv {
         // bit 0 = ms5611 valid
         // bit 1 = tmp117 valid
@@ -112,17 +132,19 @@ namespace PacketProtocol {
 
         uint8_t reserved[1]; // NOLINT(modernize-avoid-c-arrays)
 
-        // TMP117 -- raw register value, 1 LSB = 1/128 degC (16-bit signed)
+        // TMP117 - raw register value, 1 LSB = 1/128 degC (16-bit signed)
         int16_t temp_raw;
 
-        // MS5611 -- D1 (pressure) and D2 (temperature) raw values
+        // MS5611 - D1 (pressure) and D2 (temperature) raw values
         uint32_t ms_pressure;
         uint32_t ms_temperature;
     };
     PACKET_TYPE_CHECK(PayloadExpEnv);
 
-    // EXP_STATUS -- shared between EXP1 (0x23) and EXP2 (0x31).
-    // Sent every 25 ticks (1 Hz).
+    /// EXP_STATUS - shared between EXP1 (0x23) and EXP2 (0x31). Sent
+    /// every 25 ticks (1 Hz).
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExpStatus {
         // Seconds since MCU boot.
         uint32_t uptime_s;
@@ -136,16 +158,19 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExpStatus);
 
-    // EXP2_BER -- bit error rate measurement for one transmission round.
-    // Core EXP2 science payload, sent every tick. EXP_ENV is sent in parallel.
+    /// EXP2_BER - bit error rate measurement for one transmission round.
+    /// Core EXP2 science payload, sent every tick. EXP_ENV is sent in
+    /// parallel.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp2Ber {
         // Index into the LiFi RATE_TABLE selected for this round.
         uint8_t rate_index;
 
-        // Timestamp when SEND command went out -- us since LO.
+        // Timestamp when SEND command went out - us since LO.
         uint32_t timestamp_send_us;
 
-        // Timestamp when the BUFR response was fully received -- us since LO.
+        // Timestamp when the BUFR response was fully received - us since LO.
         uint32_t timestamp_recv_us;
 
         // Bits transmitted in this round.
@@ -165,31 +190,33 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp2Ber);
 
-    // EXP3_STACK_A -- one sample from the WIRED stack (STM32U0 + Molex cable + LiFi A).
-    // Ground reconstructs each burst from burst_index.
+    /// EXP3_STACK_A - one sample from the WIRED stack (STM32U0 + Molex
+    /// cable + LiFi A). Ground reconstructs each burst from burst_index.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp3StackA {
-        // MMC5983MA magnetometer -- raw 18-bit register values (sign-extended).
+        // MMC5983MA magnetometer - raw 18-bit register values (sign-extended).
         int32_t mag_x_raw;
         int32_t mag_y_raw;
         int32_t mag_z_raw;
 
-        // ICM-42688-P accelerometer -- raw 16-bit register values.
+        // ICM-42688-P accelerometer - raw 16-bit register values.
         int16_t accel_x_raw;
         int16_t accel_y_raw;
         int16_t accel_z_raw;
 
-        // ICM-42688-P gyroscope -- raw 16-bit register values.
+        // ICM-42688-P gyroscope - raw 16-bit register values.
         int16_t gyro_x_raw;
         int16_t gyro_y_raw;
         int16_t gyro_z_raw;
 
-        // TMP117 -- raw register value, 1 LSB = 1/128 degC (16-bit signed).
+        // TMP117 - raw register value, 1 LSB = 1/128 degC (16-bit signed).
         int16_t tmp_raw;
 
-        // Timestamp (LiFi-domain) when the wired-stack MCU latched this sample -- us since LO.
+        // Timestamp (LiFi-domain) when the wired-stack MCU latched this sample - us since LO.
         uint32_t lifi_a_timestamp_us;
 
-        // STM32-measured wakeup-to-response latency for this sample -- us.
+        // STM32-measured wakeup-to-response latency for this sample - us.
         uint32_t latency_a_us;
 
         // Position of this sample inside the current burst.
@@ -205,33 +232,36 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp3StackA);
 
-    // EXP3_STACK_B -- one sample from the WIRELESS stack (STM32U0 + laser power + LiFi B).
+    /// EXP3_STACK_B - one sample from the WIRELESS stack (STM32U0 +
+    /// laser power + LiFi B).
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp3StackB {
-        // MMC5983MA magnetometer -- raw 18-bit register values.
+        // MMC5983MA magnetometer - raw 18-bit register values.
         int32_t mag_x_raw;
         int32_t mag_y_raw;
         int32_t mag_z_raw;
 
-        // ICM-42688-P accelerometer -- raw 16-bit register values.
+        // ICM-42688-P accelerometer - raw 16-bit register values.
         int16_t accel_x_raw;
         int16_t accel_y_raw;
         int16_t accel_z_raw;
 
-        // ICM-42688-P gyroscope -- raw 16-bit register values.
+        // ICM-42688-P gyroscope - raw 16-bit register values.
         int16_t gyro_x_raw;
         int16_t gyro_y_raw;
         int16_t gyro_z_raw;
 
-        // TMP117 -- raw register value, 1 LSB = 1/128 degC (16-bit signed).
+        // TMP117 - raw register value, 1 LSB = 1/128 degC (16-bit signed).
         int16_t tmp_raw;
 
         // Wireless-stack storage capacitor voltage.
         uint16_t cap_voltage;
 
-        // Timestamp (LiFi-domain) reported by the wireless-stack MCU at sample latch -- us since LO.
+        // Timestamp (LiFi-domain) reported by the wireless-stack MCU at sample latch - us since LO.
         uint32_t lifi_b_timestamp_us;
 
-        // STM32-measured wakeup-to-response latency -- us.
+        // STM32-measured wakeup-to-response latency - us.
         uint32_t latency_b_us;
 
         // Position of this sample inside the current burst.
@@ -247,36 +277,42 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp3StackB);
 
-    // EXP3_ENV -- EXP3 controller environmental + IMU data, sent every tick.
+    /// EXP3_ENV - EXP3 controller environmental + IMU data, sent every
+    /// tick.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp3Env {
-        // TMP117 -- raw register value, 1 LSB = 1/128 degC (16-bit signed)
+        // TMP117 - raw register value, 1 LSB = 1/128 degC (16-bit signed)
         int16_t tmp_raw;
 
-        // MS5611 -- D1 (pressure) and D2 (temperature) raw values
+        // MS5611 - D1 (pressure) and D2 (temperature) raw values
         uint32_t ms_pressure;
         uint32_t ms_temperature;
 
-        // ICM-42686-P accelerometer -- raw 16-bit register values
+        // ICM-42686-P accelerometer - raw 16-bit register values
         int16_t imu_accel_x_raw;
         int16_t imu_accel_y_raw;
         int16_t imu_accel_z_raw;
 
-        // ICM-42686-P gyroscope -- raw 16-bit register values
+        // ICM-42686-P gyroscope - raw 16-bit register values
         int16_t imu_gyro_x_raw;
         int16_t imu_gyro_y_raw;
         int16_t imu_gyro_z_raw;
     };
     PACKET_TYPE_CHECK(PayloadExp3Env);
 
-    // EXP3_STATUS -- EXP3 control-loop diagnostics, sent every 25 ticks (1 Hz).
+    /// EXP3_STATUS - EXP3 control-loop diagnostics, sent every 25 ticks
+    /// (1 Hz).
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadExp3Status {
-        // Rolling-average latency estimate of the wired stack -- us.
+        // Rolling-average latency estimate of the wired stack - us.
         uint32_t latency_a_estimated_us;
 
-        // Rolling-average latency estimate of the wireless stack -- us.
+        // Rolling-average latency estimate of the wireless stack - us.
         uint32_t latency_b_estimated_us;
 
-        // Sync delay actually applied at the start of this cycle -- us.
+        // Sync delay actually applied at the start of this cycle - us.
         uint32_t wait_a_used_us;
 
         // SD card status:
@@ -290,7 +326,10 @@ namespace PacketProtocol {
     // System payloads
     // ---------------------------------------------------------------------------
 
-    // GAP_MARKER -- explicit gap notification, emitted by the BTC.
+    /// GAP_MARKER - explicit gap notification, emitted by the BTC or
+    /// EXPs.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadGapMarker {
         // First missing tick number.
         uint16_t first_missing_tick;
@@ -303,9 +342,11 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadGapMarker);
 
-    // BOOT -- MCU startup notification.
-    // Sent at power-on before LO. tick=0 and timestamp_us=0 in header.
-    // If received during flight: watchdog or soft reset recovered.
+    /// BOOT - MCU startup notification. Sent at power-on before LO,
+    /// tick=0 and timestamp_us=0 in header. Received during flight ->
+    /// watchdog or soft reset recovered.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PayloadBoot {
         BootReason reason;
 

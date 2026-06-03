@@ -7,6 +7,14 @@
 
 #include <cstdint>
 
+/// EXP3 "Floaty Boi" controller. Hosts its own ICM-42686-P and reports
+/// a richer env packet (PayloadExp3Env: TMP/MS5611 + IMU).
+///
+/// The wired magnetometer for the EXP3 stack (F-60) and the burst
+/// pipeline producing PayloadExp3StackA / PayloadExp3StackB is still
+/// under development; tick body is a placeholder.
+///
+/// @ingroup apps
 class Exp3Computer final : public ExpComputer {
   public:
     explicit Exp3Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;

@@ -14,7 +14,7 @@ For the mission overview start at the top-level
   - [glossary.md](handbook/glossary.md)
   - [onboarding/](handbook/onboarding/) -- new-joiner sequence
 - **[standards/](standards/)** -- the rules
-  - [system-invariants.md](standards/system-invariants.md) -- P-1..4, I-1..7
+  - [system-invariants.md](standards/system-invariants.md) -- P-1..4, I-1..6
   - [coding/](standards/coding/) -- language-specific
   - [documentation/](standards/documentation/) -- templates
 - **[decisions/](decisions/)** -- Architecture Decision Records (ADRs)
@@ -31,7 +31,7 @@ For the mission overview start at the top-level
 | [004](decisions/ADR-004-storage-ringbuffer.md) | Producer-consumer ringbuffer for SD logging |
 | [005](decisions/ADR-005-fault-management.md) | Three-strike sensor failure + GAP_MARKER |
 | [006](decisions/ADR-006-cmsis-toolbox.md) | CMSIS-Toolbox + CubeMX |
-| [007](decisions/ADR-007-iwdg-watchdog-strategy.md) | IWDG refresh once per tick, 200 ms |
+| [007](decisions/ADR-007-iwdg-watchdog-strategy.md) | IWDG refresh once per tick, 600 ms |
 | [008](decisions/ADR-008-noinit-ram-recovery.md) | Mid-flight recovery via `.noinit` SRAM |
 | [009](decisions/ADR-009-raw-sensor-data-to-ground.md) | Send raw sensor data, compensate on ground |
 | [010](decisions/ADR-010-packet-format-crc16.md) | 64-byte packet format with CRC-16/CCITT |

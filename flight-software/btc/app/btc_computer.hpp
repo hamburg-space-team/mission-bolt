@@ -8,6 +8,18 @@
 #include <array>
 #include <cstdint>
 
+/// @defgroup apps Applications
+
+/// BTC master controller.
+///
+///   - Emits the 25 Hz CAN SYNC frame that drives the EXPs.
+///   - Reacts to LO/SOE/SODS REXUS signals via EXTI (F-00).
+///   - Reassembles EXP CAN frames and forwards them onto the RS-422
+///     downlink (D-100 central calculations).
+///   - Mirrors the EXP downlink to its own SD log (D-130).
+///   - Produces its own PayloadBtcEnv and PayloadBtcStatus payloads.
+///
+/// @ingroup apps
 class BtcComputer final : public NodeComputer {
   public:
     explicit BtcComputer(const Platform& platform, CmsisI2CBus& i2c, ARM_DRIVER_USART& usart) noexcept;

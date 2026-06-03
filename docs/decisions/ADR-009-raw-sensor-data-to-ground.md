@@ -150,11 +150,11 @@ consistency with the other sensors.
 ## References
 
 - Related ADRs: 
-  - [ADR-014 Packet Format with CRC16](ADR-010-packet-format-crc16.md)
+  - [ADR-010 Packet Format with CRC16](ADR-010-packet-format-crc16.md)
 - Related ICDs: 
   - [ICD-006 Downlink Packet Format](../interfaces/ICD-006-downlink-packet-format.md)
   - [ICD-007 Packet Payloads](../interfaces/ICD-007-packet-payloads.md)
-- System Invariants: I-1 (deterministic tick), I-4 (no silent substitution)
+- System Invariants: I-1 (deterministic tick), I-6 (no silent substitution)
 - Datasheet: MS5611-01BA03 Pressure Sensor, Measurement Specialties
 - Implementation: 
   - Flight side: `flight-software/shared/sensors/ms5611.cpp`

@@ -1,4 +1,4 @@
-# ADR-007: IWDG refresh once per tick, 200 ms timeout
+# ADR-007: IWDG refresh once per tick, 600 ms timeout
 
 ## Status
 
@@ -24,9 +24,12 @@ flight loop is stuck.
 per tick, at the end of the tick body in `on_tick()`. Never from
 interrupts, never from drivers, never from anywhere else.
 
-**Timeout: 200 ms.** Five missed tick boundaries before the IWDG
-fires. Wide enough to absorb a single long sensor read or a long
-SD drain stall, narrow enough to be useful in a 600 s flight.
+**Timeout: 600 ms.** Roughly 15 missed tick boundaries before the
+IWDG fires. Wide enough to absorb the worst-case SD garbage-
+collection stall of 300 ms (ADR-004) with substantial margin, so a
+single GC pass cannot trigger a spurious reset. Narrow enough to
+catch a genuine flight-loop hang well inside one science-relevant
+time window.
 
 ## What we looked at
 
@@ -34,6 +37,8 @@ SD drain stall, narrow enough to be useful in a 600 s flight.
 - **Refresh in a timer ISR** -- same, but worse.
 - **40 ms or 80 ms timeout** -- would fire on legitimate long sensor
   reads.
+- **200 ms timeout** -- not enough headroom over the documented
+  300 ms worst-case SD stall.
 - **1 s timeout** -- that's a lot of dead time during science.
 - **Windowed watchdog (WWDG)** -- shares fate with the main clock,
   can't catch faults that disable the clock tree.
@@ -42,10 +47,10 @@ SD drain stall, narrow enough to be useful in a 600 s flight.
 
 Good:
 - One line, one place, easy to verify in review.
-- Any loop hang > 200 ms ends in a recovery path
+- Any loop hang > 600 ms ends in a recovery path
   ([ADR-008](ADR-008-noinit-ram-recovery.md)) preserving the
   monotonic tick.
-- 200 ms covers the worst-case SD GC stall
+- 600 ms covers the worst-case SD GC stall
   ([ADR-004](ADR-004-storage-ringbuffer.md)) without false trips.
 
 Bad:
@@ -56,8 +61,8 @@ Bad:
 
 ## Notes
 
-LSI on STM32L4 is nominally 32 kHz +-15 %. Worst-case timeout is
-~170 ms; we size the tick budget against that.
+LSI on STM32L4 is nominally 32 kHz +-15 %. Worst-case effective
+timeout is around 510 ms; we size the tick budget against that.
 
 `Platform::kick_wdg` is a function pointer so host tests can stub
 it. The IWDG itself isn't verified host-side; that's a target test.

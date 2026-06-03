@@ -11,6 +11,7 @@ constexpr uint8_t AS7265X_CHANNEL_COUNT = 18U;
 // Integration time: IT * 2.8ms
 constexpr uint8_t AS7265X_INT_25_CYCLES = 25U;
 
+/// @ingroup sensors
 enum class AS7265XGain : uint8_t {
     GAIN_1X = 0x00U,
     GAIN_37X = 0x01U,
@@ -18,30 +19,41 @@ enum class AS7265XGain : uint8_t {
     GAIN_64X = 0x03U,
 };
 
+/// One full 18-channel result block, raw register values.
+///
+/// @ingroup sensors
 struct AS7265XResult {
     uint16_t channels[AS7265X_CHANNEL_COUNT]; // NOLINT(modernize-avoid-c-arrays)
 };
 
-// AS7265X 18-channel multispectral sensor driver.:
+/// AMS AS7265X 18-channel multispectral sensor. The chip exposes a
+/// small hardware register window and a larger virtual register space
+/// reached through a state-machine; this driver hides that behind
+/// write_virtual / read_virtual. Polled or interrupt-driven completion.
+///
+/// @ingroup sensors
 class AS7265X : public DeviceBase {
   public:
     using tick_fn = uint32_t (*)();
-    // data_rdy_fn: returns true when the hardware INT pin signals DATA_READY (active-low - caller inverts).
-    // Pass nullptr to fall back to polling VREG_CONTROL via I2C.
+
+    // data_rdy_fn: returns true when the hardware INT pin signals
+    // DATA_READY (active-low - caller inverts). Pass nullptr to fall
+    // back to polling VREG_CONTROL via I2C.
     using data_rdy_fn = bool (*)();
 
-    // tick: millisecond tick for virtual-register timeout.
+    /// tick: millisecond tick for virtual-register timeout.
     [[nodiscard]] int init(CmsisI2CBus* bus, tick_fn tick, uint8_t addr = AS7265X_ADDR,
                            uint8_t integration_cycles = AS7265X_INT_25_CYCLES, AS7265XGain gain = AS7265XGain::GAIN_1X,
                            data_rdy_fn int_pin = nullptr);
 
-    // Trigger a one-shot measurement. Returns immediately; record timestamp right after.
+    /// Trigger a one-shot measurement. Returns immediately; record the
+    /// start timestamp right after.
     [[nodiscard]] int start_measurement();
 
-    // Returns true when measurement is complete.
+    /// True when the most recent measurement has completed.
     [[nodiscard]] bool data_ready();
 
-    // Read all 18 channels. Call only when data_ready() == true.
+    /// Read all 18 channels. Only call when data_ready() == true.
     [[nodiscard]] int read_channels(AS7265XResult* result);
 
   private:

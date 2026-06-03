@@ -225,8 +225,8 @@ document the carve-out more explicitly here.
 | 2 | 1 | `count` consecutive missing ticks |
 | 3 | 1 | `reason` (`GapReason`) |
 
-`GapReason`: `SENSOR_FAILED = 0x01`, `SCHEDULER_OVERRUN = 0x02`,
-`SYNC_MISSED = 0x03`.
+`GapReason`: `NO_DATA = 0x01`, `CAN_CRC_FAIL = 0x02`,
+`LIFI_TIMEOUT = 0x03`, `SENSOR_FAILED = 0x04`.
 
 ### `BOOT` (0xFE) -- 4 B
 

@@ -54,8 +54,10 @@ symmetric; TX/RX role is software-configured at startup.
 ## Physical Layer
 
 - UART, single-ended, 3.3 V CMOS, 8N1, no flow control.
-- Baud rate: **921 600** planned. TODO: confirm during integration; fall
-  back to 460 800 if we see errors at 921k.
+- Baud rate: **921 600**. Picked for headroom over the per-tick
+  buffer-mode traffic while staying within the STM32U031F8 internal
+  oscillator precision. Documented fallback at 460 800 if
+  integration testing shows bit errors at 921k.
 - Molex connector on the EXP2 PCB also supplies 3.3 V to the
   transceiver.
 
@@ -136,12 +138,12 @@ same step -> failed.
 
 | Name | Value |
 |---|---|
-| `UART_BAUD` | 921 600 (TODO confirm) |
+| `UART_BAUD` | 921 600 |
 | `CMD_TIMEOUT_MS` | 20 |
 | `MAX_BUFFER_BYTES` | 10 240 |
 | `DEFAULT_PATTERN_BYTES` | 64 (= 512 bits) |
-| `RATE_TABLE_LEN` | 5 (TODO confirm) |
-| `FAILURE_THRESHOLD` | 5 (TODO confirm) |
+| `RATE_TABLE_LEN` | 5 (TODO confirm during integration) |
+| `FAILURE_THRESHOLD` | 5 (TODO confirm during integration) |
 
 ## Notes
 
