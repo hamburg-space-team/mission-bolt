@@ -1,6 +1,6 @@
 CompileFlags:
   Add:
-    - -std=gnu++17
+    - -std=gnu++2b
     - -xc++
     - -Ishared/bus
     - -Ishared/led
@@ -11,18 +11,24 @@ CompileFlags:
     - -Ishared/timing
     - -Ishared/utils
   Remove:
-    - -masm-syntax-unified   # ARM GCC-only flag, not recognized by clangd/clang
-    - -masm=*                # same family
-    - --specs=*              # linker flag leaking into compile commands
-    - -fstack-usage          # GCC-only codegen flag
-    - -std=*                 # replaced by Add above
-
+    - -masm-syntax-unified # ARM GCC-only flag, not recognized by clangd/clang
+    - -masm=* # same family
+    - --specs=* # linker flag leaking into compile commands
+    - -fstack-usage # GCC-only codegen flag
+    - -std=* # replaced by Add above
 ---
-# Suppress diagnostics in CubeMX-generated and CMSIS RTE folders
+# Suppress diagnostics in CubeMX-generated, CMSIS RTE, host build, and
+# CMake-fetched dependency folders. clangd descends into these by default
+# and they emit noise we never want to fix (vendor code, broken .clang-tidy
+# in third-party deps, ARM-only flags clang can't parse, etc.).
 If:
   PathMatch:
     - ".*generated/.*"
     - ".*RTE/.*"
+    - ".*/build/.*"
+    - ".*/_deps/.*"
+    - ".*/tmp/.*"
+    - ".*/out/.*"
 Diagnostics:
   Suppress:
     - "*"

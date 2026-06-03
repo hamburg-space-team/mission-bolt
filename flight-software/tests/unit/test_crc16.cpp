@@ -14,9 +14,9 @@ TEST_CASE("Crc::compute - empty input returns INIT", "[crc16]") {
 }
 
 TEST_CASE("Crc::compute - single zero byte", "[crc16]") {
-    constexpr std::array<uint8_t, 1> BUF = {0x00};
-    constexpr uint16_t EXPECTED = Crc::compute(BUF.data(), BUF.size());
-    CHECK(Crc::compute(BUF.data(), BUF.size()) == EXPECTED);
+    constexpr std::array<uint8_t, 1> buf = {0x00};
+    constexpr uint16_t expected = Crc::compute(buf.data(), buf.size());
+    CHECK(Crc::compute(buf.data(), buf.size()) == expected);
 }
 
 TEST_CASE("Crc::update matches Crc::compute", "[crc16]") {
@@ -28,9 +28,9 @@ TEST_CASE("Crc::update matches Crc::compute", "[crc16]") {
 }
 
 TEST_CASE("Crc::compute - different data gives different CRC", "[crc16]") {
-    constexpr std::array<uint8_t, 2> DATA_A = {0xAA, 0xBB};
-    constexpr std::array<uint8_t, 2> DATA_B = {0xAA, 0xBC};
-    CHECK(Crc::compute(DATA_A.data(), DATA_A.size()) != Crc::compute(DATA_B.data(), DATA_B.size()));
+    constexpr std::array<uint8_t, 2> data_a = {0xAA, 0xBB};
+    constexpr std::array<uint8_t, 2> data_b = {0xAA, 0xBC};
+    CHECK(Crc::compute(data_a.data(), data_a.size()) != Crc::compute(data_b.data(), data_b.size()));
 }
 
 TEST_CASE("Crc::append writes big-endian CRC and returns len+2", "[crc16]") {

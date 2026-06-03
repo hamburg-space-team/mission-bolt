@@ -42,8 +42,8 @@ namespace {
     void print_sample(const ICM42688Result& s) {
         std::array<char, 96> buf{};
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-        const int n = std::snprintf(buf.data(), buf.size(), "AX=%6d AY=%6d AZ=%6d  GX=%6d GY=%6d GZ=%6d\r\n",
-                                    s.accel_x, s.accel_y, s.accel_z, s.gyro_x, s.gyro_y, s.gyro_z);
+        const int n = std::snprintf(buf.data(), buf.size(), "AX=%6d AY=%6d AZ=%6d  GX=%6d GY=%6d GZ=%6d\r\n", s.accel_x,
+                                    s.accel_y, s.accel_z, s.gyro_x, s.gyro_y, s.gyro_z);
         if (n > 0) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             HAL_UART_Transmit(&huart3, reinterpret_cast<const uint8_t*>(buf.data()), static_cast<uint16_t>(n),

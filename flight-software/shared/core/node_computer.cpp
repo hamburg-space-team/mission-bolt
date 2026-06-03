@@ -5,14 +5,18 @@ NodeComputer::NodeComputer(const Platform& platform, CmsisI2CBus& i2c) noexcept
 }
 
 void NodeComputer::init_sensors() {
-    (void)i2c.init();
+    if (!i2c.init()) {
+        leds.error_set();
+        on_sensor_failed();
+        return;
+    }
 
-    if (baro.init(&i2c, MS5611_ADDR, MS5611Osr::OSR_4096, platform.delay_ms) < 0) {
+    if (!baro.init(&i2c, MS5611_ADDR, MS5611Osr::OSR_4096, platform.delay_ms)) {
         baro.disable();
         leds.error_set();
         on_sensor_failed();
     }
-    if (tmp.init(&i2c, TMP117_ADDR) < 0) {
+    if (!tmp.init(&i2c, TMP117_ADDR)) {
         tmp.disable();
         leds.error_set();
         on_sensor_failed();
@@ -22,7 +26,7 @@ void NodeComputer::init_sensors() {
 }
 
 void NodeComputer::init_sd(void* hsd) {
-    if (sd.init(hsd) < 0) {
+    if (!sd.init(hsd)) {
         leds.error_set();
     }
 }

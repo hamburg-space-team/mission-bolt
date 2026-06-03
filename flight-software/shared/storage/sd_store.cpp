@@ -18,13 +18,13 @@ namespace {
 
 } // namespace
 
-int SdStore::init(void* handle) {
+Result<void> SdStore::init(void* handle) {
     this->hsd = handle;
     auto* hsd = static_cast<SD_HandleTypeDef*>(handle);
 
     HAL_SD_CardInfoTypeDef info{};
     if (HAL_SD_GetCardInfo(hsd, &info) != HAL_OK) {
-        return -1;
+        return std::unexpected(Error::IO_ERROR);
     }
 
     cfg.context = hsd;
@@ -43,32 +43,35 @@ int SdStore::init(void* handle) {
     cfg.prog_buffer = prog_buf.data();
     cfg.lookahead_buffer = lookahead_buf.data();
 
-    if (mount_or_format() < 0) {
-        return -1;
+    if (auto r = mount_or_format(); !r) {
+        return r;
     }
-    if (open_log() < 0) {
+    if (auto r = open_log(); !r) {
         lfs_unmount(&lfs);
-        return -1;
+        return r;
     }
 
     mounted = true;
-    return 0;
+    return {};
 }
 
-int SdStore::mount_or_format() {
+Result<void> SdStore::mount_or_format() {
     int err = lfs_mount(&lfs, &cfg);
     if (err < 0) {
         // First boot or corrupted filesystem
         err = lfs_format(&lfs, &cfg);
         if (err < 0) {
-            return err;
+            return std::unexpected(Error::IO_ERROR);
         }
         err = lfs_mount(&lfs, &cfg);
+        if (err < 0) {
+            return std::unexpected(Error::IO_ERROR);
+        }
     }
-    return err;
+    return {};
 }
 
-int SdStore::open_log() {
+Result<void> SdStore::open_log() {
     file_cfg.buffer = file_buf.data();
     file_cfg.attrs = nullptr;
     file_cfg.attr_count = 0U;
@@ -76,24 +79,33 @@ int SdStore::open_log() {
     const int err =
         lfs_file_opencfg(&lfs, &file, LOG_FILENAME.data(), LFS_O_WRONLY | LFS_O_CREAT | LFS_O_APPEND, &file_cfg);
     if (err < 0) {
-        return err;
+        return std::unexpected(Error::IO_ERROR);
     }
     file_open = true;
-    return 0;
+    return {};
 }
 
-bool SdStore::write(const uint8_t* data, uint8_t len) {
-    if (!mounted || !file_open || data == nullptr || len == 0U) {
-        return false;
+Result<void> SdStore::write(const uint8_t* data, uint8_t len) {
+    if (data == nullptr || len == 0U) {
+        return std::unexpected(Error::BAD_ARGUMENT);
     }
-    return lfs_file_write(&lfs, &file, data, len) == static_cast<lfs_ssize_t>(len);
-}
-
-bool SdStore::flush() {
     if (!mounted || !file_open) {
-        return false;
+        return std::unexpected(Error::DISABLED);
     }
-    return lfs_file_sync(&lfs, &file) == 0;
+    if (lfs_file_write(&lfs, &file, data, len) != static_cast<lfs_ssize_t>(len)) {
+        return std::unexpected(Error::IO_ERROR);
+    }
+    return {};
+}
+
+Result<void> SdStore::flush() {
+    if (!mounted || !file_open) {
+        return std::unexpected(Error::DISABLED);
+    }
+    if (lfs_file_sync(&lfs, &file) != 0) {
+        return std::unexpected(Error::IO_ERROR);
+    }
+    return {};
 }
 
 // --- Block device callbacks -------------------------------------------------

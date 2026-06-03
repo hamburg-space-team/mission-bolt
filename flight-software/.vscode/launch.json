@@ -12,6 +12,14 @@
                 "interface/stlink.cfg",
                 "target/stm32l4x.cfg"
             ],
+            "openOCDLaunchCommands": [
+                "reset_config srst_only srst_nogate connect_assert_srst",
+                "adapter srst delay 100",
+                "adapter srst pulse_width 100"
+            ],
+            "preLaunchCommands": [
+                "monitor reset halt"
+            ],
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
@@ -27,6 +35,14 @@
             "configFiles": [
                 "interface/stlink.cfg",
                 "target/stm32l4x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "reset_config srst_only srst_nogate connect_assert_srst",
+                "adapter srst delay 100",
+                "adapter srst pulse_width 100"
+            ],
+            "preLaunchCommands": [
+                "monitor reset halt"
             ],
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
@@ -44,6 +60,14 @@
                 "interface/stlink.cfg",
                 "target/stm32l4x.cfg"
             ],
+            "openOCDLaunchCommands": [
+                "reset_config srst_only srst_nogate connect_assert_srst",
+                "adapter srst delay 100",
+                "adapter srst pulse_width 100"
+            ],
+            "preLaunchCommands": [
+                "monitor reset halt"
+            ],
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
@@ -60,6 +84,14 @@
                 "interface/stlink.cfg",
                 "target/stm32l4x.cfg"
             ],
+            "openOCDLaunchCommands": [
+                "reset_config srst_only srst_nogate connect_assert_srst",
+                "adapter srst delay 100",
+                "adapter srst pulse_width 100"
+            ],
+            "preLaunchCommands": [
+                "monitor reset halt"
+            ],
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
@@ -75,6 +107,14 @@
             "configFiles": [
                 "interface/stlink.cfg",
                 "target/stm32h7x.cfg"
+            ],
+            "openOCDLaunchCommands": [
+                "reset_config srst_only srst_nogate connect_assert_srst",
+                "adapter srst delay 100",
+                "adapter srst pulse_width 100"
+            ],
+            "preLaunchCommands": [
+                "monitor reset halt"
             ],
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",

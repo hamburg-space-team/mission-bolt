@@ -2,6 +2,7 @@
 
 #include "cmsis_i2c_bus.hpp"
 #include "device_base.hpp"
+#include "errors.hpp"
 
 #include <cstdint>
 
@@ -15,13 +16,12 @@ constexpr uint8_t TMP117_ADDR = 0x48U;
 /// @ingroup sensors
 class TMP117 : public DeviceBase {
   public:
-    /// Verify device ID and switch to continuous conversion. Returns 0
-    /// on success, -1 on bus error or ID mismatch.
-    [[nodiscard]] int init(CmsisI2CBus* bus, uint8_t addr = TMP117_ADDR);
+    /// Verify device ID and switch to continuous conversion.
+    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr = TMP117_ADDR);
 
-    /// Read the raw temperature register into *raw. Failures latch via
+    /// Read the raw temperature register. Failures latch via
     /// DeviceBase.
-    [[nodiscard]] int read(int16_t* raw);
+    [[nodiscard]] Result<int16_t> read();
 
   private:
     static constexpr uint8_t REG_TEMP = 0x00U;

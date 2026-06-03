@@ -1,0 +1,12 @@
+---
+# Test-tree overrides. Inherits everything from the parent .clang-tidy
+# at flight-software/.clang-tidy and only differs in the suppressions
+# below, which exist for Catch2's macro-generated code that we cannot
+# rewrite.
+InheritParentConfig: true
+
+Checks: >-
+  -misc-use-anonymous-namespace,
+  -readability-function-cognitive-complexity,
+  -bugprone-chained-comparison,
+  -cert-err58-cpp

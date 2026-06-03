@@ -1,6 +1,6 @@
 #include "exp_computer.hpp"
 #include "can_protocol.hpp"
-#include "main.h"
+#include "main.h" // IWYU pragma: keep
 #include "packet_payloads.hpp"
 
 extern CAN_HandleTypeDef hcan1;
@@ -44,10 +44,9 @@ void ExpComputer::on_init() {
     init_sensors();
     on_experiment_init();
 
-    const uint8_t len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count);
-    if (len > 0U) {
-        can.send(exp_can_id(), tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+    if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count)) {
+        can.send(exp_can_id(), tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -62,7 +61,7 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     if (last_can_tick != NO_LAST_TICK && can_tick != static_cast<uint16_t>(last_can_tick + 1U)) {
         const auto first = static_cast<uint16_t>(last_can_tick + 1U);
         const auto missed = static_cast<uint8_t>(can_tick - last_can_tick - 1U);
-        send_gap(first, missed, PacketProtocol::GapReason::SYNC_MISSED, tick_start_us);
+        send_gap(first, missed, PacketProtocol::GapReason::NO_DATA, tick_start_us);
     }
     last_can_tick = can_tick;
 
@@ -70,7 +69,7 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     send_status_packet(can_tick, tick_start_us);
     on_experiment_tick(can_tick, tick_start_us);
 
-    sd.flush();
+    (void)sd.flush();
 }
 
 void ExpComputer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
@@ -78,24 +77,21 @@ void ExpComputer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
 
     PayloadExpEnv env{};
 
-    MS5611Result result{};
-    if (baro.read(&result) == 0) {
-        env.ms_pressure = result.d1;
-        env.ms_temperature = result.d2;
+    if (auto result = baro.read()) {
+        env.ms_pressure = result->d1;
+        env.ms_temperature = result->d2;
         env.valid_mask |= 0x01U;
     }
 
-    int16_t temp_raw = 0;
-    if (tmp.read(&temp_raw) == 0) {
-        env.temp_raw = temp_raw;
+    if (auto temp = tmp.read()) {
+        env.temp_raw = *temp;
         env.valid_mask |= 0x02U;
     }
 
-    const uint8_t len = pkt.build(tx_buf.data(), exp_env_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &env,
-                                  static_cast<uint8_t>(sizeof(env)));
-    if (len > 0U) {
-        can.send(exp_can_id(), tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+    if (auto len = pkt.build(tx_buf.data(), exp_env_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &env,
+                             static_cast<uint8_t>(sizeof(env)))) {
+        can.send(exp_can_id(), tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -108,11 +104,10 @@ void ExpComputer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
     status.uptime_s = platform.tick_ms() / 1000U;
     status.sd_status = static_cast<uint8_t>(sd.is_mounted() ? 0x01U : 0x00U);
 
-    const uint8_t len = pkt.build(tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &status,
-                                  static_cast<uint8_t>(sizeof(status)));
-    if (len > 0U) {
-        can.send(exp_can_id(), tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+    if (auto len = pkt.build(tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &status,
+                             static_cast<uint8_t>(sizeof(status)))) {
+        can.send(exp_can_id(), tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -127,10 +122,9 @@ void ExpComputer::send_gap(uint16_t first_tick, uint8_t count, PacketProtocol::G
     gap.first_missing_tick = first_tick;
     gap.count = count;
     gap.reason = reason;
-    const uint8_t len =
-        pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick}, PacketProtocol::TimestampUs{timestamp_us}, gap);
-    if (len > 0U) {
-        can.send(exp_can_id(), tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+    if (auto len = pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick},
+                                 PacketProtocol::TimestampUs{timestamp_us}, gap)) {
+        can.send(exp_can_id(), tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }

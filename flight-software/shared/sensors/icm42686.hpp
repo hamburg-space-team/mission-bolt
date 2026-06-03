@@ -2,8 +2,8 @@
 
 #include "cmsis_i2c_bus.hpp"
 #include "device_base.hpp"
+#include "errors.hpp"
 
-#include <array>
 #include <cstdint>
 
 /// @defgroup sensors Sensor drivers
@@ -29,12 +29,12 @@ struct ICM42686Result {
 /// @ingroup sensors
 class ICM42686 : public DeviceBase {
   public:
-    /// Verify WHO_AM_I, configure ranges, power on. Returns 0 on
-    /// success; -1 latches the driver via disable().
-    [[nodiscard]] int init(CmsisI2CBus* bus, uint8_t addr = ICM42686_ADDR);
+    /// Verify WHO_AM_I, configure ranges, power on. Failure latches
+    /// the driver via disable().
+    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr = ICM42686_ADDR);
 
-    /// Burst-read the 12 raw register bytes into result.
-    [[nodiscard]] int read_sample(ICM42686Result* result);
+    /// Burst-read the 12 raw register bytes.
+    [[nodiscard]] Result<ICM42686Result> read_sample();
 
   private:
     static constexpr uint8_t REG_WHO_AM_I = 0x75U;
@@ -53,8 +53,8 @@ class ICM42686 : public DeviceBase {
     CmsisI2CBus* bus = nullptr;
     uint8_t addr = 0U;
 
-    [[nodiscard]] int check_who_am_i();
-    [[nodiscard]] int config_accel();
-    [[nodiscard]] int config_gyro();
-    [[nodiscard]] int power_on();
+    [[nodiscard]] Result<void> check_who_am_i();
+    [[nodiscard]] Result<void> config_accel();
+    [[nodiscard]] Result<void> config_gyro();
+    [[nodiscard]] Result<void> power_on();
 };

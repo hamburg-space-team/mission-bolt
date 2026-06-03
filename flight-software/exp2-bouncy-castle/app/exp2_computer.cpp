@@ -1,11 +1,12 @@
 #include "exp2_computer.hpp"
 #include "can_protocol.hpp"
-#include "main.h"
+#include "main.h" // IWYU pragma: keep
 
 extern CAN_HandleTypeDef hcan1;
 
-static Exp2Computer* instance_g = nullptr;
-
+namespace {
+    Exp2Computer* instance_g = nullptr;
+}
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     CAN_RxHeaderTypeDef hdr{};
