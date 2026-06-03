@@ -16,12 +16,6 @@
 ///   - NullStore - no-op for bring-up / bench tests
 ///   - (future)  FlashStore - SPI / QSPI NOR flash
 ///
-/// Lifecycle:
-///   1. construct with whatever handle the backend needs
-///   2. init() once at boot (mount / format / open)
-///   3. write() on every packet, flush() on a 1 Hz cadence + critical
-///      events (ADR-004)
-///
 /// Non-copyable, non-movable: the instance lives at a fixed address for
 /// the lifetime of the program.
 ///
@@ -39,14 +33,30 @@ class Store {
     /// One-time mount / format / open. Call once at boot.
     [[nodiscard]] virtual Result<void> init() = 0;
 
-    /// Append raw bytes to the log. Returns immediately after the data
-    /// hits the in-RAM cache; durability is only guaranteed after
-    /// flush().
+    /// Enqueue raw bytes for later durable write. Microsecond cost;
+    /// safe to call from the critical tick path. Returns Error::IO_ERROR
+    /// if the ring buffer is full (the entry is dropped, dropped_count
+    /// is incremented for the next status payload).
     [[nodiscard]] virtual Result<void> write(const uint8_t* data, uint8_t len) = 0;
 
-    /// Commit buffered writes to durable storage.
+    /// Pop one queued entry from the ring buffer and perform the
+    /// backend write. Called from the framework's idle phase only when
+    /// at least MIN_TIME_FOR_WRITE_MS of tick budget remains. Returns
+    /// true if an entry was drained, false if the queue is empty (no
+    /// further drain attempts this tick).
+    [[nodiscard]] virtual bool drain_one() = 0;
+
+    /// Commit buffered writes to durable storage. Does NOT drain the
+    /// ring buffer; call after the drain phase (or trust the periodic
+    /// drain to catch up first).
     [[nodiscard]] virtual Result<void> flush() = 0;
 
     /// True once init() has succeeded and writes are accepted.
     [[nodiscard]] virtual bool is_mounted() const = 0;
+
+    /// Cumulative ring-buffer overflows since boot. Surfaced through
+    /// the status payload so ground can see if production outran the
+    /// drain (typically means SD card stalls were longer than the ring
+    /// buffer can absorb).
+    [[nodiscard]] virtual uint16_t dropped_count() const = 0;
 };

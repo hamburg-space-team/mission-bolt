@@ -1,6 +1,9 @@
 #include "sd_store.hpp"
 #include "stm32l4xx_hal.h"
 
+#include <atomic>
+#include <cstring>
+
 namespace {
     constexpr uint32_t SD_WRITE_TIMEOUT_MS = 500U;
 
@@ -88,16 +91,49 @@ Result<void> SdStore::open_log() {
 }
 
 Result<void> SdStore::write(const uint8_t* data, uint8_t len) {
-    if (data == nullptr || len == 0U) {
+    // PRODUCER side of the ADR-004 ring buffer. Runs in on_tick() and
+    // must complete in microseconds: no SDMMC traffic happens here.
+    if (data == nullptr || len == 0U || len > SLOT_BYTES) {
         return std::unexpected(Error::BAD_ARGUMENT);
     }
     if (!mounted || !file_open) {
         return std::unexpected(Error::DISABLED);
     }
-    if (lfs_file_write(&lfs, &file, data, len) != static_cast<lfs_ssize_t>(len)) {
+
+    const auto head = ring_head;
+    const auto next = static_cast<uint8_t>((head + 1U) % RING_CAPACITY);
+    if (next == ring_tail) {
+        // Ring full - the drain phase hasn't kept up (SD card has been
+        // stalled longer than the ring can absorb at the current
+        // production rate)
+        drops = static_cast<uint16_t>(drops + 1U);
         return std::unexpected(Error::IO_ERROR);
     }
+
+    auto& slot = ring[head];
+    std::memcpy(slot.data.data(), data, len);
+    slot.len = len;
+
+    std::atomic_signal_fence(std::memory_order_release);
+    ring_head = next;
     return {};
+}
+
+bool SdStore::drain_one() {
+    if (!mounted || !file_open) {
+        return false;
+    }
+    const auto tail = ring_tail;
+    if (tail == ring_head) {
+        return false; // ring empty
+    }
+
+    std::atomic_signal_fence(std::memory_order_acquire);
+    auto& slot = ring[tail];
+    (void)lfs_file_write(&lfs, &file, slot.data.data(), slot.len);
+
+    ring_tail = static_cast<uint8_t>((tail + 1U) % RING_CAPACITY);
+    return true;
 }
 
 Result<void> SdStore::flush() {

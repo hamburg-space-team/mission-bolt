@@ -40,9 +40,22 @@ class NodeComputer : public FlightComputer {
     virtual void on_sensor_failed() {
     }
 
+    /// Drain ring-buffered SD writes during the idle phase, respecting
+    /// the per-op safety margin from ADR-004 (MIN_TIME_FOR_WRITE_MS).
+    void on_drain(uint32_t deadline_ms) override;
+
     static constexpr uint16_t TX_BUF_SIZE = 64U;
 
+    /// Cadence (in ticks) at which storage.flush() is called on the
+    /// steady-state schedule.
     static constexpr uint8_t FLUSH_INTERVAL = 25U;
+
+    /// Per-op safety margin (ADR-004). The drain phase will not start
+    /// a new lfs_file_write() if fewer milliseconds remain in the
+    /// tick. Sized to keep nominal SD writes under the tick boundary
+    /// while still tolerating one stall per tick (the next tick is
+    /// missed; the ring buffer absorbs the produced data).
+    static constexpr uint32_t MIN_TIME_FOR_WRITE_MS = 5U;
 
     CmsisI2CBus& i2c; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     MS5611 baro;

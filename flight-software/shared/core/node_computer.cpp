@@ -31,3 +31,21 @@ void NodeComputer::init_storage() {
         leds.error_set();
     }
 }
+
+void NodeComputer::on_drain(uint32_t deadline_ms) {
+    // ADR-004: drain queued SD writes while the remaining tick budget
+    // exceeds MIN_TIME_FOR_WRITE_MS. We stop early on either the
+    // budget running out or the ring buffer going empty. If an
+    // individual lfs_file_write() stalls beyond the budget the loop
+    // exits at the top of the next iteration; the missed tick is
+    // counted at the next on_tick() call.
+    while (true) {
+        const uint32_t now = platform.tick_ms();
+        if ((now + MIN_TIME_FOR_WRITE_MS) >= deadline_ms) {
+            break;
+        }
+        if (!storage.drain_one()) {
+            break; // ring buffer empty
+        }
+    }
+}
