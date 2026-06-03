@@ -2,6 +2,7 @@
 
 #include "cmsis_i2c_bus.hpp"
 #include "device_base.hpp"
+#include "errors.hpp"
 
 #include <cstdint>
 
@@ -25,14 +26,14 @@ class LP5810 : public DeviceBase {
     /// addr: page-0 I2C address (e.g. 0x14)
     /// dc:   per-channel dot current 0x00-0xFF, scales 0-25.5 mA
     ///       (max_current=0)
-    [[nodiscard]] int init(CmsisI2CBus* bus, uint8_t addr, uint8_t dc = 0xFFU);
+    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr, uint8_t dc = 0xFFU);
 
     /// Write mask (bits 3:0) to LED_EN - enables those channels,
     /// disables the rest.
-    [[nodiscard]] int set_channels(uint8_t mask);
+    [[nodiscard]] Result<void> set_channels(uint8_t mask);
 
     /// Turn off all channels (LED_EN = 0).
-    [[nodiscard]] int disable_all();
+    [[nodiscard]] Result<void> disable_all();
 
   private:
     static constexpr uint8_t REG_CHIP_EN = 0x00U;
@@ -47,7 +48,7 @@ class LP5810 : public DeviceBase {
     static constexpr uint8_t CMD_RESET = 0xFFU;
     static constexpr uint8_t CHANNEL_COUNT = 4U;
 
-    [[nodiscard]] int write_reg(uint8_t reg, uint8_t value);
+    [[nodiscard]] Result<void> write_reg(uint8_t reg, uint8_t value);
 
     CmsisI2CBus* bus = nullptr;
     uint8_t addr = 0U;

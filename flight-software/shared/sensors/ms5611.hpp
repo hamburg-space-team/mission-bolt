@@ -2,6 +2,7 @@
 
 #include "cmsis_i2c_bus.hpp"
 #include "device_base.hpp"
+#include "errors.hpp"
 
 #include <array>
 #include <cstdint>
@@ -38,14 +39,13 @@ class MS5611 : public DeviceBase {
     using delay_fn = void (*)(uint32_t ms);
 
     /// Reset, read PROM, verify CRC. delay=nullptr disables the
-    /// conversion-time wait (caller polls instead). Returns 0 on
-    /// success, -1 on bus error or PROM-CRC mismatch.
-    [[nodiscard]] int init(CmsisI2CBus* bus, uint8_t addr = MS5611_ADDR, MS5611Osr osr = MS5611Osr::OSR_4096,
-                           delay_fn delay = nullptr);
+    /// conversion-time wait (caller polls instead).
+    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr = MS5611_ADDR, MS5611Osr osr = MS5611Osr::OSR_4096,
+                                    delay_fn delay = nullptr);
 
     /// Trigger D2 (temp) and D1 (pressure) conversions, return both
     /// raw ADC values. Failures latch via DeviceBase.
-    [[nodiscard]] int read(MS5611Result* result);
+    [[nodiscard]] Result<MS5611Result> read();
 
   private:
     static constexpr uint8_t COEFF_COUNT = 8U;
@@ -73,9 +73,9 @@ class MS5611 : public DeviceBase {
     std::array<uint16_t, COEFF_COUNT> coeff = {};
     bool coeff_read = false;
 
-    [[nodiscard]] int reset();
-    [[nodiscard]] int read_prom();
-    [[nodiscard]] int read_adc(uint8_t cmd, uint32_t* value);
-    [[nodiscard]] int read_sample(MS5611Result* result);
+    [[nodiscard]] Result<void> reset();
+    [[nodiscard]] Result<void> read_prom();
+    [[nodiscard]] Result<uint32_t> read_adc(uint8_t cmd);
+    [[nodiscard]] Result<MS5611Result> read_sample();
     [[nodiscard]] bool prom_crc_ok() const;
 };

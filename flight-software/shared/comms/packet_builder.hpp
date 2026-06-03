@@ -1,5 +1,6 @@
 #pragma once
 
+#include "errors.hpp"
 #include "packet_header.hpp"
 #include "packet_payloads.hpp"
 #include "packet_types.hpp"
@@ -53,14 +54,14 @@ namespace PacketProtocol {
         /// Layout: SYNC_0, SYNC_1, version, type, sequence, length,
         /// tick(2), timestamp_us(4), payload, CRC16 big-endian.
         /// buf must be at least MAX_PACKET_SIZE bytes.
-        /// Returns the number of bytes written, or 0 if payload_len
-        /// exceeds MAX_PAYLOAD.
-        [[nodiscard]] uint8_t build(uint8_t* buf, PayloadType type, Tick tick, TimestampUs ts_us, const void* payload,
-                                    uint8_t payload_len) noexcept {
+        /// Returns the number of bytes written, or Error::OUTPUT_TOO_LARGE
+        /// if payload_len exceeds MAX_PAYLOAD.
+        [[nodiscard]] Result<uint8_t> build(uint8_t* buf, PayloadType type, Tick tick, TimestampUs ts_us,
+                                            const void* payload, uint8_t payload_len) noexcept {
             const uint16_t total = static_cast<uint16_t>(HEADER_SIZE) + payload_len + CRC_SIZE;
 
             if (payload_len > MAX_PAYLOAD || total > MAX_PACKET_SIZE) {
-                return 0U;
+                return std::unexpected(Error::OUTPUT_TOO_LARGE);
             }
 
             uint8_t offset = 0U;
@@ -97,13 +98,14 @@ namespace PacketProtocol {
         }
 
         /// Shortcut for a PayloadGapMarker frame.
-        [[nodiscard]] uint8_t build_gap(uint8_t* buf, Tick tick, TimestampUs ts_us, PayloadGapMarker gap) noexcept {
+        [[nodiscard]] Result<uint8_t> build_gap(uint8_t* buf, Tick tick, TimestampUs ts_us,
+                                                PayloadGapMarker gap) noexcept {
             return build(buf, PayloadType::GAP_MARKER, tick, ts_us, &gap, sizeof(gap));
         }
 
         /// Shortcut for a PayloadBoot frame. tick and timestamp default
         /// to 0 (LO has not yet been received at boot).
-        [[nodiscard]] uint8_t build_boot(uint8_t* buf, BootReason reason, uint16_t reboot_count) noexcept {
+        [[nodiscard]] Result<uint8_t> build_boot(uint8_t* buf, BootReason reason, uint16_t reboot_count) noexcept {
             PayloadBoot boot{};
             boot.reason = reason;
             boot.reboot_count = reboot_count;

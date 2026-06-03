@@ -4,7 +4,7 @@ solution:
   misc:
     - for-compiler: GCC
       CPP:
-        - -std=gnu++17
+        - -std=gnu++23
 
   packs:
     - pack: ARM::CMSIS@6.3.0

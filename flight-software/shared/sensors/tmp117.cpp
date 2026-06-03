@@ -1,40 +1,33 @@
 #include "tmp117.hpp"
 #include "cmsis_i2c_bus.hpp"
 
-int TMP117::init(CmsisI2CBus* bus, uint8_t addr) {
+Result<void> TMP117::init(CmsisI2CBus* bus, uint8_t addr) {
     this->bus = bus;
     this->addr = addr;
 
-    uint16_t dev_id = 0U;
-
-    if (this->bus->read_reg16(addr, REG_DEV_ID, &dev_id) < 0) {
-        return -1;
+    auto dev_id = this->bus->read_reg16(addr, REG_DEV_ID);
+    if (!dev_id) {
+        return std::unexpected(dev_id.error());
     }
 
-    if ((dev_id & DEV_ID_MASK) != DEV_ID_EXPECTED) {
-        return -1;
+    if ((*dev_id & DEV_ID_MASK) != DEV_ID_EXPECTED) {
+        return std::unexpected(Error::PROTOCOL_ERROR);
     }
 
     return this->bus->write_reg16(addr, REG_CONFIG, CONFIG_CONTINUOUS);
 }
 
-int TMP117::read(int16_t* raw) {
-    if (raw == nullptr || is_failed()) {
-        return -1;
+Result<int16_t> TMP117::read() {
+    if (is_failed()) {
+        return std::unexpected(Error::DISABLED);
     }
 
-    uint16_t raw_u = 0U;
-
-    const int ret = this->bus->read_reg16(addr, REG_TEMP, &raw_u);
-
-    if (ret < 0) {
+    auto raw_u = this->bus->read_reg16(addr, REG_TEMP);
+    if (!raw_u) {
         register_failure();
-        return ret;
+        return std::unexpected(raw_u.error());
     }
 
     clear_failures();
-
-    *raw = static_cast<int16_t>(raw_u);
-
-    return 0;
+    return static_cast<int16_t>(*raw_u);
 }

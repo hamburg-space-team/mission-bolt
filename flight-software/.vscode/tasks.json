@@ -160,42 +160,6 @@
             "problemMatcher": []
         },
         {
-            "label": "Lint",
-            "type": "shell",
-            "command": "find ./tests ./shared/comms ./shared/utils \\( -name '*.cpp' -o -name '*.c' \\) | xargs clang-tidy -p compile_commands.json '--header-filter=.*(shared|tests/unit).*'",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "options": {
-                "shell": {
-                    "executable": "/bin/bash",
-                    "args": [
-                        "-c"
-                    ]
-                }
-            },
-            "problemMatcher": "$gcc"
-        },
-        {
-            "label": "Analyze",
-            "type": "shell",
-            "command": "find ./tests ./shared/comms ./shared/utils \\( -name '*.cpp' -o -name '*.c' \\) | xargs clang-tidy -p compile_commands.json '--header-filter=.*(shared|tests/unit).*' '--checks=clang-analyzer-*'",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared"
-            },
-            "options": {
-                "shell": {
-                    "executable": "/bin/bash",
-                    "args": [
-                        "-c"
-                    ]
-                }
-            },
-            "problemMatcher": "$gcc"
-        },
-        {
             "label": "Format",
             "type": "shell",
             "command": "find . -type f \\( -name '*.cpp' -o -name '*.hpp' -o -name '*.c' -o -name '*.h' \\) -not -path '*/generated/*' -not -path '*/RTE/*' -not -path './build/*' -not -path './out/*' -not -path './tmp/*' -not -path '*/littlefs/*' | xargs clang-format -i",

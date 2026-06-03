@@ -1,5 +1,6 @@
 #pragma once
 
+#include "errors.hpp"
 #include "lfs.h"
 
 #include <array>
@@ -20,20 +21,19 @@
 class SdStore {
   public:
     /// Mount the filesystem (format on first boot or after corruption),
-    /// then open the log file for appending. Returns 0 on success,
-    /// negative on error.
+    /// then open the log file for appending.
     /// hsd: pointer to SD handle (SD_HandleTypeDef*)
-    [[nodiscard]] int init(void* hsd);
+    [[nodiscard]] Result<void> init(void* hsd);
 
     /// Append raw bytes to the log file cache. Does not hit the SD
     /// card unless the internal 512-byte cache overflows - always call
-    /// flush() at tick end. Returns true on success.
-    bool write(const uint8_t* data, uint8_t len);
+    /// flush() at tick end.
+    [[nodiscard]] Result<void> write(const uint8_t* data, uint8_t len);
 
     /// Commit buffered writes to SD (lfs_file_sync). Call once per
     /// tick. Power-fail safe: all data written before flush() is
     /// guaranteed intact.
-    bool flush();
+    [[nodiscard]] Result<void> flush();
 
     [[nodiscard]] bool is_mounted() const {
         return mounted;
@@ -62,8 +62,8 @@ class SdStore {
     alignas(4) std::array<uint8_t, LOOKAHEAD_SIZE> lookahead_buf{};
     alignas(4) std::array<uint8_t, CACHE_SIZE> file_buf{};
 
-    [[nodiscard]] int mount_or_format();
-    [[nodiscard]] int open_log();
+    [[nodiscard]] Result<void> mount_or_format();
+    [[nodiscard]] Result<void> open_log();
 
     // LittleFS block-device callbacks - SD_HandleTypeDef* recovered via cfg.context.
     static int bd_read(const lfs_config* c, lfs_block_t block, lfs_off_t off, void* buf, lfs_size_t size);

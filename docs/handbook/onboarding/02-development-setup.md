@@ -55,7 +55,7 @@ Optional, for the Go variant of the sensor-api: `sudo apt install golang-go`.
 
 VS Code is the default. Extensions worth installing:
 
-- C/C++, clangd, CMake Tools, Cortex-Debug
+- clangd, CMake Tools, Cortex-Debug
 - ESLint, Python, Pylance
 
 The `flight-software/.vscode/` folder ships tasks for build/flash/
@@ -63,6 +63,30 @@ format/test. Open the `flight-software` folder as a workspace.
 
 Other editors are fine. clangd reads the merged
 `compile_commands.json` no matter the wrapper.
+
+### clangd version
+
+We use C++23 (`std::expected`, `gnu++23`). The Ubuntu 22.04 system
+`clangd` (version 14) and the `clangd-15` package are **too old** --
+they don't parse `std::expected` or accept `gnu++23`. You need
+**clangd >= 22.x** or LLVM >= 17.
+
+Quick install (no sudo):
+
+```bash
+mkdir -p ~/.local/clangd && cd /tmp && \
+  curl -L -o clangd.zip https://github.com/clangd/clangd/releases/download/22.1.6/clangd-linux-22.1.6.zip && \
+  unzip -q clangd.zip && mv clangd_22.1.6 ~/.local/clangd/
+```
+
+Then set `clangd.path` in your VS Code settings to
+`~/.local/clangd/clangd_22.1.6/bin/clangd`.
+
+Full setup, troubleshooting, and the per-folder `.clangd` routing
+are in [setting-up-clangd.md](../../guides/setting-up-clangd.md).
+Read it before opening the project in VS Code -- you'll lose a day
+hunting `'expected' file not found` and `invalid value 'gnu++23'`
+otherwise.
 
 ## Clone and First Build
 
@@ -117,10 +141,7 @@ You're good when:
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-|---|---|
-
-Anything else, ask in `#bolt_software`.
+Aask in `#bolt_software`.
 
 ## Next
 

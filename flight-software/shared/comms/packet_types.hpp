@@ -41,11 +41,13 @@ namespace PacketProtocol {
         SOFT_RESET = 0x03, ///< Intentional software reset
     };
 
+    /// Per CDR section 4.3.5 / ADR-005.
     /// @ingroup comms
     enum class GapReason : uint8_t {
-        SENSOR_FAILED = 0x01,     ///< sensor non-functional; EXP sends this over CAN to BTC
-        SCHEDULER_OVERRUN = 0x02, ///< BTC main loop ran late; BTC sends this to RS-422 downlink
-        SYNC_MISSED = 0x03,       ///< EXP did not receive expected BTC SYNC frame(s)
+        NO_DATA = 0x01,       ///< No valid CAN/source data inside the expected window
+        CAN_CRC_FAIL = 0x02,  ///< CAN frame received but failed CRC
+        LIFI_TIMEOUT = 0x03,  ///< No sample packets from an EXP3 stack inside the expected interval
+        SENSOR_FAILED = 0x04, ///< Source has marked a sensor as permanently disabled
     };
 
 } // namespace PacketProtocol

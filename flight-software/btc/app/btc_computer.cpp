@@ -6,7 +6,6 @@
 #include "packet_types.hpp"
 
 #include <array>
-#include <cinttypes>
 #include <cstdio>
 #include <cstring>
 
@@ -179,10 +178,9 @@ void BtcComputer::on_init() {
     init_sd(&hsd1);
     init_sensors();
 
-    const uint8_t len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count);
-    if (len > 0U) {
-        usart.Send(tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+    if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count)) {
+        usart.Send(tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -192,12 +190,11 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
     gap.first_missing_tick = first_tick;
     gap.count = count;
     gap.reason = reason;
-    const uint8_t len =
-        pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick}, PacketProtocol::TimestampUs{timestamp_us}, gap);
-    if (len > 0U) {
+    if (auto len = pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick},
+                                 PacketProtocol::TimestampUs{timestamp_us}, gap)) {
         usart_wait();
-        usart.Send(tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+        usart.Send(tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -206,7 +203,7 @@ void BtcComputer::on_sensor_failed() {
 }
 
 void BtcComputer::init_extra_sensors() {
-    if (imu.init(&i2c) < 0) {
+    if (!imu.init(&i2c)) {
         on_sensor_failed();
     }
 }
@@ -228,7 +225,7 @@ void BtcComputer::drain_exp_frames() {
         const uint8_t actual_len = static_cast<uint8_t>(PacketProtocol::HEADER_SIZE) + payload_len +
                                    static_cast<uint8_t>(PacketProtocol::CRC_SIZE);
         usart.Send(raw, actual_len);
-        sd.write(raw, actual_len);
+        (void)sd.write(raw, actual_len);
         rx_tail_g = static_cast<uint8_t>((rx_tail_g + 1U) % RX_RING_SIZE);
     }
 }
@@ -243,36 +240,32 @@ void BtcComputer::send_env_packet(uint32_t tick_start_us) {
 
     PayloadBtcEnv env{};
 
-    MS5611Result result{};
-    if (baro.read(&result) == 0) {
-        env.ms_pressure = result.d1;
-        env.ms_temperature = result.d2;
+    if (auto result = baro.read()) {
+        env.ms_pressure = result->d1;
+        env.ms_temperature = result->d2;
         env.valid_mask |= 0x01U;
     }
 
-    int16_t temp_raw = 0;
-    if (tmp.read(&temp_raw) == 0) {
-        env.temp_raw = temp_raw;
+    if (auto temp = tmp.read()) {
+        env.temp_raw = *temp;
         env.valid_mask |= 0x02U;
     }
 
-    ICM42686Result imu_result{};
-    if (imu.read_sample(&imu_result) == 0) {
-        env.accel_x_raw = imu_result.accel_x;
-        env.accel_y_raw = imu_result.accel_y;
-        env.accel_z_raw = imu_result.accel_z;
-        env.gyro_x_raw = imu_result.gyro_x;
-        env.gyro_y_raw = imu_result.gyro_y;
-        env.gyro_z_raw = imu_result.gyro_z;
+    if (auto imu_result = imu.read_sample()) {
+        env.accel_x_raw = imu_result->accel_x;
+        env.accel_y_raw = imu_result->accel_y;
+        env.accel_z_raw = imu_result->accel_z;
+        env.gyro_x_raw = imu_result->gyro_x;
+        env.gyro_y_raw = imu_result->gyro_y;
+        env.gyro_z_raw = imu_result->gyro_z;
         env.valid_mask |= 0x04U;
     }
 
-    const uint8_t len = pkt.build(tx_buf.data(), PayloadType::BTC_ENV, Tick{sync_count}, TimestampUs{tick_start_us},
-                                  &env, static_cast<uint8_t>(sizeof(env)));
-    if (len > 0U) {
+    if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_ENV, Tick{sync_count}, TimestampUs{tick_start_us}, &env,
+                             static_cast<uint8_t>(sizeof(env)))) {
         usart_wait();
-        usart.Send(tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+        usart.Send(tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -297,12 +290,11 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
         status.signal_mask |= 0x04U;
     }
 
-    const uint8_t len = pkt.build(tx_buf.data(), PayloadType::BTC_STATUS, Tick{sync_count}, TimestampUs{tick_start_us},
-                                  &status, static_cast<uint8_t>(sizeof(status)));
-    if (len > 0U) {
+    if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_STATUS, Tick{sync_count}, TimestampUs{tick_start_us},
+                             &status, static_cast<uint8_t>(sizeof(status)))) {
         usart_wait();
-        usart.Send(tx_buf.data(), len);
-        sd.write(tx_buf.data(), len);
+        usart.Send(tx_buf.data(), *len);
+        (void)sd.write(tx_buf.data(), *len);
     }
 }
 
@@ -317,7 +309,7 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     }
 
     if (missed_periods > 0U) {
-        send_gap_to_uart(sync_count, missed_periods, PacketProtocol::GapReason::SCHEDULER_OVERRUN, tick_start_us);
+        send_gap_to_uart(sync_count, missed_periods, PacketProtocol::GapReason::NO_DATA, tick_start_us);
         sync_count += missed_periods;
     }
 
@@ -330,6 +322,6 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     if ((sync_count % SAVE_INTERVAL) == 0U) {
         BootState::save_tick(sync_count);
     }
-    sd.flush();
+    (void)sd.flush();
     sync_count++;
 }

@@ -65,9 +65,6 @@
         },
         "debug.hideSlowPreLaunchWarning": true,
         "debug.showInStatusBar": "never",
-        "clangd.arguments": [
-            "--compile-commands-dir=/home/max/Projects/github.com/hamburg-space-team/mission-bolt/flight-software/out/btc/btc/Debug"
-        ]
     },
     "extensions": {
         "recommendations": [

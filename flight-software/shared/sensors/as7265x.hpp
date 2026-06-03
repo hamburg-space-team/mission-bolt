@@ -2,6 +2,7 @@
 
 #include "cmsis_i2c_bus.hpp"
 #include "device_base.hpp"
+#include "errors.hpp"
 
 #include <cstdint>
 
@@ -42,19 +43,22 @@ class AS7265X : public DeviceBase {
     using data_rdy_fn = bool (*)();
 
     /// tick: millisecond tick for virtual-register timeout.
-    [[nodiscard]] int init(CmsisI2CBus* bus, tick_fn tick, uint8_t addr = AS7265X_ADDR,
-                           uint8_t integration_cycles = AS7265X_INT_25_CYCLES, AS7265XGain gain = AS7265XGain::GAIN_1X,
-                           data_rdy_fn int_pin = nullptr);
+    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, tick_fn tick, uint8_t addr = AS7265X_ADDR,
+                                    uint8_t integration_cycles = AS7265X_INT_25_CYCLES,
+                                    AS7265XGain gain = AS7265XGain::GAIN_1X, data_rdy_fn int_pin = nullptr);
 
     /// Trigger a one-shot measurement. Returns immediately; record the
     /// start timestamp right after.
-    [[nodiscard]] int start_measurement();
+    [[nodiscard]] Result<void> start_measurement();
 
     /// True when the most recent measurement has completed.
     [[nodiscard]] bool data_ready();
 
-    /// Read all 18 channels. Only call when data_ready() == true.
-    [[nodiscard]] int read_channels(AS7265XResult* result);
+    /// Read all 18 channels into the caller-owned result. Only call
+    /// when data_ready() == true. AS7265XResult is 36 bytes; we keep
+    /// the out-param to avoid the implicit copy that the
+    /// expected<AS7265XResult, Error> return would force.
+    [[nodiscard]] Result<void> read_channels(AS7265XResult* result);
 
   private:
     static constexpr uint8_t VREG_CONTROL = 0x04U;
@@ -71,10 +75,10 @@ class AS7265X : public DeviceBase {
     static constexpr uint32_t BUSY_ITER = 100U;
     static constexpr uint8_t FIRST_CHANNEL_VREG = 0x08U;
 
-    [[nodiscard]] int write_virtual(uint8_t vreg, uint8_t value);
-    [[nodiscard]] int read_virtual(uint8_t vreg, uint8_t* value);
-    [[nodiscard]] int wait_tx_ready();
-    [[nodiscard]] int wait_rx_ready();
+    [[nodiscard]] Result<void> write_virtual(uint8_t vreg, uint8_t value);
+    [[nodiscard]] Result<uint8_t> read_virtual(uint8_t vreg);
+    [[nodiscard]] Result<void> wait_tx_ready();
+    [[nodiscard]] Result<void> wait_rx_ready();
 
     CmsisI2CBus* bus = nullptr;
     tick_fn tick = nullptr;

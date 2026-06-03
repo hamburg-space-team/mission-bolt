@@ -109,3 +109,6 @@ CheckOptions:
 
   - key: readability-function-cognitive-complexity.Threshold
     value: "15"
+    
+  - key: bugprone-unused-return-value.AllowCastToVoid
+    value: "true"
