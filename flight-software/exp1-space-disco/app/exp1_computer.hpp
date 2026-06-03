@@ -28,7 +28,7 @@
 /// @ingroup apps
 class Exp1Computer final : public ExpComputer {
   public:
-    explicit Exp1Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;
+    explicit Exp1Computer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept;
 
   protected:
     void on_experiment_init() noexcept override;

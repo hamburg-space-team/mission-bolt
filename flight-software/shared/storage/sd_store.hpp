@@ -2,12 +2,11 @@
 
 #include "errors.hpp"
 #include "lfs.h"
+#include "store.hpp"
 
 #include <array>
 #include <cstdint>
 #include <string_view>
-
-/// @defgroup storage Storage
 
 /// LittleFS-backed append-only SD log. Writes are buffered in a
 /// 512-byte cache and flushed to the SD card on flush(). LittleFS
@@ -18,24 +17,28 @@
 /// EXP downlink to its own log (D-130). See ADR-003, ADR-004.
 ///
 /// @ingroup storage
-class SdStore {
+class SdStore final : public Store {
   public:
+    /// hsd: pointer to SD_HandleTypeDef. Stored for the lifetime of the
+    /// SdStore; the HAL handle must outlive this object (it lives in
+    /// CubeMX's main.c as a global).
+    explicit SdStore(void* hsd) noexcept;
+
     /// Mount the filesystem (format on first boot or after corruption),
     /// then open the log file for appending.
-    /// hsd: pointer to SD handle (SD_HandleTypeDef*)
-    [[nodiscard]] Result<void> init(void* hsd);
+    [[nodiscard]] Result<void> init() override;
 
     /// Append raw bytes to the log file cache. Does not hit the SD
     /// card unless the internal 512-byte cache overflows - always call
     /// flush() at tick end.
-    [[nodiscard]] Result<void> write(const uint8_t* data, uint8_t len);
+    [[nodiscard]] Result<void> write(const uint8_t* data, uint8_t len) override;
 
     /// Commit buffered writes to SD (lfs_file_sync). Call once per
     /// tick. Power-fail safe: all data written before flush() is
     /// guaranteed intact.
-    [[nodiscard]] Result<void> flush();
+    [[nodiscard]] Result<void> flush() override;
 
-    [[nodiscard]] bool is_mounted() const {
+    [[nodiscard]] bool is_mounted() const override {
         return mounted;
     }
 

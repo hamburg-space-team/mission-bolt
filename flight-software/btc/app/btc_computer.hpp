@@ -5,7 +5,6 @@
 #include "node_computer.hpp"
 #include "packet_types.hpp"
 
-#include <array>
 #include <cstdint>
 
 /// @defgroup apps Applications
@@ -22,7 +21,7 @@
 /// @ingroup apps
 class BtcComputer final : public NodeComputer {
   public:
-    explicit BtcComputer(const Platform& platform, CmsisI2CBus& i2c, ARM_DRIVER_USART& usart) noexcept;
+    explicit BtcComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, ARM_DRIVER_USART& usart) noexcept;
 
   protected:
     void on_init() override;

@@ -4,8 +4,8 @@
 #include "cmsis_i2c_bus.hpp"
 #include "flight_computer.hpp"
 #include "ms5611.hpp"
-#include "sd_store.hpp"
 #include "status_leds.hpp"
+#include "store.hpp"
 #include "tmp117.hpp"
 
 #include <array>
@@ -13,21 +13,20 @@
 
 /// Intermediate base for all BOLT nodes (BTC + EXPs). Owns the sensors
 /// present on every board: MS5611 (F-80, D-350) and TMP117 (F-70,
-/// D-340). Owns the SD log (D-120/D-140), status LEDs and boot state.
+/// D-340). Owns status LEDs and boot state.
 ///
 /// @ingroup core
 class NodeComputer : public FlightComputer {
   protected:
-    explicit NodeComputer(const Platform& platform, CmsisI2CBus& i2c) noexcept;
+    explicit NodeComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage) noexcept;
 
     /// Initialize I2C bus and common sensors, then call
     /// init_extra_sensors(). Call once from on_init().
     void init_sensors();
 
-    /// Initialize the SD card and mount the LittleFS filesystem. Call
-    /// once from on_init(), before the main loop begins.
-    /// hsd: SD_HandleTypeDef*, cast in node_computer.cpp
-    void init_sd(void* hsd);
+    /// Mount / open the configured Store. Call once from on_init(),
+    /// before the main loop begins.
+    void init_storage();
 
     /// Override to initialize board-specific sensors (e.g. ICM-42686-P
     /// on BTC and EXP3). Called at the end of init_sensors() after
@@ -43,10 +42,12 @@ class NodeComputer : public FlightComputer {
 
     static constexpr uint16_t TX_BUF_SIZE = 64U;
 
+    static constexpr uint8_t FLUSH_INTERVAL = 25U;
+
     CmsisI2CBus& i2c; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     MS5611 baro;
     TMP117 tmp;
-    SdStore sd;
+    Store& storage; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     StatusLeds leds;
     BootState::State boot;
     std::array<uint8_t, TX_BUF_SIZE> tx_buf{};

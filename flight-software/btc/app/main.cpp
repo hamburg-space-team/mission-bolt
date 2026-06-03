@@ -1,6 +1,7 @@
 #include "main.h"
 #include "btc_computer.hpp"
 #include "cmsis_i2c_bus.hpp"
+#include "sd_store.hpp"
 #include "timing.hpp"
 
 // NOLINTNEXTLINE(readability-identifier-naming)
@@ -8,6 +9,7 @@ extern ARM_DRIVER_I2C Driver_I2C1;
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern ARM_DRIVER_USART Driver_USART2;
 extern IWDG_HandleTypeDef hiwdg;
+extern SD_HandleTypeDef hsd1;
 
 namespace {
     static void kick_wdg() {
@@ -28,6 +30,7 @@ namespace {
 extern "C" void app_main(void) {
     static const Platform plat{HAL_Delay, HAL_GetTick, kick_wdg, get_tick_us, led_can_write, led_err_write};
     static CmsisI2CBus i2c{&Driver_I2C1, HAL_GetTick};
-    static BtcComputer computer{plat, i2c, Driver_USART2};
+    static SdStore storage{&hsd1};
+    static BtcComputer computer{plat, i2c, storage, Driver_USART2};
     computer.run();
 }

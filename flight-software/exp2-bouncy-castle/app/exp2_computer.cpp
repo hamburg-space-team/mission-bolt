@@ -20,8 +20,8 @@ extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     }
 }
 
-Exp2Computer::Exp2Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept
-    : ExpComputer(platform, i2c, can) {
+Exp2Computer::Exp2Computer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept
+    : ExpComputer(platform, i2c, storage, can) {
     instance_g = this;
 }
 

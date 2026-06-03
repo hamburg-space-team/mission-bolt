@@ -13,7 +13,7 @@
 /// @ingroup apps
 class Exp2Computer final : public ExpComputer {
   public:
-    explicit Exp2Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;
+    explicit Exp2Computer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept;
 
   protected:
     void on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) override;

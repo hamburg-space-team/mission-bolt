@@ -22,8 +22,8 @@ extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     }
 }
 
-Exp3Computer::Exp3Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept
-    : ExpComputer(platform, i2c, can) {
+Exp3Computer::Exp3Computer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept
+    : ExpComputer(platform, i2c, storage, can) {
     instance_g = this;
 }
 
@@ -53,7 +53,7 @@ void Exp3Computer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
     if (auto len = pkt.build(tx_buf.data(), exp_env_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &env,
                              static_cast<uint8_t>(sizeof(env)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
 
@@ -74,11 +74,11 @@ void Exp3Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
     using namespace PacketProtocol;
     PayloadExp3Status status{};
     // Scheduler/latency fields stay 0 until the duty-cycle pipeline lands.
-    status.sd_status = static_cast<uint8_t>(sd.is_mounted() ? 0x01U : 0x00U);
+    status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP3_STATUS, Tick{can_tick}, TimestampUs{timestamp_us},
                              &status, static_cast<uint8_t>(sizeof(status)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
