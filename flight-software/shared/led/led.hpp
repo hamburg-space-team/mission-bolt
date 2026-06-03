@@ -2,8 +2,12 @@
 
 #include <cstdint>
 
-// Single-LED abstraction. WriteFn(true) = on, WriteFn(false) = off.
-// Default-constructed Led is a no-op (nullptr write function).
+/// @defgroup led LED drivers
+
+/// Single-LED abstraction. WriteFn(true) = on, WriteFn(false) = off.
+/// Default-constructed Led is a no-op (nullptr write function).
+///
+/// @ingroup led
 class Led {
   public:
     using WriteFn = void (*)(bool on);

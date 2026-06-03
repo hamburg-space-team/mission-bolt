@@ -15,14 +15,19 @@ namespace PacketProtocol {
     constexpr uint8_t SPECTRUM_CHANNELS = 9U;
     static constexpr uint8_t HEADER_LENGTH_OFFSET = 5U;
 
+    /// 12-byte downlink packet header. Little-endian on the wire (matches
+    /// Cortex-M); sync bytes fixed. CRC at the end of the packet covers
+    /// everything after the two sync bytes.
+    ///
+    /// @ingroup comms
     struct __attribute__((packed)) PacketHeader {
         uint8_t sync[2];       // NOLINT(modernize-avoid-c-arrays) - SYNC_0, SYNC_1
-        uint8_t version;       // PROTOCOL_VERSION
-        uint8_t type;          // PayloadType
-        uint8_t sequence;      // per-type counter, wraps at 255
-        uint8_t length;        // payload length in bytes
-        uint16_t tick;         // 25 Hz tick since LO
-        uint32_t timestamp_us; // microseconds since LO
+        uint8_t version;       ///< PROTOCOL_VERSION
+        uint8_t type;          ///< PayloadType
+        uint8_t sequence;      ///< per-type counter, wraps at 255
+        uint8_t length;        ///< payload length in bytes
+        uint16_t tick;         ///< 25 Hz tick since LO
+        uint32_t timestamp_us; ///< microseconds since LO
     };
 
     static_assert(sizeof(PacketHeader) == HEADER_SIZE, "PacketHeader size mismatch");

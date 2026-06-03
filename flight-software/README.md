@@ -59,6 +59,17 @@ Details: [docs/guides/running-flight-unit-tests.md](../docs/guides/running-fligh
 
 [docs/guides/debugging-with-openocd.md](../docs/guides/debugging-with-openocd.md).
 
+## API Documentation
+
+Headers carry Doxygen annotations. Build:
+
+```bash
+doxygen Doxyfile
+```
+
+Output lands in `build/doxygen/html/`. Details:
+[docs/guides/generating-doxygen.md](../docs/guides/generating-doxygen.md).
+
 ## Toolchain
 
 - C++20 (`-std=gnu++20`), `arm-none-eabi-gcc` 13.3.1

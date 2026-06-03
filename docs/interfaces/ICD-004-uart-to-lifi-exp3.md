@@ -41,7 +41,8 @@ sample frames; EXP3 parses them as they arrive.
 ## Physical Layer
 
 - UART, 3.3 V, 8N1, no flow control.
-- Baud rate **921 600** planned. TODO: confirm during integration.
+- Baud rate **921 600**. Same value as EXP2 LiFi; documented
+  fallback at 460 800 if integration testing shows bit errors.
 - Cable UART uses a Molex connector that also carries 3.3 V and
   ground to the Wired Stack.
 
@@ -146,8 +147,8 @@ burst still attempted.
 
 | Name | Value |
 |---|---|
-| `UART_BAUD` | 921 600 (TODO confirm) |
-| `SAMPLE_FRAME_SIZE` | 39 (TODO finalise) |
+| `UART_BAUD` | 921 600 |
+| `SAMPLE_FRAME_SIZE` | 39 (TODO finalise against stack firmware) |
 | `WIRELESS_TIMEOUT_MS` | 50 (TODO confirm) |
 | `WIRED_START_TIMEOUT_MS` | 10 (TODO confirm) |
 | `MAX_BURST_MS` | 120 |

@@ -34,15 +34,19 @@ real fault is caught within 120 ms.
 **GAP_MARKER packets.** The BTC emits a `GAP_MARKER` with a
 `GapReason` whenever it can't include a source in a downlink slot:
 
-- `SENSOR_FAILED` -- source has marked the sensor disabled
-- `SCHEDULER_OVERRUN` -- BTC missed the slot
-- `SYNC_MISSED` -- an experiment lost BTC SYNC
+- `NO_DATA` -- no valid CAN data was received from the source
+  within the expected window
+- `CAN_CRC_FAIL` -- the CAN frame was received but failed CRC
+- `LIFI_TIMEOUT` -- no sample packets received from an EXP3 stack
+  within the expected interval (degraded or lost LiFi link)
+- `SENSOR_FAILED` -- the source has marked a sensor as permanently
+  disabled
 
 Defined in [`packet_types.hpp`](../../flight-software/shared/comms/packet_types.hpp).
 
 **AS7265X recovery.** Spectrometer gets one reset attempt before
-the three-strike rule kicks in: hold reset, wait three ticks,
-release, re-init.
+the three-strike rule kicks in: hold reset, wait three ticks
+(120 ms), release, re-init.
 
 **Autonomous mode.** Experiment controllers that miss 5 consecutive
 SYNCs (200 ms) generate their own local tick, write SD only, and
@@ -71,8 +75,11 @@ Bad:
 
 ## Notes
 
-TODO: 200 ms autonomous-mode threshold is a guess; validate during
-integration tests and tune in [ICD-002](../interfaces/ICD-002-can-protocol.md).
+The 200 ms autonomous-mode threshold balances false positives
+(single missed SYNC from bus noise) against responsiveness. We
+will measure the actual false-positive rate during integration
+tests; if needed it can be retuned in
+[ICD-002](../interfaces/ICD-002-can-protocol.md).
 
 EXP controllers report sensor failures over CAN via `valid_mask`.
 The BTC promotes those into `GAP_MARKER` if it has to drop the slot.

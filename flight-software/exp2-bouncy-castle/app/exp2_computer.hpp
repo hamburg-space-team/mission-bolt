@@ -6,6 +6,11 @@
 
 #include <cstdint>
 
+/// EXP2 "Bouncy Castle" controller. F-30/F-40: sends a predetermined
+/// LiFi signal and records intensity changes at the receiver. Schema
+/// is captured in PayloadExp2Ber; tick body is still TODO.
+///
+/// @ingroup apps
 class Exp2Computer final : public ExpComputer {
   public:
     explicit Exp2Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;

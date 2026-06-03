@@ -1,9 +1,13 @@
 # C++ Coding Standard (Flight Code)
 
-The flight code is C++20 (`-std=gnu++20`). The standard we follow
-in spirit is HIC++ (High Integrity C++). We don't claim full
-compliance, we claim the parts that matter for a single-shot
-embedded payload, and we document the carve-outs.
+The flight code is C++23 (`-std=gnu++23`). We picked C++23
+specifically for `std::expected`, which is our primary
+error-handling mechanism (see Error handling below). The standard
+we follow in spirit is HIC++ (High Integrity C++). We don't claim
+full compliance, we claim the parts that matter for a single-shot
+embedded payload, and we document the carve-outs. ECSS-E-ST-40C is
+used as a guide for our review phases; we do not target full
+compliance with the heavyweight aerospace standards.
 
 ## Hard Rules
 
@@ -87,14 +91,71 @@ Sized at compile time. Aligned where the underlying API needs it
 ## What We Don't Use
 
 - Exceptions, RTTI, the C++ standard library beyond `<cstdint>`,
-  `<cstddef>`, `<array>`.
+  `<cstddef>`, `<array>`, `<expected>`.
 - `std::function`, `std::shared_ptr`, anything that hides
   allocation.
 - Floating-point on the critical path unless the sensor demands
   it. Raw integer registers go to ground; conversion happens there
   ([ADR-009](../../decisions/ADR-009-raw-sensor-data-to-ground.md)).
 
+## Error handling
+
+`std::expected<T, E>` is the primary error-handling mechanism.
+Functions that can fail return an expected; the caller has to
+handle both the value and the error branch before using the
+result. Three reasons:
+
+- Exceptions are off (`-fno-exceptions`), so they're not available
+  anyway.
+- The error path is visible in the signature, not hidden in an
+  out-parameter or a sentinel return.
+- The compiler enforces that the caller handle the error before
+  unwrapping. No "I forgot to check the return value" bugs.
+
+```cpp
+[[nodiscard]] std::expected<int16_t, I2cError> read_temperature();
+```
+
+Sentinel returns (`int read(...)` with `0 = OK`, non-zero = error)
+are still used in the existing `DeviceBase` API and in HAL
+wrappers. New code should prefer `std::expected` where it doesn't
+fight the surrounding code.
+
 ## Comments
+
+Two layers: Doxygen on the public API in headers, inline comments
+only where the *why* is non-obvious.
+
+### Doxygen -- public API only
+
+Use `///` line comments. The first line is the brief.
+
+Write Doxygen for:
+
+- Public classes, structs and free functions
+- Public/protected methods *with non-obvious semantics* (timeouts,
+  error conditions, side effects, ordering constraints, units)
+
+Skip Doxygen for:
+
+- Trivial getters/setters -- the name says everything
+- Private members and methods -- implementation detail
+- `.cpp` files -- the matching header carries the API
+- Generated code (CubeMX, HAL)
+
+```cpp
+/// Reads the raw temperature register.
+///
+/// @param raw Destination; must not be nullptr.
+/// @return 0 on success; failures latch via DeviceBase.
+[[nodiscard]] int read(int16_t* raw);
+```
+
+If a better name removes the need for the comment, rename. A
+specific name beats a documented generic one
+(`read_temperature_centiCelsius` over `read` + Doxygen).
+
+### Inline comments -- only when the *why* is non-obvious
 
 Default to none. Identifiers should carry the meaning. Add a
 comment only when the *why* is non-obvious: a hidden constraint,
@@ -116,6 +177,28 @@ OK:
 platform.kick_wdg();
 ```
 
+### Cross-references
+
+When code implements a requirement, invariant or decision, name
+it explicitly so future readers can navigate back to the context:
+
+```cpp
+/// Reads the 18-channel spectrum (per F-10).
+Result read_channels(uint16_t* values, uint32_t timeout_ms);
+
+// I-2: hard timeout on every I2C read.
+i2c.read(addr, reg, &value, timeout_ms);
+
+// See ADR-007 for the IWDG strategy.
+platform.kick_wdg();
+```
+
+### Honesty
+
+If a comment becomes false, fix it or delete it. Update the
+comment in the same commit as the code change. Never document
+behaviour you have not verified.
+
 ## Tests
 
 - New algorithmic logic gets a host-side Catch2 test.
@@ -134,8 +217,9 @@ Look for:
   containers.
 - **Error paths.** Every return value checked. Every failure
   surfaced.
-- **Comments.** Are they explaining *why*? If they explain *what*,
-  delete them.
+- **Comments.** Doxygen blocks on public APIs -- required. Inline
+  body comments -- only if they explain *why*. Delete the "*what*"
+  ones.
 
 ## References
 

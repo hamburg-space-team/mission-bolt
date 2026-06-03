@@ -6,23 +6,33 @@
 #include <cstdint>
 #include <string_view>
 
-// Writes are buffered in a 512-byte cache and flushed to the SD card on
-// flush(). LittleFS commits metadata atomically, so a power failure at any
-// point leaves the filesystem and all previously-flushed packets intact.
+/// @defgroup storage Storage
+
+/// LittleFS-backed append-only SD log. Writes are buffered in a
+/// 512-byte cache and flushed to the SD card on flush(). LittleFS
+/// commits metadata atomically, so a power failure at any point leaves
+/// the filesystem and all previously-flushed packets intact.
+///
+/// One SdStore per node (D-120/D-140). BTC additionally mirrors the
+/// EXP downlink to its own log (D-130). See ADR-003, ADR-004.
+///
+/// @ingroup storage
 class SdStore {
   public:
-    // Mount the filesystem (format on first boot or after corruption), then
-    // open the log file for appending. Returns 0 on success, negative on error.
-    // hsd: pointer to SD handle
+    /// Mount the filesystem (format on first boot or after corruption),
+    /// then open the log file for appending. Returns 0 on success,
+    /// negative on error.
+    /// hsd: pointer to SD handle (SD_HandleTypeDef*)
     [[nodiscard]] int init(void* hsd);
 
-    // Append raw bytes to the log file cache. Does not hit the SD card unless
-    // the internal 512-byte cache overflows - always call flush() at tick end.
-    // Returns true on success.
+    /// Append raw bytes to the log file cache. Does not hit the SD
+    /// card unless the internal 512-byte cache overflows - always call
+    /// flush() at tick end. Returns true on success.
     bool write(const uint8_t* data, uint8_t len);
 
-    // Commit buffered writes to SD (lfs_file_sync). Call once per tick.
-    // Power-fail safe: all data written before flush() is guaranteed intact.
+    /// Commit buffered writes to SD (lfs_file_sync). Call once per
+    /// tick. Power-fail safe: all data written before flush() is
+    /// guaranteed intact.
     bool flush();
 
     [[nodiscard]] bool is_mounted() const {
@@ -55,7 +65,7 @@ class SdStore {
     [[nodiscard]] int mount_or_format();
     [[nodiscard]] int open_log();
 
-    // LittleFS block-device callbacks - SD_HandleTypeDef* is recovered via cfg.context.
+    // LittleFS block-device callbacks - SD_HandleTypeDef* recovered via cfg.context.
     static int bd_read(const lfs_config* c, lfs_block_t block, lfs_off_t off, void* buf, lfs_size_t size);
     static int bd_prog(const lfs_config* c, lfs_block_t block, lfs_off_t off, const void* buf, lfs_size_t size);
     static int bd_erase(const lfs_config* c, lfs_block_t block);

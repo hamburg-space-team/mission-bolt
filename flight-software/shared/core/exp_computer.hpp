@@ -6,36 +6,40 @@
 
 #include <cstdint>
 
-// Abstract base for all EXP nodes.
-//
-// Framework flow:
-//   on_init()  -> CAN + SD + sensors -> on_experiment_init()
-//   on_tick()  -> SYNC -> env/status  -> on_experiment_tick()
-//
-// A new EXP only needs to implement:
-//   - exp_can_id / exp_env_type / exp_status_type  (identity, one-liners)
-//   - on_experiment_init()                         (sensor init, optional)
-//   - on_experiment_tick()                         (science data, required)
-//
-// The concrete EXP .cpp must also declare a file-scope pointer to itself and implement
+/// Abstract base for all EXP nodes (D-110: each experiment runs on its own controller).
+///
+/// Framework flow:
+///   on_init()  -> CAN + SD + sensors -> on_experiment_init()
+///   on_tick()  -> SYNC -> env/status  -> on_experiment_tick()
+///
+/// A new EXP only needs to implement:
+///   - exp_can_id / exp_env_type / exp_status_type (identity, one-liners)
+///   - on_experiment_init()                        (sensor init, optional)
+///   - on_experiment_tick()                        (science data, required)
+///
+/// The concrete EXP .cpp must also declare a file-scope pointer to
+/// itself and implement HAL_CAN_RxFifo0MsgPendingCallback that
+/// forwards the SYNC frame to notify_sync().
+///
+/// @ingroup core
 class ExpComputer : public NodeComputer {
   public:
-    // Called by HAL_CAN_RxFifo0MsgPendingCallback in each concrete EXP's .cpp.
+    /// Called by HAL_CAN_RxFifo0MsgPendingCallback in each concrete
+    /// EXP's .cpp.
     void notify_sync(uint16_t tick) noexcept;
 
   protected:
     explicit ExpComputer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;
 
-    // EXP identity — one-liner overrides in each concrete subclass
+    // EXP identity - one-liner overrides in each concrete subclass
     [[nodiscard]] virtual uint32_t exp_can_id() const noexcept = 0;
     [[nodiscard]] virtual PacketProtocol::PayloadType exp_env_type() const noexcept = 0;
     [[nodiscard]] virtual PacketProtocol::PayloadType exp_status_type() const noexcept = 0;
 
-    // Packet builders — EXP3 overrides send_env_packet() for PayloadExp3Env
+    // Packet builders - EXP3 overrides send_env_packet() for PayloadExp3Env
     virtual void send_env_packet(uint16_t can_tick, uint32_t timestamp_us);
     virtual void send_status_packet(uint16_t can_tick, uint32_t timestamp_us);
 
-    // Experiment lifecycle hooks
     virtual void on_experiment_init() noexcept {
     }
     virtual void on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) = 0;

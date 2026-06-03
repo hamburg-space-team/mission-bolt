@@ -98,7 +98,7 @@ The three GPIO inputs sampled on the BTC are:
 | Signal | Direction | Polarity | Role |
 |--------|-----------|----------|------|
 | LO (Lift-Off) | RXSM -> BTC | Rising edge defines `t = 0` | First rising edge after boot transitions the BTC out of pre-flight wait state. The tick at which LO is observed is the science timeline reference for all controllers. |
-| SODS (Start of Data Storage) | RXSM -> BTC | Active level reported | Sampled and reported in `PayloadBtcStatus::signal_mask` bit 2 each tick. Does not gate on-board action; SD logging runs continuously from boot. |
+| SODS (Start of Data Storage) | RXSM -> BTC | Active level reported | Sampled and reported in `PayloadBtcStatus::signal_mask` bit 2 each tick. Candidate trigger for the start of SD logging; final mechanism still to be defined. SODS is documented as susceptible to noise, so any use as a control input will need debouncing. |
 | SOE (Start of Experiment) | RXSM -> BTC | Active level reported | Sampled and reported in `signal_mask` bit 1 each tick. Recorded for post-flight correlation only. |
 
 All three signals are sampled once per tick from inside the tick
@@ -131,9 +131,9 @@ the CRC. Bytes between frames are silence (idle line).
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| Nominal aggregate rate | <= 42 kbit/s | All sources at planned cadence |
-| Maximum aggregate rate | <= 80 kbit/s | Burst budget for recovery and BOOT packets |
-| Minimum acceptable rate | 30 kbit/s | Minimum-success criterion |
+| Nominal aggregate rate | ~83 kbit/s | All sources at planned cadence |
+| Maximum aggregate rate | <= 115 kbit/s | Burst budget for recovery and BOOT packets |
+| Minimum acceptable rate | 50 kbit/s | Minimum-success criterion |
 | Frame inter-arrival | >= 0 | No required gap; back-to-back frames are valid |
 | LO detection latency | <= 40 ms | Sampled once per tick |
 

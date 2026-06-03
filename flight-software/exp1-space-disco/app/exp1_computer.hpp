@@ -8,19 +8,24 @@
 
 #include <cstdint>
 
-// Measurement cycle (10 ticks × 40ms = 400ms):
-// Phase 0:  start DARK
-// Phase 1:  wait
-// Phase 2:  read DARK -> send dark -> start RGB
-// Phase 3:  wait
-// Phase 4:  read RGB -> send RGB -> start WHITE
-// Phase 5:  wait
-// Phase 6:  read WHITE -> send white -> start IR
-// Phase 7:  wait
-// Phase 8:  read IR -> send IR -> start UV
-// Phase 9:  wait
-// Phase 10: read UV -> send UV -> disable LEDs
-
+/// EXP1 "Space Disco" controller. F-10/F-20: measures UV, IR and
+/// visible-light wavelengths and records timestamped sent/received
+/// intensities for post-flight correlation.
+///
+/// Measurement cycle (10 ticks x 40ms = 400ms):
+/// Phase 0:  start DARK
+/// Phase 1:  wait
+/// Phase 2:  read DARK -> send dark -> start RGB
+/// Phase 3:  wait
+/// Phase 4:  read RGB -> send RGB -> start WHITE
+/// Phase 5:  wait
+/// Phase 6:  read WHITE -> send white -> start IR
+/// Phase 7:  wait
+/// Phase 8:  read IR -> send IR -> start UV
+/// Phase 9:  wait
+/// Phase 10: read UV -> send UV -> disable LEDs
+///
+/// @ingroup apps
 class Exp1Computer final : public ExpComputer {
   public:
     explicit Exp1Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;

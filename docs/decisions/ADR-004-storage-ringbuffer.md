@@ -1,4 +1,4 @@
-# ADR-003: Producer-Consumer Ringbuffer for SD Logging
+# ADR-004: Producer-Consumer Ringbuffer for SD Logging
 
 ## Status
 
@@ -10,8 +10,9 @@ Accepted
 
 ## Context
 
-Each STM32L476 flight controller and the STM32F756 BTC log telemetry data 
-to a microSD card via SDMMC and LittleFS. Consumer-grade SD cards stall 
+Each STM32L476 flight controller (BTC, EXP1, EXP2, EXP3) logs
+telemetry data to a microSD card via SDMMC and LittleFS. Consumer-
+grade SD cards stall 
 unpredictably for 50-300 ms during internal flash management operations 
 (garbage collection, wear levelling).
 
@@ -86,7 +87,8 @@ not justified for a single-mission deployment.
 ### Positive
 
 - `on_tick()` execution time becomes deterministic, maintaining I-1
-- LittleFS power-loss safety is preserved per I-7
+- LittleFS power-loss safety is preserved (P-2: local SD is the
+  post-flight authoritative record)
 - No RTOS complexity required, maintaining the analysability-by-
   inspection property per P-3
 - Migration path to RTOS preserved if needed; only consumer context 
@@ -95,8 +97,9 @@ not justified for a single-mission deployment.
 
 ### Negative
 
-- Long SD stalls (>15 ms) still cause individual missed ticks during 
-  the drain phase
+- Long SD stalls (those that extend past the 5 ms
+  `MIN_TIME_FOR_WRITE_MS` threshold late in the tick) still cause
+  individual missed ticks during the drain phase
 - Worst-case 1 second data loss on mid-tick reboot due to 25-tick sync 
   interval
 - Increased RAM usage: 64 entries x 60 bytes ~ 4 KB per controller
@@ -124,10 +127,12 @@ without meaningful data-loss reduction.
 
 ## References
 
-- Related ADRs: [ADR-001 Tick Architecture](ADR-001-tick-architecture.md)
-- Related ICDs: [ICD-001 RS-422 to RXSM](../interfaces/ICD-001-rs422-to-rxsm.md)
-- Implementation: [`flight-software/src/shared/storage/`](../../flight-software/src/shared/storage/)
-- System Invariants: [I-1 and I-7](../architecture/system-invariants.md)
+- Related ADRs: [ADR-001 Tick Architecture](ADR-001-tick-architecture.md),
+  [ADR-007 IWDG](ADR-007-iwdg-watchdog-strategy.md)
+- Related ICDs: [ICD-001 RS-422 to RXSM](../interfaces/ICD-001-rs-422-to-rxsm.md)
+- Implementation: [`flight-software/shared/storage/`](../../flight-software/shared/storage/)
+- System Invariants: [I-1 (deterministic tick budget) and P-2 (local
+  data + downlink complementary)](../standards/system-invariants.md)
 
 ## Revision History
 

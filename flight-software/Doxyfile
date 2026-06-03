@@ -1,0 +1,121 @@
+# THHOR-BOLT REXUS 37 - Flight Software Doxyfile
+# Generated for Doxygen >= 1.9. Only non-default settings are listed.
+# Run from the flight-software/ directory:
+#     doxygen Doxyfile
+
+# --- Project ---------------------------------------------------------------
+PROJECT_NAME           = "THHOR-BOLT Flight Software"
+PROJECT_BRIEF          = "Embedded firmware for the four STM32 controllers of THHOR-BOLT REXUS 37."
+PROJECT_NUMBER         = "main"
+OUTPUT_DIRECTORY       = build/doxygen
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+
+# --- Inputs ----------------------------------------------------------------
+INPUT                  = shared \
+                         btc/app \
+                         exp1-space-disco/app \
+                         exp2-bouncy-castle/app \
+                         exp3-floaty-boi/app \
+                         README.md
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.cpp *.h *.md
+EXCLUDE_PATTERNS       = */generated/* */RTE/* */build/* */tmp/* */out/* */lib/littlefs/*
+USE_MDFILE_AS_MAINPAGE = README.md
+STRIP_FROM_PATH        = .
+
+# --- Extraction ------------------------------------------------------------
+# Per documentation-for-ai-agents.md: public API only.
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_PRIV_VIRTUAL   = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = NO
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
+INTERNAL_DOCS          = NO
+SHOW_INCLUDE_FILES     = YES
+SHOW_USED_FILES        = YES
+SHOW_FILES             = YES
+SHOW_NAMESPACES        = YES
+INLINE_SOURCES         = NO
+SOURCE_BROWSER         = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+# --- C++ parsing -----------------------------------------------------------
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = NO
+MULTILINE_CPP_IS_BRIEF = NO
+INHERIT_DOCS           = YES
+SEPARATE_MEMBER_PAGES  = NO
+TAB_SIZE               = 4
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = YES
+CPP_CLI_SUPPORT        = NO
+DISTRIBUTE_GROUP_DOC   = NO
+GROUP_NESTED_COMPOUNDS = YES
+SUBGROUPING            = YES
+INLINE_GROUPED_CLASSES = NO
+INLINE_SIMPLE_STRUCTS  = NO
+TYPEDEF_HIDES_STRUCT   = NO
+
+# Macros / vendor-extensions used in the code base
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = __attribute__(x)= \
+                         __packed= \
+                         DOXYGEN=1
+
+# --- Diagnostics -----------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC       = NO
+WARN_AS_ERROR          = NO
+WARN_LOGFILE           = build/doxygen/warnings.log
+
+# --- HTML output -----------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE        = AUTO_LIGHT
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_DYNAMIC_SECTIONS  = YES
+HTML_INDEX_NUM_ENTRIES = 100
+SEARCHENGINE           = YES
+
+# --- LaTeX / man / xml: disabled to keep build fast ------------------------
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+GENERATE_XML           = NO
+GENERATE_RTF           = NO
+GENERATE_DOCBOOK       = NO
+
+# --- Diagrams (require Graphviz) -------------------------------------------
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 0
+CLASS_DIAGRAMS         = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+DIRECTORY_GRAPH        = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_TRANSPARENT        = YES
+DOT_GRAPH_MAX_NODES    = 75
+MAX_DOT_GRAPH_DEPTH    = 0
+
+# --- Alphabetical index ----------------------------------------------------
+ALPHABETICAL_INDEX     = YES

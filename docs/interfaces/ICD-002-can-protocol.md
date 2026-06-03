@@ -39,13 +39,16 @@ This document specifies:
 
 This document does not cover:
 
-- The downlink packet format used after BTC reassembly (see ICD-001)
+- The downlink packet format used after BTC reassembly (see
+  [ICD-006](ICD-006-downlink-packet-format.md))
+- The RS-422 link from BTC to RXSM (see
+  [ICD-001](ICD-001-rs-422-to-rxsm.md))
 
 ## Parties
 
 | Component | Hardware | Role |
 |-----------|----------|------|
-| BTC | STM32F756ZG | Bus master, SYNC broadcaster, downlink aggregator |
+| BTC | STM32L476RGT6 | Bus master, SYNC broadcaster, downlink aggregator |
 | EXP1 | STM32L476RGT6 | Space Disco data publisher |
 | EXP2 | STM32L476RGT6 | Bouncy Castle data publisher |
 | EXP3 | STM32L476RGT6 | Floaty Boi data publisher |
@@ -54,11 +57,17 @@ This document does not cover:
 
 ### Electrical Specification
 
-To be defined
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Bit rate | 1 Mbit/s | Single bus shared by all four nodes |
+| Frame format | CAN 2.0B standard, 11-bit IDs | |
+| Transceiver | TCAN332D (3.3 V) | Per CDR electronics chapter |
+| Topology | Linear bus with termination | Star fallback if signal integrity allows |
 
 ### Cable Specification
 
-To be defined
+Twisted pair with EMI shielding, routed on the REXUS baseplate.
+Detailed harness specification in the CDR electronics chapter.
 
 ## Protocol Specification
 
@@ -105,7 +114,9 @@ Byte order is little-endian for multi-byte fields.
 
 | Offset | Size | Type | Field | Description |
 |--------|------|------|-------|-------------|
-| 0 | 4 B | uint32 LE | tick_number | Current BTC tick from LO |
+| 0 | 2 B | uint16 LE | tick_number | Current BTC tick from LO |
+| 2 | 4 B | uint32 LE | timestamp_us | BTC microsecond timestamp when SYNC was framed |
+| 6 | 2 B | uint16 LE | reserved | Set to 0, ignored on consumers |
 
 
 ## Fragmentation Protocol
@@ -141,7 +152,7 @@ GAP_MARKER packet with reason `CAN_CRC_FAIL`.
 ### Missing Messages
 
 If an experiment misses 5 consecutive SYNC messages (200 ms), it enters 
-autonomous mode (see ADR-004 Fault Management).
+autonomous mode (see [ADR-005 Fault Management](../decisions/ADR-005-fault-management.md)).
 
 ## Constants
 
