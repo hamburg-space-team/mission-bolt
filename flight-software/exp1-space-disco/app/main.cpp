@@ -2,11 +2,13 @@
 #include "bxcan_transport.hpp"
 #include "cmsis_i2c_bus.hpp"
 #include "exp1_computer.hpp"
+#include "sd_store.hpp"
 #include "timing.hpp"
 
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern ARM_DRIVER_I2C Driver_I2C1;
 extern IWDG_HandleTypeDef hiwdg;
+extern SD_HandleTypeDef hsd1;
 
 static void kick_wdg() {
     HAL_IWDG_Refresh(&hiwdg);
@@ -25,7 +27,8 @@ static void led_err_write(bool on) {
 extern "C" void app_main(void) {
     static const Platform platform{HAL_Delay, HAL_GetTick, kick_wdg, get_tick_us, led_can_write, led_err_write};
     static CmsisI2CBus i2c{&Driver_I2C1, HAL_GetTick};
+    static SdStore storage{&hsd1};
     static BxcanTransport can_transport;
-    static Exp1Computer computer{platform, i2c, can_transport};
+    static Exp1Computer computer{platform, i2c, storage, can_transport};
     computer.run();
 }

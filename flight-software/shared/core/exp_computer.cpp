@@ -4,10 +4,9 @@
 #include "packet_payloads.hpp"
 
 extern CAN_HandleTypeDef hcan1;
-extern SD_HandleTypeDef hsd1;
 
-ExpComputer::ExpComputer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept
-    : NodeComputer(platform, i2c), can(can) {
+ExpComputer::ExpComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept
+    : NodeComputer(platform, i2c, storage), can(can) {
 }
 
 void ExpComputer::notify_sync(uint16_t tick) noexcept {
@@ -40,13 +39,16 @@ void ExpComputer::on_init() {
     HAL_CAN_Start(&hcan1);
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 
-    init_sd(&hsd1);
+    init_storage();
     init_sensors();
     on_experiment_init();
 
     if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count)) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+        // Critical event: BOOT packet must hit durable storage before
+        // any subsequent reset can lose it.
+        (void)storage.flush();
     }
 }
 
@@ -69,7 +71,13 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     send_status_packet(can_tick, tick_start_us);
     on_experiment_tick(can_tick, tick_start_us);
 
-    (void)sd.flush();
+    // ADR-004: flush at 1 Hz (every 25 ticks) rather than every tick.
+    // Per-tick flushing forced partial-block writes that undermined the
+    // natural block-aligned commit cycle. Critical events (BOOT,
+    // sensor failure) flush out of band in their handlers.
+    if ((can_tick % FLUSH_INTERVAL) == 0U) {
+        (void)storage.flush();
+    }
 }
 
 void ExpComputer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
@@ -91,7 +99,7 @@ void ExpComputer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
     if (auto len = pkt.build(tx_buf.data(), exp_env_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &env,
                              static_cast<uint8_t>(sizeof(env)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
 
@@ -102,12 +110,12 @@ void ExpComputer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
     using namespace PacketProtocol;
     PayloadExpStatus status{};
     status.uptime_s = platform.tick_ms() / 1000U;
-    status.sd_status = static_cast<uint8_t>(sd.is_mounted() ? 0x01U : 0x00U);
+    status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
 
     if (auto len = pkt.build(tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &status,
                              static_cast<uint8_t>(sizeof(status)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
 
@@ -125,6 +133,6 @@ void ExpComputer::send_gap(uint16_t first_tick, uint8_t count, PacketProtocol::G
     if (auto len = pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick},
                                  PacketProtocol::TimestampUs{timestamp_us}, gap)) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }

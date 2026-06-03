@@ -153,8 +153,8 @@ extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
 }
 
-BtcComputer::BtcComputer(const Platform& platform, CmsisI2CBus& i2c, ARM_DRIVER_USART& usart) noexcept
-    : NodeComputer(platform, i2c), usart(usart) {
+BtcComputer::BtcComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, ARM_DRIVER_USART& usart) noexcept
+    : NodeComputer(platform, i2c, storage), usart(usart) {
 }
 
 void BtcComputer::on_init() {
@@ -175,12 +175,15 @@ void BtcComputer::on_init() {
                   DOWNLINK_BAUD);
     usart.Control(ARM_USART_CONTROL_TX, 1U);
 
-    init_sd(&hsd1);
+    init_storage();
     init_sensors();
 
     if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count)) {
         usart.Send(tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+        // Critical event: BOOT must hit durable storage before any
+        // reset could lose it.
+        (void)storage.flush();
     }
 }
 
@@ -194,7 +197,7 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
                                  PacketProtocol::TimestampUs{timestamp_us}, gap)) {
         usart_wait();
         usart.Send(tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
 
@@ -225,7 +228,7 @@ void BtcComputer::drain_exp_frames() {
         const uint8_t actual_len = static_cast<uint8_t>(PacketProtocol::HEADER_SIZE) + payload_len +
                                    static_cast<uint8_t>(PacketProtocol::CRC_SIZE);
         usart.Send(raw, actual_len);
-        (void)sd.write(raw, actual_len);
+        (void)storage.write(raw, actual_len);
         rx_tail_g = static_cast<uint8_t>((rx_tail_g + 1U) % RX_RING_SIZE);
     }
 }
@@ -265,7 +268,7 @@ void BtcComputer::send_env_packet(uint32_t tick_start_us) {
                              static_cast<uint8_t>(sizeof(env)))) {
         usart_wait();
         usart.Send(tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
 
@@ -277,7 +280,7 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
     PayloadBtcStatus status{};
     status.uptime_s = platform.tick_ms() / 1000U;
     // TODO bit 1 (SD failed) once SdStore tracks consecutive write failures
-    status.sd_status = static_cast<uint8_t>(sd.is_mounted() ? 0x01U : 0x00U);
+    status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
 
     if (lo_received) {
         status.signal_mask |= 0x01U;
@@ -294,7 +297,7 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
                              &status, static_cast<uint8_t>(sizeof(status)))) {
         usart_wait();
         usart.Send(tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
 
@@ -321,7 +324,7 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
 
     if ((sync_count % SAVE_INTERVAL) == 0U) {
         BootState::save_tick(sync_count);
+        (void)storage.flush();
     }
-    (void)sd.flush();
     sync_count++;
 }

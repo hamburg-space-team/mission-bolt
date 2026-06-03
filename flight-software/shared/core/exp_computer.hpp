@@ -29,7 +29,7 @@ class ExpComputer : public NodeComputer {
     void notify_sync(uint16_t tick) noexcept;
 
   protected:
-    explicit ExpComputer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept;
+    explicit ExpComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept;
 
     // EXP identity - one-liner overrides in each concrete subclass
     [[nodiscard]] virtual uint32_t exp_can_id() const noexcept = 0;

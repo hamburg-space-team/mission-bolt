@@ -18,16 +18,18 @@ namespace {
 
 } // namespace
 
-Result<void> SdStore::init(void* handle) {
-    this->hsd = handle;
-    auto* hsd = static_cast<SD_HandleTypeDef*>(handle);
+SdStore::SdStore(void* hsd) noexcept : hsd(hsd) {
+}
+
+Result<void> SdStore::init() {
+    auto* hsd_typed = static_cast<SD_HandleTypeDef*>(this->hsd);
 
     HAL_SD_CardInfoTypeDef info{};
-    if (HAL_SD_GetCardInfo(hsd, &info) != HAL_OK) {
+    if (HAL_SD_GetCardInfo(hsd_typed, &info) != HAL_OK) {
         return std::unexpected(Error::IO_ERROR);
     }
 
-    cfg.context = hsd;
+    cfg.context = hsd_typed;
     cfg.read = bd_read;
     cfg.prog = bd_prog;
     cfg.erase = bd_erase;

@@ -26,8 +26,8 @@ extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     }
 }
 
-Exp1Computer::Exp1Computer(const Platform& platform, CmsisI2CBus& i2c, CanTransport& can) noexcept
-    : ExpComputer(platform, i2c, can) {
+Exp1Computer::Exp1Computer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, CanTransport& can) noexcept
+    : ExpComputer(platform, i2c, storage, can) {
     instance_g = this;
 }
 
@@ -195,12 +195,12 @@ void Exp1Computer::send_spectrum_pair(uint8_t idx) {
     if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM_A, Tick{start_tick},
                              TimestampUs{start_timestamp_us}, &spec_a, static_cast<uint8_t>(sizeof(spec_a)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM_B, Tick{start_tick},
                              TimestampUs{start_timestamp_us}, &spec_b, static_cast<uint8_t>(sizeof(spec_b)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)sd.write(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
     }
 }
