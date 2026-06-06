@@ -43,9 +43,17 @@ Result<void> CmsisI2CBus::read(uint8_t addr, uint8_t* data, std::size_t len) {
 
 Result<void> CmsisI2CBus::write_read(uint8_t addr, const uint8_t* tx, std::size_t tx_len, uint8_t* rx,
                                      std::size_t rx_len) {
-    if (auto r = write(addr, tx, tx_len); !r) {
+    if (drv == nullptr) {
+        return std::unexpected(Error::BAD_ARGUMENT);
+    }
+
+    if (drv->MasterTransmit(addr, tx, tx_len, true) != ARM_DRIVER_OK) {
+        return std::unexpected(Error::BUS_ERROR);
+    }
+    if (auto r = wait_busy(); !r) {
         return r;
     }
+
     return read(addr, rx, rx_len);
 }
 
