@@ -16,6 +16,9 @@ namespace CanProtocol {
     constexpr uint32_t SYNC_ID = 0x001U;
     constexpr uint8_t SYNC_DLC = 2U;
 
+    constexpr uint32_t STORAGE_START_ID = 0x002U;
+    constexpr uint8_t STORAGE_START_DLC = 0U;
+
     constexpr uint32_t EXP1_DATA_ID = 0x010U;
     constexpr uint32_t EXP2_DATA_ID = 0x020U;
     constexpr uint32_t EXP3_DATA_ID = 0x030U;

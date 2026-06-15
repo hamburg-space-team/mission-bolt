@@ -9,25 +9,7 @@
 #include <cstdint>
 #include <string_view>
 
-/// LittleFS-backed append-only SD log. Sits behind a producer/consumer
-/// ring buffer so on_tick() never touches SDMMC directly (ADR-004):
-///
-///   on_tick() -> write() -> ring buffer in RAM   (microseconds)
-///                    |
-///                    v
-///   framework idle phase -> drain_one() -> lfs_file_write()  (may stall)
-///                                                  |
-///                                                  v
-///   1 Hz cadence + BOOT -> flush() -> lfs_file_sync()  (durability)
-///
-/// The ring buffer holds RING_CAPACITY slots, each big enough for the
-/// full MAX_PACKET_SIZE downlink frame. SD cards stall unpredictably
-/// for 50-300 ms during internal flash management; the ring buffer
-/// absorbs the produced data during the stall and the drain catches
-/// up once the card recovers.
-///
-/// One SdStore per node (D-120/D-140). BTC additionally mirrors the
-/// EXP downlink to its own log (D-130). See ADR-003, ADR-004.
+/// LittleFS-backed append-only SD log. Sits behind a producer/consumer ring buffer
 ///
 /// @ingroup storage
 class SdStore final : public Store {
@@ -73,10 +55,7 @@ class SdStore final : public Store {
     static constexpr int32_t BLOCK_CYCLES = 500;      // wear-levelling hint
     static constexpr std::string_view LOG_FILENAME = "log.bin";
 
-    // Producer/consumer ring buffer geometry (ADR-004).
-    // 64 slots * 64 B payload + 1 B length each = ~4.2 KB per controller.
-    // Sized to absorb a 300 ms SD stall at the EXP3 worst-case production
-    // rate (~125 packets/s).
+    // Producer/consumer ring buffer geometry.
     static constexpr uint8_t RING_CAPACITY = 64U;
     static constexpr uint8_t SLOT_BYTES = static_cast<uint8_t>(PacketProtocol::MAX_PACKET_SIZE);
 

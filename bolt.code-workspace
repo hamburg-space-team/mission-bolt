@@ -69,7 +69,6 @@
     "extensions": {
         "recommendations": [
             "llvm-vs-code-extensions.vscode-clangd",
-            "xaver.clang-format",
             "marus25.cortex-debug",
             "ms-vscode.vscode-serial-monitor",
             "alexnesnes.teleplot",

@@ -1,8 +1,8 @@
 #include "node_computer.hpp"
 
 NodeComputer::NodeComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage) noexcept
-    : FlightComputer(platform), i2c(i2c), storage(storage),
-      leds(Led{platform.led_can}, Led{platform.led_err}), boot(BootState::read()) {
+    : FlightComputer(platform), i2c(i2c), storage(storage), leds(Led{platform.led_can}, Led{platform.led_err}),
+      boot(BootState::read()) {
 }
 
 void NodeComputer::init_sensors() {
