@@ -23,6 +23,11 @@
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
+            "svdFile": "${userHome}/.cache/arm/packs/Keil/STM32L4xx_DFP/3.1.0/CMSIS/SVD/STM32L476.svd",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            },
             "preLaunchTask": "Build btc.Debug"
         },
         {
@@ -47,6 +52,11 @@
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
+            "svdFile": "${userHome}/.cache/arm/packs/Keil/STM32L4xx_DFP/3.1.0/CMSIS/SVD/STM32L476.svd",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            },
             "preLaunchTask": "Build exp1.Debug"
         },
         {
@@ -71,6 +81,11 @@
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
+            "svdFile": "${userHome}/.cache/arm/packs/Keil/STM32L4xx_DFP/3.1.0/CMSIS/SVD/STM32L476.svd",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            },
             "preLaunchTask": "Build exp2.Debug"
         },
         {
@@ -95,6 +110,11 @@
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
+            "svdFile": "${userHome}/.cache/arm/packs/Keil/STM32L4xx_DFP/3.1.0/CMSIS/SVD/STM32L476.svd",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            },
             "preLaunchTask": "Build exp3.Debug"
         },
         {
@@ -119,6 +139,11 @@
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",
+            "svdFile": "${userHome}/.cache/arm/packs/Keil/STM32H7xx_DFP/4.1.3/CMSIS/SVD/STM32H753.svd",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            },
             "preLaunchTask": "Build test.Debug"
         },
         {

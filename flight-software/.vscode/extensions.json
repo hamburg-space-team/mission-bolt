@@ -3,6 +3,8 @@
         "ms-vscode.vscode-serial-monitor",
         "llvm-vs-code-extensions.vscode-clangd",
         "marus25.cortex-debug",
+        "mcu-debug.peripheral-viewer",
+        "mcu-debug.memory-view",
         "alexnesnes.teleplot"
     ]
 }
