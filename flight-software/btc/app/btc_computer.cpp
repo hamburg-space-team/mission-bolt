@@ -2,18 +2,30 @@
 #include "can_protocol.hpp"
 #include "main.h"
 #include "packet_builder.hpp"
+#include "packet_header.hpp"
 #include "packet_payloads.hpp"
 #include "packet_types.hpp"
 
 #include <array>
-#include <cstdio>
-#include <cstring>
 
 extern CAN_HandleTypeDef hcan1;
 extern SD_HandleTypeDef hsd1;
 extern RTC_HandleTypeDef hrtc;
 
 namespace {
+
+    // EXP data IDs the reassembler tracks
+    constexpr std::array<uint32_t, 3U> EXP_DATA_IDS = {
+        CanProtocol::EXP1_DATA_ID,
+        CanProtocol::EXP2_DATA_ID,
+        CanProtocol::EXP3_DATA_ID,
+    };
+
+    BtcComputer* instance_g = nullptr;
+
+    // SAFETY: written in EXTI ISR, read in main thread. bool read/write
+    // is atomic on Cortex-M4.
+    volatile bool lo_pending_g = false;
 
     void configure_exact_filter(uint32_t stid, uint8_t bank, uint32_t fifo) {
         CAN_FilterTypeDef f{};
@@ -40,67 +52,10 @@ namespace {
                static_cast<uint32_t>(t.Seconds);
     }
 
-    // ---- SYNC TX ----
-    void send_can_sync(uint16_t tick) {
-        CAN_TxHeaderTypeDef hdr{};
-        hdr.StdId = CanProtocol::SYNC_ID;
-        // hdr.IDE = 0 (CAN_ID_STD), hdr.RTR = 0 (CAN_RTR_DATA) - set by zero-init
-        hdr.DLC = CanProtocol::SYNC_DLC;
-        hdr.TransmitGlobalTime = DISABLE;
-
-        const std::array<uint8_t, CanProtocol::SYNC_DLC> data = {
-            static_cast<uint8_t>(tick),
-            static_cast<uint8_t>(tick >> 8U),
-        };
-        uint32_t mailbox = 0U;
-        HAL_CAN_AddTxMessage(&hcan1, &hdr, data.data(), &mailbox);
-    }
-
-    // ---- Per-EXP reassembly state (fragment -> complete packet) ----
-    struct ReassemblySlot {
-        std::array<uint8_t, CanProtocol::EXP_DATA_LEN> buf{};
-        uint8_t frames_received = 0U;
-        uint8_t frames_expected = 0U;
-    };
-
-    constexpr uint8_t EXP_COUNT = 3U;
-    static std::array<ReassemblySlot, EXP_COUNT> reassembly_g{};
-
-    // ---- Forwarding ring buffer (complete reassembled packets -> UART/SD) ----
-    struct RxPacket {
-        std::array<uint8_t, CanProtocol::EXP_DATA_LEN> data{};
-    };
-
-    // SAFETY: rx_head_g written in ISR, rx_tail_g written in main thread only.
-    // uint8_t read/write is atomic on Cortex-M4 -- no mutex needed.
-    // Ring buffer drop-on-full strategy: ISR drops if (next == rx_tail_g).
-    constexpr uint8_t RX_RING_SIZE = 8U;
-    static std::array<RxPacket, RX_RING_SIZE> rx_ring_g{};
-    static volatile uint8_t rx_head_g = 0U;
-    static volatile uint8_t rx_tail_g = 0U;
-
-    constexpr uint32_t TX_TIMEOUT_MS = 100U;
-
-    // SAFETY: written in EXTI ISR, read in main thread only. bool is atomic on Cortex-M4.
-    static volatile bool lo_pending_g = false;
-
-    uint8_t id_to_exp_idx(uint32_t id) {
-        if (id == CanProtocol::EXP1_DATA_ID) {
-            return 0U;
-        }
-        if (id == CanProtocol::EXP2_DATA_ID) {
-            return 1U;
-        }
-        if (id == CanProtocol::EXP3_DATA_ID) {
-            return 2U;
-        }
-        return 0xFFU;
-    }
-
 } // namespace
 
-// Reassembles bxCAN fragments back into complete PacketProtocol frames, then pushes
-// to the ring buffer for on_tick() to forward.
+// HAL callback: pulls one bxCAN frame from FIFO1 and forwards it to
+// the reassembler. The reassembly state lives in CanReassembler.
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     CAN_RxHeaderTypeDef hdr{};
@@ -108,41 +63,8 @@ extern "C" void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &hdr, raw.data()) != HAL_OK) {
         return;
     }
-
-    auto exp_idx = id_to_exp_idx(hdr.StdId);
-    if (exp_idx >= EXP_COUNT) {
-        return;
-    }
-
-    auto frame_idx = static_cast<uint8_t>(raw[0] >> 4U);
-    auto frame_count = static_cast<uint8_t>(raw[0] & 0x0FU);
-
-    ReassemblySlot& slot = reassembly_g[exp_idx];
-
-    // Reset slot on new sequence start; discard mid-sequence if first frame is missing.
-    if (frame_idx == 0U) {
-        slot = {};
-        slot.frames_expected = frame_count;
-    } else if (frame_idx != slot.frames_received) {
-        slot = {}; // reset
-        return;
-    }
-
-    auto offset = static_cast<uint8_t>(frame_idx * CanProtocol::BXCAN_BYTES_PER_FRAME);
-    if (offset < CanProtocol::EXP_DATA_LEN) {
-        auto space = static_cast<uint8_t>(CanProtocol::EXP_DATA_LEN - offset);
-        auto chunk = (space < CanProtocol::BXCAN_BYTES_PER_FRAME) ? space : CanProtocol::BXCAN_BYTES_PER_FRAME;
-        std::memcpy(slot.buf.data() + offset, raw.data() + 1U, chunk);
-    }
-    slot.frames_received++;
-
-    if (slot.frames_received == slot.frames_expected) {
-        const auto next = static_cast<uint8_t>((rx_head_g + 1U) % RX_RING_SIZE);
-        if (next != rx_tail_g) { // drop if ring full
-            rx_ring_g[rx_head_g].data = slot.buf;
-            rx_head_g = next;
-        }
-        slot = {};
+    if (instance_g != nullptr) {
+        instance_g->notify_can_frame(hdr.StdId, raw.data());
     }
 }
 
@@ -154,7 +76,12 @@ extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 BtcComputer::BtcComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, ARM_DRIVER_USART& usart) noexcept
-    : NodeComputer(platform, i2c, storage), usart(usart) {
+    : NodeComputer(platform, i2c, storage), downlink(usart, platform), reassembler(EXP_DATA_IDS), sync_tx(hcan1) {
+    instance_g = this;
+}
+
+void BtcComputer::notify_can_frame(uint32_t can_id, const uint8_t* raw) noexcept {
+    reassembler.on_frame(can_id, raw);
 }
 
 void BtcComputer::on_init() {
@@ -168,18 +95,13 @@ void BtcComputer::on_init() {
     HAL_CAN_Start(&hcan1);
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO1_MSG_PENDING);
 
-    usart.Initialize(nullptr);
-    usart.PowerControl(ARM_POWER_FULL);
-    usart.Control(ARM_USART_MODE_ASYNCHRONOUS | ARM_USART_DATA_BITS_8 | ARM_USART_PARITY_NONE | ARM_USART_STOP_BITS_1 |
-                      ARM_USART_FLOW_CONTROL_NONE,
-                  DOWNLINK_BAUD);
-    usart.Control(ARM_USART_CONTROL_TX, 1U);
+    downlink.init(DOWNLINK_BAUD);
 
     init_storage();
     init_sensors();
 
     if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count)) {
-        usart.Send(tx_buf.data(), *len);
+        downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
         // Critical event: BOOT must hit durable storage before any
         // reset could lose it.
@@ -195,8 +117,7 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
     gap.reason = reason;
     if (auto len = pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick},
                                  PacketProtocol::TimestampUs{timestamp_us}, gap)) {
-        usart_wait();
-        usart.Send(tx_buf.data(), *len);
+        downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
 }
@@ -211,25 +132,12 @@ void BtcComputer::init_extra_sensors() {
     }
 }
 
-void BtcComputer::usart_wait() {
-    const uint32_t deadline = platform.tick_ms() + TX_TIMEOUT_MS;
-    while (usart.GetStatus().tx_busy != 0U) {
-        if (platform.tick_ms() > deadline) {
-            break;
-        }
-    }
-}
-
 void BtcComputer::drain_exp_frames() {
-    while (rx_tail_g != rx_head_g) {
-        usart_wait();
-        const uint8_t* raw = rx_ring_g[rx_tail_g].data.data();
-        const uint8_t payload_len = raw[PacketProtocol::HEADER_LENGTH_OFFSET];
-        const uint8_t actual_len = static_cast<uint8_t>(PacketProtocol::HEADER_SIZE) + payload_len +
-                                   static_cast<uint8_t>(PacketProtocol::CRC_SIZE);
-        usart.Send(raw, actual_len);
-        (void)storage.write(raw, actual_len);
-        rx_tail_g = static_cast<uint8_t>((rx_tail_g + 1U) % RX_RING_SIZE);
+    std::array<uint8_t, PacketProtocol::MAX_PACKET_SIZE> buf{};
+    uint8_t len = 0U;
+    while (reassembler.pop(buf.data(), len)) {
+        downlink.send(buf.data(), len);
+        (void)storage.write(buf.data(), len);
     }
 }
 
@@ -266,8 +174,7 @@ void BtcComputer::send_env_packet(uint32_t tick_start_us) {
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_ENV, Tick{sync_count}, TimestampUs{tick_start_us}, &env,
                              static_cast<uint8_t>(sizeof(env)))) {
-        usart_wait();
-        usart.Send(tx_buf.data(), *len);
+        downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
 }
@@ -295,8 +202,7 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_STATUS, Tick{sync_count}, TimestampUs{tick_start_us},
                              &status, static_cast<uint8_t>(sizeof(status)))) {
-        usart_wait();
-        usart.Send(tx_buf.data(), *len);
+        downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
 }
@@ -316,7 +222,7 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
         sync_count += missed_periods;
     }
 
-    send_can_sync(sync_count);
+    sync_tx.send(sync_count);
 
     drain_exp_frames();
     send_env_packet(tick_start_us);

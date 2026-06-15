@@ -23,6 +23,7 @@ layer:
     - group: Comms
       files:
         - file: comms/bxcan_transport.cpp
+        - file: comms/can_reassembler.cpp
 
     - group: Core
       files:
