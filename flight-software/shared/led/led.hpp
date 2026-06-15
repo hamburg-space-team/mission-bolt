@@ -29,7 +29,7 @@ class Led {
     void toggle() noexcept {
         state = !state;
         if (fn != nullptr) {
-            fn(true);
+            fn(state);
         }
     }
 

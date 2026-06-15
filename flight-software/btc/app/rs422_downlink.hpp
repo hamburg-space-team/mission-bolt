@@ -44,7 +44,7 @@ class Rs422Downlink {
     }
 
   private:
-    static constexpr uint32_t TX_TIMEOUT_MS = 100U;
+    static constexpr uint32_t TX_TIMEOUT_MS = 10U;
 
     void wait_tx_ready() noexcept {
         const uint32_t deadline = platform.tick_ms() + TX_TIMEOUT_MS;

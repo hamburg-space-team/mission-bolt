@@ -123,6 +123,7 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
 }
 
 void BtcComputer::on_sensor_failed() {
+    leds.error_set();
     send_gap_to_uart(0U, 1U, PacketProtocol::GapReason::SENSOR_FAILED, 0U);
 }
 
@@ -208,7 +209,7 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
 }
 
 void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
-    leds.can_tick(); // blinks every tick; stops if scheduler starves
+    leds.can_tick();
 
     if (lo_pending_g) {
         lo_pending_g = false;
