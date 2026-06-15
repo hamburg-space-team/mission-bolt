@@ -2,7 +2,7 @@
 
 #include "Driver_USART.h"
 #include "can_reassembler.hpp"
-#include "icm42686.hpp"
+#include "icm42688.hpp"
 #include "node_computer.hpp"
 #include "packet_types.hpp"
 #include "rs422_downlink.hpp"
@@ -52,5 +52,5 @@ class BtcComputer final : public NodeComputer {
     void send_env_packet(uint32_t tick_start_us);
     void send_status_packet(uint32_t tick_start_us);
 
-    ICM42686 imu{};
+    ICM42688 imu{};
 };
