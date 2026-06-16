@@ -68,6 +68,7 @@
         "cmsis-csolution.generateClangSetup": false,
         "cortex-debug.variableUseNaturalFormat": false,
         "clangd.arguments": [],
+        "cmsis-csolution.autoDebugLaunch": false,
     },
     "extensions": {
         "recommendations": [
