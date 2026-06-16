@@ -8,7 +8,7 @@
 
 /// @defgroup sensors Sensor drivers
 
-constexpr uint8_t ICM42686_ADDR = 0x68U;
+constexpr uint8_t ICM42686_ADDR = 0x69U;
 
 /// One raw sample (6x 16-bit signed registers). Units depend on the
 /// configured full-scale range; see config_accel() / config_gyro().
