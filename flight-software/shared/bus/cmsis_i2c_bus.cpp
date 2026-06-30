@@ -21,9 +21,7 @@ Result<void> CmsisI2CBus::init() {
     if (drv->PowerControl(ARM_POWER_FULL) != ARM_DRIVER_OK) {
         return std::unexpected(Error::BUS_ERROR);
     }
-    if (drv->Control(ARM_I2C_BUS_SPEED, ARM_I2C_BUS_SPEED_FAST) != ARM_DRIVER_OK) {
-        return std::unexpected(Error::BUS_ERROR);
-    }
+
     return {};
 }
 
