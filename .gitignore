@@ -13,3 +13,4 @@ desktop.ini
 # Local environment overrides
 .env.local
 *.local
+flight-software/.vscode/cmsis.json
