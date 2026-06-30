@@ -31,6 +31,7 @@ solution:
       target-set:
         - set:
           images:
+            - project-context: exp3.Debug
             - project-context: exp2.Debug
     - type: exp3-floaty-boi
       device: STM32L476RGTx
