@@ -2,6 +2,12 @@
 
 #include <array>
 
+volatile uint32_t CmsisI2CBus::last_event = 0U;
+
+void CmsisI2CBus::signal_event(uint32_t event) {
+    last_event = event;
+}
+
 CmsisI2CBus::CmsisI2CBus(ARM_DRIVER_I2C* drv, tick_fn tick) : drv(drv), get_tick(tick) {
 }
 
@@ -9,7 +15,7 @@ Result<void> CmsisI2CBus::init() {
     if (drv == nullptr) {
         return std::unexpected(Error::BAD_ARGUMENT);
     }
-    if (drv->Initialize(nullptr) != ARM_DRIVER_OK) {
+    if (drv->Initialize(&CmsisI2CBus::signal_event) != ARM_DRIVER_OK) {
         return std::unexpected(Error::BUS_ERROR);
     }
     if (drv->PowerControl(ARM_POWER_FULL) != ARM_DRIVER_OK) {
@@ -25,20 +31,22 @@ Result<void> CmsisI2CBus::write(uint8_t addr, const uint8_t* data, std::size_t l
     if (drv == nullptr) {
         return std::unexpected(Error::BAD_ARGUMENT);
     }
+    last_event = 0U;
     if (drv->MasterTransmit(addr, data, len, false) != ARM_DRIVER_OK) {
         return std::unexpected(Error::BUS_ERROR);
     }
-    return wait_busy();
+    return wait_complete();
 }
 
 Result<void> CmsisI2CBus::read(uint8_t addr, uint8_t* data, std::size_t len) {
     if (drv == nullptr) {
         return std::unexpected(Error::BAD_ARGUMENT);
     }
+    last_event = 0U;
     if (drv->MasterReceive(addr, data, len, false) != ARM_DRIVER_OK) {
         return std::unexpected(Error::BUS_ERROR);
     }
-    return wait_busy();
+    return wait_complete();
 }
 
 Result<void> CmsisI2CBus::write_read(uint8_t addr, const uint8_t* tx, std::size_t tx_len, uint8_t* rx,
@@ -47,10 +55,11 @@ Result<void> CmsisI2CBus::write_read(uint8_t addr, const uint8_t* tx, std::size_
         return std::unexpected(Error::BAD_ARGUMENT);
     }
 
+    last_event = 0U;
     if (drv->MasterTransmit(addr, tx, tx_len, true) != ARM_DRIVER_OK) {
         return std::unexpected(Error::BUS_ERROR);
     }
-    if (auto r = wait_busy(); !r) {
+    if (auto r = wait_complete(); !r) {
         return r;
     }
 
@@ -83,20 +92,29 @@ Result<uint16_t> CmsisI2CBus::read_reg16(uint8_t addr, uint8_t reg) {
     return static_cast<uint16_t>((static_cast<uint16_t>(buf[0]) << 8U) | static_cast<uint16_t>(buf[1]));
 }
 
-Result<void> CmsisI2CBus::wait_busy() const {
+Result<void> CmsisI2CBus::wait_complete() const {
     if (get_tick != nullptr) {
         const uint32_t start = get_tick();
-        while ((get_tick() - start) < I2C_TIMEOUT_MS) {
-            if (drv->GetStatus().busy == 0U) {
-                return {};
+        while ((last_event & ARM_I2C_EVENT_TRANSFER_DONE) == 0U) {
+            if ((get_tick() - start) >= I2C_TIMEOUT_MS) {
+                return std::unexpected(Error::TIMEOUT);
             }
         }
-        return std::unexpected(Error::TIMEOUT);
-    }
-    for (uint32_t i = 0U; i < BUSY_TIMEOUT; i++) {
-        if (drv->GetStatus().busy == 0U) {
-            return {};
+    } else {
+        uint32_t i = 0U;
+        while ((last_event & ARM_I2C_EVENT_TRANSFER_DONE) == 0U) {
+            if (++i >= BUSY_TIMEOUT) {
+                return std::unexpected(Error::TIMEOUT);
+            }
         }
     }
-    return std::unexpected(Error::TIMEOUT);
+
+    const uint32_t event = last_event;
+    if ((event & (ARM_I2C_EVENT_ADDRESS_NACK | ARM_I2C_EVENT_TRANSFER_INCOMPLETE)) != 0U) {
+        return std::unexpected(Error::PROTOCOL_ERROR);
+    }
+    if ((event & (ARM_I2C_EVENT_BUS_ERROR | ARM_I2C_EVENT_ARBITRATION_LOST)) != 0U) {
+        return std::unexpected(Error::BUS_ERROR);
+    }
+    return {};
 }

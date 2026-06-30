@@ -1,6 +1,5 @@
 #pragma once
 
-#include "packet_types.hpp"
 #include <cstdint>
 
 namespace PacketProtocol {

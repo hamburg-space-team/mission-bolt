@@ -1,6 +1,6 @@
 #include "bxcan_transport.hpp"
 #include "can_protocol.hpp"
-#include "main.h"
+#include "main.h" // IWYU pragma: keep
 
 #include <array>
 #include <cstring>

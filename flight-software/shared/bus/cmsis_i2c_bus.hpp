@@ -11,8 +11,7 @@
 /// Wraps ARM_DRIVER_I2C with a register-oriented API. One instance per
 /// physical I2C controller. Every transaction is bounded: by the
 /// optional ms-tick when supplied, otherwise by a fixed-iteration spin
-/// (I-2). All fallible calls return Result<void> or Result<value>; the
-/// error code carries the cause back to the caller.
+/// (I-2).
 ///
 /// @ingroup bus
 class CmsisI2CBus {
@@ -46,5 +45,15 @@ class CmsisI2CBus {
     ARM_DRIVER_I2C* drv = nullptr;
     tick_fn get_tick = nullptr;
 
-    [[nodiscard]] Result<void> wait_busy() const;
+    /// SignalEvent callback registered with the CMSIS driver. The callback
+    /// type carries no user context, so the latched event is necessarily
+    /// shared static state; this is safe because transactions are serialised
+    /// (every public method blocks to completion). See wait_complete().
+    static void signal_event(uint32_t event);
+    static volatile uint32_t last_event;
+
+    /// Block until the SignalEvent callback reports the transaction finished,
+    /// then map the event bitmask to a Result. A NACK is reported only here
+    /// (ARM_I2C_EVENT_ADDRESS_NACK), not via GetStatus()/GetDataCount().
+    [[nodiscard]] Result<void> wait_complete() const;
 };
