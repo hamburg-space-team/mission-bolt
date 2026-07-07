@@ -1,6 +1,6 @@
 /******************************************************************************
  * File Name   : MX_Device.h
- * Date        : 15/06/2026 18:42:09
+ * Date        : 08/07/2026 00:48:32
  * Description : STM32Cube MX parameter definitions
  * Note        : This file is generated with a generator out of the
  *               STM32CubeMX project and its generated files (DO NOT EDIT!)
@@ -66,6 +66,29 @@
 #define MX_I2C1_SDA_GPIO_Speed                  GPIO_SPEED_FREQ_VERY_HIGH
 #define MX_I2C1_SDA_GPIO_AF                     GPIO_AF4_I2C1
 
+/*------------------------------ LPUART1        -----------------------------*/
+#define MX_LPUART1                              1
+
+/* Pins */
+
+/* LPUART1_RX */
+#define MX_LPUART1_RX_Pin                       PC0
+#define MX_LPUART1_RX_GPIO_Pin                  GPIO_PIN_0
+#define MX_LPUART1_RX_GPIOx                     GPIOC
+#define MX_LPUART1_RX_GPIO_Mode                 GPIO_MODE_AF_PP
+#define MX_LPUART1_RX_GPIO_PuPd                 GPIO_NOPULL
+#define MX_LPUART1_RX_GPIO_Speed                GPIO_SPEED_FREQ_VERY_HIGH
+#define MX_LPUART1_RX_GPIO_AF                   GPIO_AF8_LPUART1
+
+/* LPUART1_TX */
+#define MX_LPUART1_TX_Pin                       PC1
+#define MX_LPUART1_TX_GPIO_Pin                  GPIO_PIN_1
+#define MX_LPUART1_TX_GPIOx                     GPIOC
+#define MX_LPUART1_TX_GPIO_Mode                 GPIO_MODE_AF_PP
+#define MX_LPUART1_TX_GPIO_PuPd                 GPIO_NOPULL
+#define MX_LPUART1_TX_GPIO_Speed                GPIO_SPEED_FREQ_VERY_HIGH
+#define MX_LPUART1_TX_GPIO_AF                   GPIO_AF8_LPUART1
+
 /*------------------------------ SDMMC1         -----------------------------*/
 #define MX_SDMMC1                               1
 
@@ -130,32 +153,5 @@
 #define MX_SDMMC1_D3_GPIO_PuPd                  GPIO_NOPULL
 #define MX_SDMMC1_D3_GPIO_Speed                 GPIO_SPEED_FREQ_VERY_HIGH
 #define MX_SDMMC1_D3_GPIO_AF                    GPIO_AF12_SDMMC1
-
-/*------------------------------ USART2         -----------------------------*/
-#define MX_USART2                               1
-
-/* Virtual mode */
-#define MX_USART2_VM                            VM_ASYNC
-#define MX_USART2_VM_ASYNC                      1
-
-/* Pins */
-
-/* USART2_RX */
-#define MX_USART2_RX_Pin                        PA3
-#define MX_USART2_RX_GPIO_Pin                   GPIO_PIN_3
-#define MX_USART2_RX_GPIOx                      GPIOA
-#define MX_USART2_RX_GPIO_Mode                  GPIO_MODE_AF_PP
-#define MX_USART2_RX_GPIO_PuPd                  GPIO_NOPULL
-#define MX_USART2_RX_GPIO_Speed                 GPIO_SPEED_FREQ_VERY_HIGH
-#define MX_USART2_RX_GPIO_AF                    GPIO_AF7_USART2
-
-/* USART2_TX */
-#define MX_USART2_TX_Pin                        PA2
-#define MX_USART2_TX_GPIO_Pin                   GPIO_PIN_2
-#define MX_USART2_TX_GPIOx                      GPIOA
-#define MX_USART2_TX_GPIO_Mode                  GPIO_MODE_AF_PP
-#define MX_USART2_TX_GPIO_PuPd                  GPIO_NOPULL
-#define MX_USART2_TX_GPIO_Speed                 GPIO_SPEED_FREQ_VERY_HIGH
-#define MX_USART2_TX_GPIO_AF                    GPIO_AF7_USART2
 
 #endif  /* MX_DEVICE_H__ */

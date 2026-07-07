@@ -20,24 +20,21 @@ class NodeComputer : public FlightComputer {
   protected:
     explicit NodeComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage) noexcept;
 
-    /// Initialize I2C bus and common sensors, then call
-    /// init_extra_sensors(). Call once from on_init().
+    /// Initialize I2C bus and common sensors, then call init_extra_sensors().
     void init_sensors();
 
     /// Mount / open the configured Store. Call once from on_init(),
     /// before the main loop begins.
     void init_storage();
 
-    /// Override to initialize board-specific sensors (e.g. ICM-42686-P
-    /// on BTC and EXP3). Called at the end of init_sensors() after
-    /// common sensors are ready.
+    /// Override to initialize board-specific sensors
+    /// Called at the end of init_sensors() after common sensors are ready.
     virtual void init_extra_sensors() {
     }
 
-    /// Called by init_sensors() when a common sensor fails to
-    /// initialise. Subclasses send a GAP_MARKER over their downlink
-    /// (CAN or UART). I-6: no silent fallback values.
-    virtual void on_sensor_failed() {
+    /// Called when a device fails to initialise (or latches at runtime).
+    virtual void on_sensor_failed(StatusLeds::Fault code) {
+        leds.set_fault(code);
     }
 
     /// Drain ring-buffered SD writes during the idle phase, respecting
@@ -50,11 +47,8 @@ class NodeComputer : public FlightComputer {
     /// steady-state schedule.
     static constexpr uint8_t FLUSH_INTERVAL = 25U;
 
-    /// Per-op safety margin (ADR-004). The drain phase will not start
-    /// a new lfs_file_write() if fewer milliseconds remain in the
-    /// tick. Sized to keep nominal SD writes under the tick boundary
-    /// while still tolerating one stall per tick (the next tick is
-    /// missed; the ring buffer absorbs the produced data).
+    /// The drain phase will not start a new lfs_file_write() if fewer milliseconds
+    /// remain in the tick.
     static constexpr uint32_t MIN_TIME_FOR_WRITE_MS = 5U;
 
     CmsisI2CBus& i2c; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)

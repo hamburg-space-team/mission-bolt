@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 /// @defgroup led LED drivers
 
 /// Single-LED abstraction. WriteFn(true) = on, WriteFn(false) = off.
@@ -17,19 +15,26 @@ class Led {
     }
 
     void on() const noexcept {
-        if (fn != nullptr) {
-            fn(true);
+        if (this->fn != nullptr) {
+            this->fn(true);
         }
     }
     void off() const noexcept {
-        if (fn != nullptr) {
-            fn(false);
+        if (this->fn != nullptr) {
+            this->fn(false);
+        }
+    }
+    /// Drive the LED to an explicit state; toggle() continues from it.
+    void set(bool on) noexcept {
+        this->state = on;
+        if (this->fn != nullptr) {
+            this->fn(this->state);
         }
     }
     void toggle() noexcept {
-        state = !state;
-        if (fn != nullptr) {
-            fn(state);
+        this->state = !this->state;
+        if (this->fn != nullptr) {
+            this->fn(this->state);
         }
     }
 

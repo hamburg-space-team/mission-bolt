@@ -76,7 +76,7 @@ extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 BtcComputer::BtcComputer(const Platform& platform, CmsisI2CBus& i2c, Store& storage, ARM_DRIVER_USART& usart) noexcept
-    : NodeComputer(platform, i2c, storage), downlink(usart, platform), reassembler(EXP_DATA_IDS), sync_tx(hcan1) {
+    : NodeComputer(platform, i2c, storage), downlink(usart), reassembler(EXP_DATA_IDS), sync_tx(hcan1) {
     instance_g = this;
 }
 
@@ -122,14 +122,16 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
     }
 }
 
-void BtcComputer::on_sensor_failed() {
-    leds.error_set();
-    send_gap_to_uart(0U, 1U, PacketProtocol::GapReason::SENSOR_FAILED, 0U);
+void BtcComputer::on_sensor_failed(StatusLeds::Fault code) {
+    leds.set_fault(code);
+    // For SENSOR_FAILED gaps the first_missing_tick field carries the fault
+    // code (same convention as the EXPs) - ground sees the source.
+    send_gap_to_uart(static_cast<uint16_t>(code), 1U, PacketProtocol::GapReason::SENSOR_FAILED, 0U);
 }
 
 void BtcComputer::init_extra_sensors() {
     if (!imu.init(&i2c)) {
-        on_sensor_failed();
+        on_sensor_failed(StatusLeds::Fault::IMU);
     }
 }
 
@@ -146,7 +148,9 @@ void BtcComputer::send_env_packet(uint32_t tick_start_us) {
     using namespace PacketProtocol;
 
     if (baro.is_failed()) {
-        send_gap_to_uart(sync_count, 1U, GapReason::SENSOR_FAILED, tick_start_us);
+        // SENSOR_FAILED convention: first_missing_tick = fault code.
+        send_gap_to_uart(static_cast<uint16_t>(StatusLeds::Fault::BARO), 1U, GapReason::SENSOR_FAILED,
+                         tick_start_us);
         return;
     }
 
@@ -209,7 +213,16 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
 }
 
 void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
-    leds.can_tick();
+    // Error-LED pattern is pure tick counting - run it every tick.
+    leds.error_tick();
+
+    // Downlink health: Rs422Downlink latches after 10 consecutive dropped
+    // frames. Report the fault exactly once; the LED code then rotates until
+    // reboot (ADR-005 latching).
+    if (!uart_fault_reported && downlink.is_failed()) {
+        uart_fault_reported = true;
+        leds.set_fault(StatusLeds::Fault::UART);
+    }
 
     if (lo_pending_g) {
         lo_pending_g = false;
@@ -223,6 +236,9 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
         sync_count += missed_periods;
     }
 
+    // LED phase derives from the exact tick value broadcast below, so the
+    // BTC and EXP CAN LEDs blink in lockstep.
+    leds.can_tick(sync_count);
     sync_tx.send(sync_count);
 
     drain_exp_frames();

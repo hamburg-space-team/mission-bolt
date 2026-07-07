@@ -10,7 +10,7 @@ constexpr uint8_t AS7265X_ADDR = 0x49U;
 constexpr uint8_t AS7265X_CHANNEL_COUNT = 18U;
 
 // Integration time: IT * 2.8ms
-constexpr uint8_t AS7265X_INT_25_CYCLES = 25U;
+constexpr uint8_t AS7265X_INT_25_CYCLES = 40U;
 
 /// @ingroup sensors
 enum class AS7265XGain : uint8_t {
@@ -51,6 +51,11 @@ class AS7265X : public DeviceBase {
     /// start timestamp right after.
     [[nodiscard]] Result<void> start_measurement();
 
+    /// Change the integration time (cycles x 2.8 ms) for subsequent
+    /// measurements. No-op when the value is already set, so calling it
+    /// every measurement is cheap.
+    [[nodiscard]] Result<void> set_integration(uint8_t cycles);
+
     /// True when the most recent measurement has completed.
     [[nodiscard]] bool data_ready();
 
@@ -59,6 +64,12 @@ class AS7265X : public DeviceBase {
     /// the out-param to avoid the implicit copy that the
     /// expected<AS7265XResult, Error> return would force.
     [[nodiscard]] Result<void> read_channels(AS7265XResult* result);
+
+    /// Read only the dies [first_die, first_die+die_count) (6 channels
+    /// each) into their fixed slots of result->channels. Lets the caller
+    /// split the ~35 ms full read across ticks while a measurement
+    /// integrates (pipelined readout, issue #24).
+    [[nodiscard]] Result<void> read_channels_dies(AS7265XResult* result, uint8_t first_die, uint8_t die_count);
 
   private:
     static constexpr uint8_t VREG_CONTROL = 0x04U;
@@ -73,10 +84,18 @@ class AS7265X : public DeviceBase {
     static constexpr uint8_t MODE_ONE_SHOT = 0b11U;
     static constexpr uint32_t TIMEOUT_MS = 10U;
     static constexpr uint32_t BUSY_ITER = 100U;
+    // RAW channel window 0x08-0x13: six uint16 channels of ONE sensor die,
+    // selected via VREG_DEV_SEL (0 = AS72651, 1 = AS72652, 2 = AS72653).
+    // 0x14 onward holds the calibrated IEEE-754 floats - do NOT read RAW
+    // data past 0x13.
     static constexpr uint8_t FIRST_CHANNEL_VREG = 0x08U;
+    static constexpr uint8_t VREG_DEV_SEL = 0x4FU;
+    static constexpr uint8_t DEVICE_COUNT = 3U;
+    static constexpr uint8_t CHANNELS_PER_DEVICE = 6U;
 
     [[nodiscard]] Result<void> write_virtual(uint8_t vreg, uint8_t value);
     [[nodiscard]] Result<uint8_t> read_virtual(uint8_t vreg);
+    [[nodiscard]] Result<void> wait_status(uint8_t mask, uint8_t want);
     [[nodiscard]] Result<void> wait_tx_ready();
     [[nodiscard]] Result<void> wait_rx_ready();
 
@@ -84,4 +103,5 @@ class AS7265X : public DeviceBase {
     tick_fn tick = nullptr;
     data_rdy_fn data_rdy_pin = nullptr;
     uint8_t addr = 0U;
+    uint8_t current_cycles = 0U; // last integration setting written to the chip
 };

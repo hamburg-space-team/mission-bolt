@@ -24,8 +24,6 @@ solution:
       device: STM32L476RGTx
       target-set:
         - set:
-          images:
-            - project-context: exp1.Debug
     - type: exp2-bouncy-castle
       device: STM32L476RGTx
       target-set:

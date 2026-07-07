@@ -59,7 +59,7 @@ void Exp3Computer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
 
 void Exp3Computer::init_extra_sensors() {
     if (!imu.init(&i2c)) {
-        on_sensor_failed();
+        on_sensor_failed(StatusLeds::Fault::IMU);
     }
 }
 
@@ -67,10 +67,9 @@ void Exp3Computer::on_experiment_tick(uint16_t /*can_tick*/, uint32_t /*timestam
     // TODO: PayloadExp3Mag - send wired + wireless MMC5983MA readings once driver is ready
 }
 
+// Interval gating happens in ExpComputer::on_tick() on the gap-free
+// local_tick; can_tick here is stamp-only.
 void Exp3Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
-    if ((can_tick % STATUS_INTERVAL) != 0U) {
-        return;
-    }
     using namespace PacketProtocol;
     PayloadExp3Status status{};
     // Scheduler/latency fields stay 0 until the duty-cycle pipeline lands.

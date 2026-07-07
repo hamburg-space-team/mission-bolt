@@ -47,8 +47,7 @@
                 "adapter srst pulse_width 100"
             ],
             "preLaunchCommands": [
-                "monitor reset halt"
-            ],
+                "monitor reset halt",            ],
             "toolchainPrefix": "arm-none-eabi",
             "gdbPath": "/usr/bin/gdb-multiarch",
             "runToEntryPoint": "app_main",

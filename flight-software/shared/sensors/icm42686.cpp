@@ -26,7 +26,7 @@ Result<void> ICM42686::init(CmsisI2CBus* bus, uint8_t addr) {
 }
 
 Result<void> ICM42686::check_who_am_i() {
-    auto val = bus->read_reg8(addr, REG_WHO_AM_I);
+    auto val = this->bus->read_reg8(this->addr, REG_WHO_AM_I);
     if (!val) {
         return std::unexpected(val.error());
     }
@@ -38,16 +38,16 @@ Result<void> ICM42686::check_who_am_i() {
 
 Result<void> ICM42686::config_accel() {
     const uint8_t config = (ACCEL_FS_32G << 5U) | ODR_1KHZ;
-    return bus->write_reg8(addr, REG_ACCEL_CONFIG0, config);
+    return this->bus->write_reg8(this->addr, REG_ACCEL_CONFIG0, config);
 }
 
 Result<void> ICM42686::config_gyro() {
     const uint8_t config = (GYRO_FS_2000 << 5U) | ODR_1KHZ;
-    return bus->write_reg8(addr, REG_GYRO_CONFIG0, config);
+    return this->bus->write_reg8(this->addr, REG_GYRO_CONFIG0, config);
 }
 
 Result<void> ICM42686::power_on() {
-    if (auto r = bus->write_reg8(addr, REG_PWR_MGMT0, PWR_ACCEL_GYRO); !r) {
+    if (auto r = this->bus->write_reg8(this->addr, REG_PWR_MGMT0, PWR_ACCEL_GYRO); !r) {
         return r;
     }
     // Datasheet: no register writes for 200us after PWR_MGMT0.
@@ -62,7 +62,7 @@ Result<ICM42686Result> ICM42686::read_sample() {
 
     uint8_t start_reg = REG_ACCEL_DATA_X1;
     std::array<uint8_t, 12> buf{};
-    if (auto r = bus->write_read(addr, &start_reg, 1U, buf.data(), buf.size()); !r) {
+    if (auto r = this->bus->write_read(this->addr, &start_reg, 1U, buf.data(), buf.size()); !r) {
         register_failure();
         return std::unexpected(r.error());
     }

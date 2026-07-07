@@ -5,6 +5,6 @@
 
 #pragma once
 
-#include "packet_header.hpp"
-#include "packet_payloads.hpp"
-#include "packet_types.hpp"
+#include "packet_header.hpp"   // IWYU pragma: keep
+#include "packet_payloads.hpp" // IWYU pragma: keep
+#include "packet_types.hpp"    // IWYU pragma: keep

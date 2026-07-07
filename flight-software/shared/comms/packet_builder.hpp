@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "crc16.hpp"
+#include "crc16_hw.hpp"
 
 static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "little-endian required");
 
@@ -44,10 +44,12 @@ namespace PacketProtocol {
         std::array<uint8_t, 256> seq = {};
 
       public:
-        /// Reset every sequence counter to 0. Call once at boot. Not
-        /// idempotent mid-flight: ground would read the reset as a gap.
+        /// Reset every sequence counter to 0 and bring up the hardware
+        /// CRC (ADR-011). Call once at boot. Not idempotent mid-flight:
+        /// ground would read the sequence reset as a gap.
         void init() noexcept {
             seq.fill(0U);
+            Crc16Hw::init();
         }
 
         /// Write a full packet (header + payload + CRC) into buf.
@@ -86,9 +88,11 @@ namespace PacketProtocol {
 
             std::memcpy(buf + offset, payload, payload_len);
 
-            // CRC over everything after the 2 sync bytes
+            // CRC over everything after the 2 sync bytes. Hardware CRC
+            // peripheral (ADR-011); byte-identical to Crc::compute, verified
+            // by the boot self-test with automatic software fallback.
             const auto crc_len = static_cast<std::size_t>(HEADER_SIZE - 2U + payload_len);
-            const uint16_t crc = Crc::compute(buf + 2U, crc_len);
+            const uint16_t crc = Crc16Hw::compute(buf + 2U, crc_len);
 
             const auto crc_offset = static_cast<uint16_t>(HEADER_SIZE + payload_len);
             buf[crc_offset] = static_cast<uint8_t>(crc >> 8U);
