@@ -25,6 +25,17 @@ Result<void> CmsisI2CBus::init() {
     return {};
 }
 
+Result<void> CmsisI2CBus::reset() {
+    if (drv == nullptr) {
+        return std::unexpected(Error::BAD_ARGUMENT);
+    }
+    // Power off (HAL_I2C_DeInit: aborts any in-flight transfer, releases the
+    // pins, clears the peripheral's latched error state) then fully re-init.
+    (void)drv->PowerControl(ARM_POWER_OFF);
+    (void)drv->Uninitialize();
+    return init();
+}
+
 Result<void> CmsisI2CBus::write(uint8_t addr, const uint8_t* data, std::size_t len) {
     if (drv == nullptr) {
         return std::unexpected(Error::BAD_ARGUMENT);

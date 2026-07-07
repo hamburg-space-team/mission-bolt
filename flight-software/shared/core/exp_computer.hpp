@@ -45,7 +45,7 @@ class ExpComputer : public NodeComputer {
     virtual void on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) = 0;
 
     void send_gap(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason, uint32_t timestamp_us);
-    void on_sensor_failed() override;
+    void on_sensor_failed(StatusLeds::Fault code) override;
 
     CanTransport& can; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     static constexpr uint8_t STATUS_INTERVAL = 25U;
@@ -58,6 +58,25 @@ class ExpComputer : public NodeComputer {
     volatile bool sync_pending = false;
     volatile uint16_t sync_tick = 0U;
     static constexpr uint16_t NO_LAST_TICK = 0xFFFFU;
+    // Largest forward SYNC hole reported as a gap (also the count field's
+    // uint8 ceiling). Larger differences in wrap arithmetic mean the master
+    // restarted its counter (LO reset) -> re-baseline without a gap.
+    static constexpr uint16_t MAX_REPORTABLE_GAP = 250U;
     uint16_t last_can_tick = NO_LAST_TICK;
+    // Internal sequencing tick: +1 per executed tick, gap-free by
+    // construction. All interval gates (status, flush) run off this counter,
+    // so a jump in the BTC SYNC tick (gap, LO reset to 0) can never skip a
+    // boundary. The BTC tick is used only for the CAN LED phase and as the
+    // Tick stamp inside packets (ground-side correlation).
+    uint16_t local_tick = 0U;
     bool gc_done = false;
+
+    // Autonomous fallback: if no CAN SYNC arrives for this long, the node
+    // stops waiting and drives the experiment on a self-generated tick.
+    static constexpr uint32_t AUTONOMOUS_TIMEOUT_MS = 200U;
+    uint32_t last_sync_ms = 0U;
+    bool autonomous = false;
+    // One-shot guard: the latched CAN-TX fault (Fault::CAN_BUS) is reported
+    // exactly once per boot.
+    bool can_fault_reported = false;
 };

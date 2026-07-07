@@ -8,10 +8,7 @@
 
 /// @defgroup bus Hardware buses
 
-/// Wraps ARM_DRIVER_I2C with a register-oriented API. One instance per
-/// physical I2C controller. Every transaction is bounded: by the
-/// optional ms-tick when supplied, otherwise by a fixed-iteration spin
-/// (I-2).
+/// Wraps ARM_DRIVER_I2C with a register-oriented API.
 ///
 /// @ingroup bus
 class CmsisI2CBus {
@@ -21,10 +18,12 @@ class CmsisI2CBus {
     /// tick = nullptr falls back to the iteration-count timeout.
     CmsisI2CBus(ARM_DRIVER_I2C* drv, tick_fn tick = nullptr);
 
-    /// Initialize the underlying CMSIS driver, bring it to full power,
-    /// configure for fast mode (400 kHz). Must be called once before
-    /// any read/write.
     [[nodiscard]] Result<void> init();
+
+    /// Full peripheral reset: powers the CMSIS driver off (HAL_I2C_DeInit,
+    /// which releases SCL/SDA and clears any latched BERR / arbitration-lost /
+    /// lock-up), then re-runs init().
+    [[nodiscard]] Result<void> reset();
 
     [[nodiscard]] Result<void> write(uint8_t addr, const uint8_t* data, std::size_t len);
     [[nodiscard]] Result<void> read(uint8_t addr, uint8_t* data, std::size_t len);
@@ -47,13 +46,11 @@ class CmsisI2CBus {
 
     /// SignalEvent callback registered with the CMSIS driver. The callback
     /// type carries no user context, so the latched event is necessarily
-    /// shared static state; this is safe because transactions are serialised
-    /// (every public method blocks to completion). See wait_complete().
+    /// shared static state
     static void signal_event(uint32_t event);
     static volatile uint32_t last_event;
 
     /// Block until the SignalEvent callback reports the transaction finished,
-    /// then map the event bitmask to a Result. A NACK is reported only here
-    /// (ARM_I2C_EVENT_ADDRESS_NACK), not via GetStatus()/GetDataCount().
+    /// then map the event bitmask to a Result.
     [[nodiscard]] Result<void> wait_complete() const;
 };

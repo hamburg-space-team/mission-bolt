@@ -12,18 +12,14 @@
 /// visible-light wavelengths and records timestamped sent/received
 /// intensities for post-flight correlation.
 ///
-/// Measurement cycle (10 ticks x 40ms = 400ms):
-/// Phase 0:  start DARK
-/// Phase 1:  wait
-/// Phase 2:  read DARK -> send dark -> start RGB
-/// Phase 3:  wait
-/// Phase 4:  read RGB -> send RGB -> start WHITE
-/// Phase 5:  wait
-/// Phase 6:  read WHITE -> send white -> start IR
-/// Phase 7:  wait
-/// Phase 8:  read IR -> send IR -> start UV
-/// Phase 9:  wait
-/// Phase 10: read UV -> send UV -> disable LEDs
+/// Runs a measurement MATRIX (table in exp1_computer.cpp): every row
+/// combines an LED configuration (each LED alone, all together, dark
+/// reference) with a PWM brightness (25/50/75/100 %) and an integration
+/// time (25/50 cycles). Readout is PIPELINED: while row N+1 integrates,
+/// row N's 18 channels are read in two tick-sized halves (dies 0+1, then
+/// die 2) - full science rate with every tick inside the 40 ms budget.
+/// A full matrix pass is 58 rows / 174 ticks (~7 s). led_mask in the
+/// spectrum packets carries the MATRIX ROW INDEX (ICD-007).
 ///
 /// @ingroup apps
 class Exp1Computer final : public ExpComputer {
@@ -46,27 +42,31 @@ class Exp1Computer final : public ExpComputer {
 
   private:
     // Hardware addresses
-    static constexpr uint8_t LP5810C_ADDR = 0x14U; // RGB LED driver
-    static constexpr uint8_t LP5810D_ADDR = 0x15U; // UV/IR LED driver
+    // LP5810 page-0 base address = 0b101 | variant-bits | page(00). Per the
+    // datasheet (Table 7-4): variant C = 0x58, variant D = 0x5C.
+    static constexpr uint8_t LP5810C_ADDR = 0x58U; // RGB LED driver   (0x58-0x5B)
+    static constexpr uint8_t LP5810D_ADDR = 0x5CU; // UV/IR LED driver (0x5C-0x5F)
+    // Per-channel dot current (0xFF = 25.5 mA at max_current=0). D-360:
+    // keep illumination below detector saturation.
+    static constexpr uint8_t LP5810_DOT_CURRENT = 0xFFU;
     // LP5810C channel mask: OUT0=R, OUT1=G, OUT2=B
     static constexpr uint8_t RGB_CHANNELS = 0x07U;
     // LP5810D channel masks: OUT0=white, OUT1=IR 940nm, OUT2=UV 400nm
     static constexpr uint8_t WHITE_CHANNEL = 0x01U;
     static constexpr uint8_t IR_CHANNEL = 0x02U;
     static constexpr uint8_t UV_CHANNEL = 0x04U;
-    // led_mask values (matches PayloadExp1SpectrumA.led_mask)
-    static constexpr uint8_t LED_DARK = 0x00U;
-    static constexpr uint8_t LED_RGB = 0x01U;
-    static constexpr uint8_t LED_WHITE = 0x02U;
-    static constexpr uint8_t LED_IR = 0x03U;
-    static constexpr uint8_t LED_UV = 0x04U;
+    // AS72651 firmware boot from SPI flash after reset: up to ~1s before the
+    // device ACKs on I2C. Polled in wait_spec_boot().
+    static constexpr uint32_t SPEC_BOOT_TIMEOUT_MS = 1500U;
+    static constexpr uint32_t SPEC_BOOT_POLL_MS = 25U;
 
-    static constexpr uint8_t MEAS_COUNT = 5U;   // dark, rgb, white, ir, uv
-    static constexpr uint8_t PHASE_COUNT = 11U; // ticks per cycle
-
-    void send_spectrum_pair(uint8_t meas_idx);
+    /// Ship the AS7265XResult in `result` as an EXP1_SPECTRUM_A/B pair.
+    /// matrix_idx = MATRIX row of the measurement (goes out as led_mask).
+    void send_spectrum_pair(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us);
     void sensor_init() noexcept;
     void try_spec_recovery();
+    void wait_spec_boot() noexcept;
+    void report_led_fault_once() noexcept;
 
     enum class RecoveryStep : uint8_t { IDLE, ASSERTING, WAITING };
 
@@ -74,14 +74,31 @@ class Exp1Computer final : public ExpComputer {
     LP5810 lp5810_rgb{};
     LP5810 lp5810_uv_ir{};
 
+    // Spectrometer recovery: a full reset (I2C bus + AS7265X) is retried up
+    // to SPEC_MAX_RECOVERIES times; after that the cycle is given up.
+    static constexpr uint8_t SPEC_MAX_RECOVERIES = 3U;
+
     bool cycle_active = false;
-    bool spec_reset_attempted = false;
-    uint8_t meas_phase = 0U;
+    // One-shot guard: a runtime LP5810 latch is reported (error LED + gap
+    // packet) exactly once; reset on re-init so a fresh latch reports again.
+    bool led_fault_reported = false;
+    uint8_t spec_recovery_attempts = 0U;
     RecoveryStep recovery_step = RecoveryStep::IDLE;
     uint8_t recovery_ticks = 0U;
 
+    // Measurement-matrix runtime state.
+    uint8_t step_idx = 0U;      // MATRIX row currently integrating
+    uint8_t block_tick = 0U;    // tick within the current row's block
+    uint8_t cur_step_idx = 0U;  // row of the in-flight measurement
+    uint8_t prev_step_idx = 0U; // row whose data is being read out/sent
+    bool cur_started = false;   // an in-flight measurement exists
+    bool prev_ready = false;    // prev row awaits readout/send
+    bool cur_valid = false;
+    bool prev_valid = false;
+    uint16_t cur_start_tick = 0U;
+    uint32_t cur_start_us = 0U;
+    uint16_t prev_start_tick = 0U;
+    uint32_t prev_start_us = 0U;
+
     AS7265XResult result{};
-    uint32_t start_timestamp_us = 0U;
-    uint16_t start_tick = 0U;
-    bool result_valid = false;
 };

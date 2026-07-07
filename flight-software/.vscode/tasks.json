@@ -124,7 +124,7 @@
         {
             "label": "Flash exp1",
             "type": "shell",
-            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32l4x.cfg -c \"program ${workspaceFolder}/out/exp1-space-disco/exp1/Debug/exp1.elf verify reset exit\"",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32l4x.cfg -c \"program ${workspaceFolder}/out/exp1/exp1-space-disco/Debug/exp1.elf verify reset exit\"",
             "dependsOn": "Build exp1.Debug",
             "presentation": {
                 "reveal": "always",
@@ -143,7 +143,7 @@
         {
             "label": "Flash exp2",
             "type": "shell",
-            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32l4x.cfg -c \"program ${workspaceFolder}/out/exp2-bouncy-castle/exp2/Debug/exp2.elf verify reset exit\"",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32l4x.cfg -c \"program ${workspaceFolder}/out/exp2/exp2-bouncy-castle/Debug/exp2.elf verify reset exit\"",
             "dependsOn": "Build exp2.Debug",
             "presentation": {
                 "reveal": "always",
@@ -239,7 +239,7 @@
         {
             "label": "Flash exp3",
             "type": "shell",
-            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32l4x.cfg -c \"program ${workspaceFolder}/out/exp3-floaty-boi/exp3/Debug/exp3.elf verify reset exit\"",
+            "command": "${env:OPENOCD} -f interface/stlink.cfg -f target/stm32l4x.cfg -c \"program ${workspaceFolder}/out/exp3/exp3-floaty-boi/Debug/exp3.elf verify reset exit\"",
             "dependsOn": "Build exp3.Debug",
             "presentation": {
                 "reveal": "always",

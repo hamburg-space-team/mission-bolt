@@ -1,7 +1,6 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
-#include <span>
 
 /// CRC-16/CCITT-FALSE. Polynomial 0x1021, init 0xFFFF, no reflection.
 /// Wire format is big-endian.

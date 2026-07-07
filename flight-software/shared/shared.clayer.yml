@@ -18,6 +18,7 @@ layer:
 
     - group: Utils
       files:
+        - file: utils/crc16_hw.cpp
         - file: utils/device_base.cpp
 
     - group: Comms

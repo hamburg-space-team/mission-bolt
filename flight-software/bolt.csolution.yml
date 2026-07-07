@@ -24,14 +24,11 @@ solution:
       device: STM32L476RGTx
       target-set:
         - set:
-          images:
-            - project-context: exp2.Debug
     - type: exp2-bouncy-castle
       device: STM32L476RGTx
       target-set:
         - set:
           images:
-            - project-context: exp3.Debug
             - project-context: exp2.Debug
     - type: exp3-floaty-boi
       device: STM32L476RGTx

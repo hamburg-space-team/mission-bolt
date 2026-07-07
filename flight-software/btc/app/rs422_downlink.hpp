@@ -1,20 +1,22 @@
 #pragma once
 
 #include "Driver_USART.h"
-#include "platform.hpp"
+#include "main.h" // IWYU pragma: keep (__disable_irq)
 
+#include <array>
 #include <cstdint>
 
-/// Thin wrapper around the CMSIS-Driver USART used for the BTC's
-/// RS-422 downlink to the RXSM (ICD-001)
+/// Thin wrapper around the CMSIS-Driver USART used for the BTC's RS-422
+/// downlink to the RXSM
 ///
 /// @ingroup apps
 class Rs422Downlink {
   public:
-    /// usart:    the CMSIS-Driver USART instance (e.g. Driver_USART2).
-    /// platform: borrowed for tick_ms; used to implement the TX-ready
-    ///           timeout. Both references must outlive this object.
-    Rs422Downlink(ARM_DRIVER_USART& usart, const Platform& platform) noexcept : usart(usart), platform(platform) {
+    /// usart: the CMSIS-Driver USART instance (Driver_USART21 = LPUART1).
+    /// Must outlive this object. Exactly one downlink exists per BTC; the
+    /// constructor registers it as the SignalEvent target.
+    explicit Rs422Downlink(ARM_DRIVER_USART& usart) noexcept : usart(usart) {
+        instance_g = this;
     }
 
     Rs422Downlink(const Rs422Downlink&) = delete;
@@ -25,36 +27,91 @@ class Rs422Downlink {
     /// One-time bring-up: power on, configure framing (8N1, no flow
     /// control), enable TX. Call from on_init().
     void init(uint32_t baud) noexcept {
-        usart.Initialize(nullptr);
-        usart.PowerControl(ARM_POWER_FULL);
-        usart.Control(ARM_USART_MODE_ASYNCHRONOUS | ARM_USART_DATA_BITS_8 | ARM_USART_PARITY_NONE |
-                          ARM_USART_STOP_BITS_1 | ARM_USART_FLOW_CONTROL_NONE,
-                      baud);
-        usart.Control(ARM_USART_CONTROL_TX, 1U);
+        this->usart.Initialize(&Rs422Downlink::signal_event);
+        this->usart.PowerControl(ARM_POWER_FULL);
+        this->usart.Control(ARM_USART_MODE_ASYNCHRONOUS | ARM_USART_DATA_BITS_8 | ARM_USART_PARITY_NONE |
+                                ARM_USART_STOP_BITS_1 | ARM_USART_FLOW_CONTROL_NONE,
+                            baud);
+        this->usart.Control(ARM_USART_CONTROL_TX, 1U);
     }
 
-    /// Wait until the previous TX has cleared, then push `len` bytes
-    /// onto the line. Drops the new frame silently if the previous
-    /// transmission has not completed within TX_TIMEOUT_MS - that
-    /// keeps the tick loop bounded when the cable is unplugged or
-    /// the RXSM stops draining (I-2).
+    /// Enqueue one packet for transmission and return immediately (never
+    /// blocks). Drops the WHOLE packet if the ring cannot hold it and
+    /// counts the drop; a later successful enqueue resets the streak.
     void send(const uint8_t* data, uint8_t len) noexcept {
-        wait_tx_ready();
-        usart.Send(data, len);
+        if (free_bytes() < len) {
+            if (this->consecutive_drops < MAX_CONSECUTIVE_DROPS) {
+                this->consecutive_drops++;
+            }
+            return;
+        }
+        this->consecutive_drops = 0U;
+        uint16_t h = this->head;
+        for (uint8_t i = 0U; i < len; i++) {
+            this->ring[h] = data[i];
+            h = static_cast<uint16_t>((h + 1U) % TX_RING_SIZE);
+        }
+        this->head = h; // publish only after the bytes are in place
+        kick();
+    }
+
+    /// Latched true once MAX_CONSECUTIVE_DROPS packets in a row were
+    /// dropped - the ring never drains, so the line is dead or permanently
+    /// overloaded. Polled once per tick by BtcComputer to raise
+    /// StatusLeds::Fault::UART.
+    [[nodiscard]] bool is_failed() const noexcept {
+        return this->consecutive_drops >= MAX_CONSECUTIVE_DROPS;
     }
 
   private:
-    static constexpr uint32_t TX_TIMEOUT_MS = 10U;
+    static constexpr uint16_t TX_RING_SIZE = 1024U;
+    static constexpr uint8_t MAX_CONSECUTIVE_DROPS = 10U;
 
-    void wait_tx_ready() noexcept {
-        const uint32_t deadline = platform.tick_ms() + TX_TIMEOUT_MS;
-        while (usart.GetStatus().tx_busy != 0U) {
-            if (platform.tick_ms() > deadline) {
-                break;
-            }
+    /// Free ring capacity. One slot is kept unused so head == tail always
+    /// means "empty".
+    [[nodiscard]] uint16_t free_bytes() const noexcept {
+        const uint16_t h = this->head;
+        const uint16_t t = this->tail;
+        const auto used = static_cast<uint16_t>((h + TX_RING_SIZE - t) % TX_RING_SIZE);
+        return static_cast<uint16_t>((TX_RING_SIZE - 1U) - used);
+    }
+
+    /// Start the next contiguous chunk if the line is idle. Called from
+    /// both the producer (send) and the SEND_COMPLETE interrupt; the short
+    /// global IRQ lock makes the idle-check-and-start atomic between them.
+    void kick() noexcept {
+        __disable_irq();
+        if (!this->tx_active && this->head != this->tail) {
+            const uint16_t t = this->tail;
+            const uint16_t h = this->head;
+            const auto chunk = (h > t) ? static_cast<uint16_t>(h - t) : static_cast<uint16_t>(TX_RING_SIZE - t);
+            this->in_flight = chunk;
+            this->tx_active = true;
+            (void)this->usart.Send(&this->ring[t], chunk);
+        }
+        __enable_irq();
+    }
+
+    /// CMSIS SignalEvent callback (no user context -> singleton pointer,
+    /// same pattern as CmsisI2CBus). Runs in interrupt context: release the
+    /// transmitted chunk and chain the next one.
+    static void signal_event(uint32_t event) {
+        if ((event & ARM_USART_EVENT_SEND_COMPLETE) != 0U && instance_g != nullptr) {
+            instance_g->tail = static_cast<uint16_t>((instance_g->tail + instance_g->in_flight) % TX_RING_SIZE);
+            instance_g->tx_active = false;
+            instance_g->kick();
         }
     }
 
-    ARM_DRIVER_USART& usart;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
-    const Platform& platform; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    static inline Rs422Downlink* instance_g = nullptr;
+
+    ARM_DRIVER_USART& usart; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+
+    std::array<uint8_t, TX_RING_SIZE> ring{};
+    volatile uint16_t head = 0U; // producer (tick loop)
+    volatile uint16_t tail = 0U; // consumer (TX-complete interrupt)
+    volatile uint16_t in_flight = 0U;
+    volatile bool tx_active = false;
+    uint8_t consecutive_drops = 0U;
 };

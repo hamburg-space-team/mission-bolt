@@ -19,6 +19,12 @@ class CanTransport {
     /// len <= CanProtocol::EXP_DATA_LEN.
     virtual void send(uint32_t id, const uint8_t* data, uint8_t len) = 0;
 
+    /// True once the transport latched a persistent TX failure (e.g. the
+    /// TX ring never drains). Default: never fails (host test stubs).
+    [[nodiscard]] virtual bool is_failed() const {
+        return false;
+    }
+
   protected:
     CanTransport() = default;
 };

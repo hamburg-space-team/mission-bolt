@@ -35,7 +35,11 @@ generator-import:
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.c
+        - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_crc.c
+        - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_crc_ex.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_iwdg.c
+        - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c
+        - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rtc.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rtc_ex.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_sdmmc.c
@@ -43,5 +47,3 @@ generator-import:
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_sd_ex.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_mmc.c
         - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_mmc_ex.c
-        - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c
-        - file: ./STM32CubeMX/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c

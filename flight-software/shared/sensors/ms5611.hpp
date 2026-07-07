@@ -43,8 +43,13 @@ class MS5611 : public DeviceBase {
     [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr = MS5611_ADDR, MS5611Osr osr = MS5611Osr::OSR_4096,
                                     delay_fn delay = nullptr);
 
-    /// Trigger D2 (temp) and D1 (pressure) conversions, return both
-    /// raw ADC values. Failures latch via DeviceBase.
+    /// Pipelined per-tick read (ICD-005): collects the conversion started on
+    /// the PREVIOUS call, starts the next one (D2/D1 alternating) and returns
+    /// the most recent completed pair - one value is one tick older than the
+    /// other. Never blocks for a conversion. Requires calls to be at least
+    /// one conversion time apart (40 ms tick >> 9.04 ms max at OSR_4096).
+    /// Returns TIMEOUT (without a DeviceBase strike) for the first two calls
+    /// after init while the pipeline primes. Failures latch via DeviceBase.
     [[nodiscard]] Result<MS5611Result> read();
 
   private:
@@ -63,8 +68,13 @@ class MS5611 : public DeviceBase {
 
     static constexpr uint16_t CRC_POLY = 0x3000U;
 
-    // Worst-case conversion time per OSR setting, ms.
+    // Worst-case conversion time per OSR setting, ms (datasheet). Not waited
+    // on at runtime: the pipelined read() relies on the 40 ms tick period
+    // exceeding the worst case (10 ms at OSR_4096) instead of blocking.
     static constexpr std::array<uint16_t, 5> CONV_TIME_MS = {1U, 2U, 3U, 5U, 10U};
+
+    /// Which conversion is currently running in the device (pipeline state).
+    enum class Pending : uint8_t { NONE, D1, D2 };
 
     CmsisI2CBus* bus = nullptr;
     uint8_t addr = 0U;
@@ -73,9 +83,17 @@ class MS5611 : public DeviceBase {
     std::array<uint16_t, COEFF_COUNT> coeff = {};
     bool coeff_read = false;
 
+    // Pipeline state: in-flight conversion plus the most recent raw values.
+    Pending pending = Pending::NONE;
+    uint32_t d1_raw = 0U;
+    uint32_t d2_raw = 0U;
+    bool have_d1 = false;
+    bool have_d2 = false;
+
     [[nodiscard]] Result<void> reset();
     [[nodiscard]] Result<void> read_prom();
-    [[nodiscard]] Result<uint32_t> read_adc(uint8_t cmd);
-    [[nodiscard]] Result<MS5611Result> read_sample();
+    [[nodiscard]] Result<void> start_conversion(uint8_t cmd);
+    [[nodiscard]] Result<uint32_t> read_adc_result();
+    [[nodiscard]] Result<void> collect_pending();
     [[nodiscard]] bool prom_crc_ok() const;
 };

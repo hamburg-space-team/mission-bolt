@@ -1,7 +1,7 @@
 {
     "targetSet": {
         "bolt": {
-            "activeTargetType": "exp3-floaty-boi"
+            "activeTargetType": "btc"
         }
     }
 }
