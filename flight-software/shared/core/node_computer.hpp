@@ -33,8 +33,22 @@ class NodeComputer : public FlightComputer {
     }
 
     /// Called when a device fails to initialise (or latches at runtime).
-    virtual void on_sensor_failed(StatusLeds::Fault code) {
+    /// `err` is the Error that caused it - subclasses turn it into a
+    /// FAULT packet with the full step trace (ADR-012); the base only
+    /// latches the LED code.
+    virtual void report_fault(StatusLeds::Fault code, const Error& err) {
+        (void)err;
         leds.set_fault(code);
+    }
+
+    /// One-shot poll for a runtime device latch: reports the device's
+    /// death trace (DeviceBase::last_error()) the first time
+    /// is_failed() reads true. Call once per tick per device.
+    void poll_device_fault(DeviceBase& dev, StatusLeds::Fault code, bool& reported) {
+        if (!reported && dev.is_failed()) {
+            reported = true;
+            report_fault(code, dev.last_error());
+        }
     }
 
     /// Drain ring-buffered SD writes during the idle phase, respecting
@@ -54,6 +68,10 @@ class NodeComputer : public FlightComputer {
     CmsisI2CBus& i2c; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     MS5611 baro;
     TMP117 tmp;
+
+    bool baro_fault_reported = false;
+    bool tmp_fault_reported = false;
+
     Store& storage; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     StatusLeds leds;
     BootState::State boot;

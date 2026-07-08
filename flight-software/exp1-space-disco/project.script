@@ -1,5 +1,0 @@
-load STM32L476RGTx
-project name STM32CubeMX
-project toolchain "STM32CubeIDE"
-project path "/home/max/Projects/github.com/edusat-tuhh/bolt-flight-software/exp1-space-disco/generated"
-SetCopyLibrary "copy only"

@@ -69,6 +69,10 @@
         "cortex-debug.variableUseNaturalFormat": false,
         "clangd.arguments": [],
         "cmsis-csolution.autoDebugLaunch": false,
+        "memory-inspector.addressPadding": "32bit",
+        "memory-inspector.groupings.groupsPerRow": "Autofit",
+        "memory-inspector.groupings.MAUsPerGroup": 4,
+        "memory-inspector.scrollingBehavior": "Auto-Append",
     },
     "extensions": {
         "recommendations": [

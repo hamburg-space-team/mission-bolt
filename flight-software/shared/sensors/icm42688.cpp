@@ -1,24 +1,36 @@
 #include "icm42688.hpp"
 #include "stm32l4xx_hal.h"
 
+#include <array>
+
 Result<void> ICM42688::init(CmsisI2CBus* bus, uint8_t addr) {
     this->bus = bus;
     this->addr = addr;
 
-    if (auto r = check_who_am_i(); !r) {
-        disable();
-        return r;
+    (void)this->bus->write_reg8(this->addr, REG_DEVICE_CONFIG, SOFT_RESET);
+    HAL_Delay(SOFT_RESET_DELAY_MS);
+
+    auto who = check_who_am_i();
+    if (!who) {
+        this->addr = (this->addr == ICM42688_ADDR) ? ICM42688_ADDR_ALT : ICM42688_ADDR;
+        (void)this->bus->write_reg8(this->addr, REG_DEVICE_CONFIG, SOFT_RESET);
+        HAL_Delay(SOFT_RESET_DELAY_MS);
+        who = check_who_am_i();
+    }
+    if (!who) {
+        disable(who.error());
+        return who;
     }
     if (auto r = config_accel(); !r) {
-        disable();
+        disable(r.error());
         return r;
     }
     if (auto r = config_gyro(); !r) {
-        disable();
+        disable(r.error());
         return r;
     }
     if (auto r = power_on(); !r) {
-        disable();
+        disable(r.error());
         return r;
     }
     return {};
@@ -26,28 +38,38 @@ Result<void> ICM42688::init(CmsisI2CBus* bus, uint8_t addr) {
 
 Result<void> ICM42688::check_who_am_i() {
     auto val = this->bus->read_reg8(this->addr, REG_WHO_AM_I);
+    for (uint8_t i = 0U; (!val || *val != EXPECTED_WHO_AM_I) && i < WHOAMI_RETRIES; i++) {
+        HAL_Delay(WHOAMI_RETRY_DELAY_MS);
+        val = this->bus->read_reg8(this->addr, REG_WHO_AM_I);
+    }
     if (!val) {
-        return std::unexpected(val.error());
+        return mark(val.error(), Step::IMU_WHOAMI);
     }
     if (*val != EXPECTED_WHO_AM_I) {
-        return std::unexpected(Error::PROTOCOL_ERROR);
+        return fail(ErrorCode::PROTOCOL_ERROR, Step::IMU_WHOAMI, __LINE__);
     }
     return {};
 }
 
 Result<void> ICM42688::config_accel() {
     const uint8_t config = (ACCEL_FS_16G << 5U) | ODR_1KHZ;
-    return this->bus->write_reg8(this->addr, REG_ACCEL_CONFIG0, config);
+    if (auto r = this->bus->write_reg8(this->addr, REG_ACCEL_CONFIG0, config); !r) {
+        return mark(r.error(), Step::IMU_CONFIG_ACCEL);
+    }
+    return {};
 }
 
 Result<void> ICM42688::config_gyro() {
     const uint8_t config = (GYRO_FS_2000 << 5U) | ODR_1KHZ;
-    return this->bus->write_reg8(this->addr, REG_GYRO_CONFIG0, config);
+    if (auto r = this->bus->write_reg8(this->addr, REG_GYRO_CONFIG0, config); !r) {
+        return mark(r.error(), Step::IMU_CONFIG_GYRO);
+    }
+    return {};
 }
 
 Result<void> ICM42688::power_on() {
     if (auto r = this->bus->write_reg8(this->addr, REG_PWR_MGMT0, PWR_ACCEL_GYRO); !r) {
-        return r;
+        return mark(r.error(), Step::IMU_POWER_ON);
     }
     // Datasheet: no register writes for 200us after PWR_MGMT0.
     HAL_Delay(1U);
@@ -56,14 +78,15 @@ Result<void> ICM42688::power_on() {
 
 Result<ICM42688Result> ICM42688::read_sample() {
     if (is_failed()) {
-        return std::unexpected(Error::DISABLED);
+        return fail(ErrorCode::DISABLED, Step::IMU_READ, __LINE__);
     }
 
     uint8_t start_reg = REG_ACCEL_DATA_X1;
     std::array<uint8_t, 12> buf{};
     if (auto r = this->bus->write_read(this->addr, &start_reg, 1U, buf.data(), buf.size()); !r) {
-        register_failure();
-        return std::unexpected(r.error());
+        const auto marked = mark(r.error(), Step::IMU_READ);
+        register_failure(marked.error());
+        return marked;
     }
 
     return ICM42688Result{

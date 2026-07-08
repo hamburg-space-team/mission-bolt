@@ -7,7 +7,7 @@ Result<void> MS5611::init(CmsisI2CBus* bus, uint8_t addr, MS5611Osr osr, delay_f
     this->delay_ms = delay;
 
     if (auto r = reset(); !r) {
-        return r;
+        return mark(r.error(), Step::BARO_RESET);
     }
 
     if (this->delay_ms != nullptr) {
@@ -19,7 +19,7 @@ Result<void> MS5611::init(CmsisI2CBus* bus, uint8_t addr, MS5611Osr osr, delay_f
     }
 
     if (!prom_crc_ok()) {
-        return std::unexpected(Error::PROTOCOL_ERROR);
+        return fail(ErrorCode::PROTOCOL_ERROR, Step::BARO_PROM_CRC, __LINE__);
     }
 
     // Restart the conversion pipeline: after a (re-)init the device has no
@@ -36,11 +36,11 @@ Result<void> MS5611::init(CmsisI2CBus* bus, uint8_t addr, MS5611Osr osr, delay_f
 // so the result is always ready by the time the next tick reads it.
 Result<MS5611Result> MS5611::read() {
     if (is_failed()) {
-        return std::unexpected(Error::DISABLED);
+        return fail(ErrorCode::DISABLED, Step::BARO_READ, __LINE__);
     }
     if (!this->coeff_read) {
         if (auto r = read_prom(); !r) {
-            register_failure();
+            register_failure(r.error());
             return std::unexpected(r.error());
         }
     }
@@ -49,7 +49,7 @@ Result<MS5611Result> MS5611::read() {
     if (this->pending != Pending::NONE) {
         if (auto r = collect_pending(); !r) {
             this->pending = Pending::NONE; // device state unknown -> restart pipeline
-            register_failure();
+            register_failure(r.error());
             return std::unexpected(r.error());
         }
     }
@@ -60,15 +60,16 @@ Result<MS5611Result> MS5611::read() {
     const auto cmd = static_cast<uint8_t>(base_cmd | (static_cast<uint8_t>(this->osr) * 2U));
     if (auto r = start_conversion(cmd); !r) {
         this->pending = Pending::NONE;
-        register_failure();
-        return std::unexpected(r.error());
+        const auto marked = mark(r.error(), Step::BARO_START_CONV);
+        register_failure(marked.error());
+        return marked;
     }
     this->pending = next_is_d1 ? Pending::D1 : Pending::D2;
 
     if (!this->have_d1 || !this->have_d2) {
         // Pipeline still priming (first two calls after init). Not a failed
         // transaction, so deliberately no DeviceBase strike (ICD-005).
-        return std::unexpected(Error::TIMEOUT);
+        return fail(ErrorCode::TIMEOUT, Step::BARO_READ, __LINE__);
     }
 
     clear_failures();
@@ -85,7 +86,7 @@ Result<void> MS5611::read_prom() {
 
         std::array<uint8_t, 2> buf{};
         if (auto r = this->bus->write_read(this->addr, &reg, 1U, buf.data(), buf.size()); !r) {
-            return r;
+            return mark(r.error(), Step::BARO_PROM_READ);
         }
 
         this->coeff[i] = static_cast<uint16_t>((static_cast<uint16_t>(buf[0]) << 8U) | static_cast<uint16_t>(buf[1]));
@@ -109,7 +110,7 @@ Result<void> MS5611::collect_pending() {
     if (*adc == 0U) {
         // Datasheet: the ADC reads 0 if the conversion was not finished -
         // means the >=1-conversion-time-per-tick assumption broke.
-        return std::unexpected(Error::PROTOCOL_ERROR);
+        return fail(ErrorCode::PROTOCOL_ERROR, Step::BARO_COLLECT, __LINE__);
     }
     if (this->pending == Pending::D2) {
         this->d2_raw = *adc;
@@ -123,12 +124,12 @@ Result<void> MS5611::collect_pending() {
 
 Result<uint32_t> MS5611::read_adc_result() {
     if (auto r = this->bus->write(this->addr, &CMD_ADC_READ, 1U); !r) {
-        return std::unexpected(r.error());
+        return mark(r.error(), Step::BARO_READ_ADC);
     }
 
     std::array<uint8_t, 3> buf{};
     if (auto r = this->bus->read(this->addr, buf.data(), sizeof(buf)); !r) {
-        return std::unexpected(r.error());
+        return mark(r.error(), Step::BARO_READ_ADC);
     }
 
     return (static_cast<uint32_t>(buf[0]) << 16U) | (static_cast<uint32_t>(buf[1]) << 8U) |

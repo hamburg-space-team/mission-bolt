@@ -51,6 +51,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+void MX_SDMMC1_SD_Init(void);
 
 /* USER CODE BEGIN EFP */
 
@@ -69,6 +70,9 @@ void Error_Handler(void);
 #define LO_Pin GPIO_PIN_2
 #define LO_GPIO_Port GPIOB
 #define LO_EXTI_IRQn EXTI2_IRQn
+#define IMU_INT1_Pin GPIO_PIN_11
+#define IMU_INT1_GPIO_Port GPIOB
+#define IMU_INT1_EXTI_IRQn EXTI15_10_IRQn
 
 /* USER CODE BEGIN Private defines */
 

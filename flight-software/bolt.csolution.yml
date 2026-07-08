@@ -24,6 +24,8 @@ solution:
       device: STM32L476RGTx
       target-set:
         - set:
+          images:
+            - project-context: exp1.Debug
     - type: exp2-bouncy-castle
       device: STM32L476RGTx
       target-set:
@@ -51,10 +53,18 @@ solution:
       debug: off
       optimize: speed
 
+  # for-context pins each firmware to its board: without it csolution
+  # builds the full cross product (every project for every target-type),
+  # so each target would list all five projects/images.
   projects:
     - project: btc/btc.cproject.yml
+      for-context: +btc
     - project: exp1-space-disco/exp1.cproject.yml
+      for-context: +exp1-space-disco
     - project: exp2-bouncy-castle/exp2.cproject.yml
+      for-context: +exp2-bouncy-castle
     - project: exp3-floaty-boi/exp3.cproject.yml
+      for-context: +exp3-floaty-boi
     - project: test-nucleo-h753zi/test.cproject.yml
+      for-context: +test-nucleo-h753zi
   created-for: CMSIS-Toolbox@2.12.0

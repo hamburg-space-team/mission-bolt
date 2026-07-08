@@ -39,7 +39,8 @@ class CmsisI2CBus {
 
   private:
     static constexpr uint32_t BUSY_TIMEOUT = 100000U;
-    static constexpr uint32_t I2C_TIMEOUT_MS = 2U;
+
+    static constexpr uint32_t I2C_TIMEOUT_MS = 25U;
 
     ARM_DRIVER_I2C* drv = nullptr;
     tick_fn get_tick = nullptr;
@@ -52,5 +53,7 @@ class CmsisI2CBus {
 
     /// Block until the SignalEvent callback reports the transaction finished,
     /// then map the event bitmask to a Result.
-    [[nodiscard]] Result<void> wait_complete() const;
+    [[nodiscard]] Result<void> wait_complete();
+
+    [[nodiscard]] bool wait_idle();
 };

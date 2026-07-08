@@ -38,4 +38,6 @@ class Exp3Computer final : public ExpComputer {
 
   private:
     ICM42686 imu{};
+
+    bool imu_fault_reported = false;
 };

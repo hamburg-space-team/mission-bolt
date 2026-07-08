@@ -36,6 +36,7 @@ struct AS7265XResult {
 class AS7265X : public DeviceBase {
   public:
     using tick_fn = uint32_t (*)();
+    using delay_fn = void (*)(uint32_t ms);
 
     // data_rdy_fn: returns true when the hardware INT pin signals
     // DATA_READY (active-low - caller inverts). Pass nullptr to fall
@@ -43,9 +44,13 @@ class AS7265X : public DeviceBase {
     using data_rdy_fn = bool (*)();
 
     /// tick: millisecond tick for virtual-register timeout.
+    /// delay: millisecond delay used BETWEEN status polls (SparkFun
+    /// reference: continuous polling starves the AS72651 firmware and the
+    /// mailbox never turns ready). nullptr = tight polling (host tests).
     [[nodiscard]] Result<void> init(CmsisI2CBus* bus, tick_fn tick, uint8_t addr = AS7265X_ADDR,
                                     uint8_t integration_cycles = AS7265X_INT_25_CYCLES,
-                                    AS7265XGain gain = AS7265XGain::GAIN_1X, data_rdy_fn int_pin = nullptr);
+                                    AS7265XGain gain = AS7265XGain::GAIN_1X, data_rdy_fn int_pin = nullptr,
+                                    delay_fn delay = nullptr);
 
     /// Trigger a one-shot measurement. Returns immediately; record the
     /// start timestamp right after.
@@ -67,8 +72,9 @@ class AS7265X : public DeviceBase {
 
     /// Read only the dies [first_die, first_die+die_count) (6 channels
     /// each) into their fixed slots of result->channels. Lets the caller
-    /// split the ~35 ms full read across ticks while a measurement
-    /// integrates (pipelined readout, issue #24).
+    /// split the full read across ticks. NOTE: the RAW registers are LIVE
+    /// - starting the next measurement resets them - so every read must
+    /// happen after DATA_RDY and before the next start_measurement().
     [[nodiscard]] Result<void> read_channels_dies(AS7265XResult* result, uint8_t first_die, uint8_t die_count);
 
   private:
@@ -79,15 +85,15 @@ class AS7265X : public DeviceBase {
     static constexpr uint8_t STATUS_TX_FULL = 0x02U;
     static constexpr uint8_t STATUS_RX_VALID = 0x01U;
     static constexpr uint8_t DATA_RDY_BIT = 0x02U;
-    static constexpr uint8_t INT_ENABLE_BIT = 0x80U; // bit 7 of VREG_CONTROL
+
+    static constexpr uint8_t INT_ENABLE_BIT = 0x40U;
     static constexpr uint8_t VWRITE_FLAG = 0x80U;
     static constexpr uint8_t MODE_ONE_SHOT = 0b11U;
-    static constexpr uint32_t TIMEOUT_MS = 10U;
+    static constexpr uint32_t TIMEOUT_MS = 20U;
     static constexpr uint32_t BUSY_ITER = 100U;
-    // RAW channel window 0x08-0x13: six uint16 channels of ONE sensor die,
-    // selected via VREG_DEV_SEL (0 = AS72651, 1 = AS72652, 2 = AS72653).
-    // 0x14 onward holds the calibrated IEEE-754 floats - do NOT read RAW
-    // data past 0x13.
+
+    static constexpr uint32_t POLLING_DELAY_MS = 1U;
+
     static constexpr uint8_t FIRST_CHANNEL_VREG = 0x08U;
     static constexpr uint8_t VREG_DEV_SEL = 0x4FU;
     static constexpr uint8_t DEVICE_COUNT = 3U;
@@ -99,8 +105,11 @@ class AS7265X : public DeviceBase {
     [[nodiscard]] Result<void> wait_tx_ready();
     [[nodiscard]] Result<void> wait_rx_ready();
 
+    [[nodiscard]] Result<uint8_t> hw_read_reg(uint8_t reg);
+
     CmsisI2CBus* bus = nullptr;
     tick_fn tick = nullptr;
+    delay_fn delay_ms = nullptr;
     data_rdy_fn data_rdy_pin = nullptr;
     uint8_t addr = 0U;
     uint8_t current_cycles = 0U; // last integration setting written to the chip

@@ -69,11 +69,14 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     this->leds.error_tick();
 
     // CAN-TX health: the transport latches after 10 consecutively dropped
-    // packets (ring never drains -> bus dead/saturated). Report once.
     if (!this->can_fault_reported && this->can.is_failed()) {
         this->can_fault_reported = true;
-        this->leds.set_fault(StatusLeds::Fault::CAN_BUS);
+        report_fault(StatusLeds::Fault::CAN_BUS, make_error(ErrorCode::TIMEOUT, Step::CAN_TX_RING));
     }
+
+    // Runtime latches of the common sensors: ship the death trace once.
+    poll_device_fault(this->baro, StatusLeds::Fault::BARO, this->baro_fault_reported);
+    poll_device_fault(this->tmp, StatusLeds::Fault::TMP, this->tmp_fault_reported);
 
     const uint32_t now_ms = this->platform.tick_ms();
     uint16_t can_tick = 0U;
@@ -159,9 +162,16 @@ void ExpComputer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
     }
 }
 
-void ExpComputer::on_sensor_failed(StatusLeds::Fault code) {
+void ExpComputer::report_fault(StatusLeds::Fault code, const Error& err) {
     this->leds.set_fault(code);
-    send_gap(static_cast<uint16_t>(code), 1U, PacketProtocol::GapReason::SENSOR_FAILED, 0U);
+    // Header: timestamp = when the error occurred (from the Error
+    // itself), tick = CAN tick at report time (0 before the first SYNC).
+    const uint16_t tick = (this->last_can_tick != NO_LAST_TICK) ? this->last_can_tick : 0U;
+    if (auto len =
+            this->pkt.build_fault(this->tx_buf.data(), PacketProtocol::Tick{tick}, static_cast<uint8_t>(code), err)) {
+        this->can.send(exp_can_id(), this->tx_buf.data(), *len);
+        (void)this->storage.write(this->tx_buf.data(), *len);
+    }
 }
 
 void ExpComputer::send_gap(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason,

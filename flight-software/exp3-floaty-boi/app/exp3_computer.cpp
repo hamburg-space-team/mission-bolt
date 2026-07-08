@@ -12,11 +12,12 @@ namespace {
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     CAN_RxHeaderTypeDef hdr{};
-    uint8_t data[CanProtocol::SYNC_DLC]{};
-    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &hdr, data) != HAL_OK) {
+
+    std::array<uint8_t, 8U> data{};
+    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &hdr, data.data()) != HAL_OK) {
         return;
     }
-    if (hdr.StdId == CanProtocol::SYNC_ID && instance_g != nullptr) {
+    if (hdr.StdId == CanProtocol::SYNC_ID && hdr.DLC >= CanProtocol::SYNC_DLC && instance_g != nullptr) {
         const auto tick = static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8U);
         instance_g->notify_sync(tick);
     }
@@ -58,12 +59,16 @@ void Exp3Computer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
 }
 
 void Exp3Computer::init_extra_sensors() {
-    if (!imu.init(&i2c)) {
-        on_sensor_failed(StatusLeds::Fault::IMU);
+    if (auto r = imu.init(&i2c); !r) {
+        imu_fault_reported = true; // reported here, not by the tick poll
+        report_fault(StatusLeds::Fault::IMU, r.error());
     }
 }
 
 void Exp3Computer::on_experiment_tick(uint16_t /*can_tick*/, uint32_t /*timestamp_us*/) {
+    // Runtime IMU latch: ship the death trace + error-LED code 7 once.
+    poll_device_fault(imu, StatusLeds::Fault::IMU, imu_fault_reported);
+
     // TODO: PayloadExp3Mag - send wired + wireless MMC5983MA readings once driver is ready
 }
 

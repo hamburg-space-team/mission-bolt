@@ -1,7 +1,11 @@
 #include "flight_computer.hpp"
+#include "errors.hpp"
 #include "timing.hpp"
 
 FlightComputer::FlightComputer(const Platform& platform) noexcept : platform(platform) {
+    // Every Error born after this point carries the microsecond
+    // timestamp of its occurrence (ADR-012).
+    ErrorClock::now_us = platform.tick_us;
     this->pkt.init();
 }
 
