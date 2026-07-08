@@ -15,11 +15,11 @@ Implementation: [`status_leds.hpp`](../../flight-software/shared/led/status_leds
 ## Error LED: pulse-count codes
 
 No error → LED off. When something goes wrong, the LED blinks out the
-code of the source as a group of pulses you can count: *N* short pulses
-(120 ms on / 120 ms off each), then an 800 ms pause, then the group
+code of the source as a group of pulses you can count: *N* pulses
+(320 ms on / 320 ms off each), then a 1.6 s pause, then the group
 repeats.
 
-If **several** errors are latched, the LED shows each code for **5 s**
+If **several** errors are latched, the LED shows each code for **10 s**
 and then rotates to the next one. The switch always lands on a group
 boundary, so you never catch a group mid-count. Codes stay latched
 until reboot (ADR-005: no silent self-healing).
@@ -49,9 +49,13 @@ after 5 s, the SD card isn't mounted either.
 
 ### Telemetry counterpart
 
-Every error also drops a GAP_MARKER with `reason = SENSOR_FAILED`, and
-its `first_missing_tick` field carries the **same code** — so the
-ground sees exactly the diagnosis your eye does at the bench.
+Every latched error also ships a **FAULT packet (0xF1)** whose
+`fault_code` field carries the **same code** the LED blinks — plus the
+error cause, the step trace of where in the call chain it originated,
+the origin source line and the microsecond timestamp of occurrence.
+See [fault-trace-codes.md](fault-trace-codes.md) / ADR-012. (This
+replaces the old `SENSOR_FAILED` gap-marker convention, which is no
+longer emitted.)
 (Exception: SD errors only show up as an LED code plus the `sd_status`
-field in the status packet, since the downlink isn't up yet during
+field in the status packet, since the links aren't up yet during
 storage init. ICD-007 follow-up note still pending.)

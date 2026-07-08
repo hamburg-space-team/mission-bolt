@@ -13,16 +13,16 @@
 /// Error LED - blinks a COUNTABLE PULSE CODE per fault source (see Fault).
 ///             Codes latch and are never cleared in flight (ADR-005). With
 ///             several faults latched the LED shows each code for
-///             ERR_WINDOW_TICKS (5 s), then rotates to the next one.
+///             ERR_WINDOW_TICKS (10 s), then rotates to the next one.
 ///
 /// Pattern of one code (all timing in 40 ms ticks via error_tick(); no
 /// timers). Example code 3 (TMP117):
 ///
-///   on   ###   ###   ###                          ###   ###   ###
-///   off     ###   ###   ####################...###   ###   ###
-///        |pulse|pulse|pulse|----- code gap -----|  next repetition
-///         3+3   3+3   3+3        20 ticks
-///        (120 ms on / 120 ms off per pulse, 800 ms between groups)
+///   on   #####     #####     #####                            #####
+///   off       #####     #####     ######################...###
+///        | pulse  | pulse  | pulse  |----- code gap -----|  next repetition
+///          8+8      8+8      8+8          40 ticks
+///        (320 ms on / 320 ms off per pulse, 1.6 s between groups)
 ///
 /// Full fault-code table (count the pulses): codes 1-5 exist on every
 /// board, codes 6+ are board-specific. See docs/handbook/led-blink-codes.md.
@@ -141,10 +141,10 @@ class StatusLeds {
     static constexpr uint8_t LOST_BLINK_DIV = 48U;
 
     // Error-code pattern timing, all in 40 ms ticks.
-    static constexpr uint16_t PULSE_ON_TICKS = 3U;     // 120 ms on
-    static constexpr uint16_t PULSE_GAP_TICKS = 3U;    // 120 ms off between pulses
-    static constexpr uint16_t CODE_GAP_TICKS = 20U;    // 800 ms between repetitions
-    static constexpr uint16_t ERR_WINDOW_TICKS = 125U; // 5 s per code, then rotate
+    static constexpr uint16_t PULSE_ON_TICKS = 8U;  // 320 ms on
+    static constexpr uint16_t PULSE_GAP_TICKS = 8U; // 320 ms off between pulses
+    static constexpr uint16_t CODE_GAP_TICKS = 40U; // 1.6 s between repetitions
+    static constexpr uint16_t ERR_WINDOW_TICKS = 250U;
 
     /// Next latched fault code strictly after `after` (wrapping); returns
     /// `after` itself when it is the only latched code, 0 when none is set.
