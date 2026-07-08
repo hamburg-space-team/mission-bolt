@@ -1,0 +1,50 @@
+{
+    "name": "mission-bolt",
+    "build": { "dockerfile": "Dockerfile" },
+
+    // USB passthrough for the ST-Link (WSL2: attach it first with
+    // usbipd on the Windows side, see .devcontainer/README.md).
+    // Privileged so openocd may claim the raw USB device without udev
+    // gymnastics inside the container. Alternative without privileged:
+    // run the GDB server on the host and connect via TCP (README).
+    "privileged": true,
+    "mounts": [
+        "source=/dev/bus/usb,target=/dev/bus/usb,type=bind",
+        "source=mission-bolt-cmsis-packs,target=/opt/cmsis-packs,type=volume"
+    ],
+
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "marus25.cortex-debug",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "Arm.cmsis-csolution",
+                "usernamehw.errorlens",
+                "PKief.material-icon-theme",
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-themes",
+                "xaver.clang-format",
+                "dbaeumer.vscode-eslint",
+                "mcu-debug.memory-view",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "ms-python.vscode-python-envs",
+                "DavidAnson.vscode-markdownlint",
+                "ms-vscode.vscode-serial-monitor",
+                "bradlc.vscode-tailwindcss",
+                "Arm.vscode-cmsis-debugger",
+                "Arm.keil-studio-pack"
+            ],
+            "settings": {
+                "clangd.arguments": [
+                    "--compile-commands-dir=${workspaceFolder}/flight-software/tmp"
+                ]
+            }
+        }
+    },
+
+    "remoteUser": "vscode"
+}

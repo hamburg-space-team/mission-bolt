@@ -1,0 +1,33 @@
+{
+    "editor.formatOnSave": true,
+    "cmsis-csolution.autoDebugLaunch": false,
+    "debug.hideSlowPreLaunchWarning": true,
+    "debug.showInStatusBar": "never",
+    "cortex-debug.openocdPath": "openocd",
+    "files.associations": {
+        ".clang-format-ignore": "plaintext",
+        ".clangd": "yaml"
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    },
+    "[c]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    },
+    "clangd.path": "/usr/local/bin/clangd",
+    "clangd.arguments": [
+        "--header-insertion=never",
+        "--background-index"
+    ],
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.exclude": {
+        "**/generated": false,
+        "**/RTE": false
+    },
+    "search.exclude": {
+        "**/generated": false,
+        "**/RTE": false
+    }
+}

@@ -5,6 +5,21 @@
         "marus25.cortex-debug",
         "mcu-debug.peripheral-viewer",
         "mcu-debug.memory-view",
-        "alexnesnes.teleplot"
+        "alexnesnes.teleplot",
+        "usernamehw.errorlens",
+        "PKief.material-icon-theme",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-themes",
+        "xaver.clang-format",
+        "dbaeumer.vscode-eslint",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.vscode-python-envs",
+        "DavidAnson.vscode-markdownlint",
+        "bradlc.vscode-tailwindcss",
+        "Arm.vscode-cmsis-debugger",
+        "Arm.cmsis-csolution",
+        "Arm.keil-studio-pack"
     ]
 }
