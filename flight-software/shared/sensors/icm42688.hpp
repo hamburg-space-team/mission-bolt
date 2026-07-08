@@ -7,7 +7,8 @@
 #include <array>
 #include <cstdint>
 
-constexpr uint8_t ICM42688_ADDR = 0x68U;
+constexpr uint8_t ICM42688_ADDR = 0x68U;     // AP_AD0 = 0
+constexpr uint8_t ICM42688_ADDR_ALT = 0x69U; // AP_AD0 = 1
 
 /// One raw sample. At the configured ranges: 2048 LSB/g (accel),
 /// 16.384 LSB/(deg/s) (gyro).
@@ -38,6 +39,12 @@ class ICM42688 : public DeviceBase {
   private:
     static constexpr uint8_t REG_WHO_AM_I = 0x75U;
     static constexpr uint8_t EXPECTED_WHO_AM_I = 0x47U;
+    // Cold-power-up grace: retries x delay for the first WHO_AM_I access.
+    static constexpr uint8_t WHOAMI_RETRIES = 5U;
+    static constexpr uint32_t WHOAMI_RETRY_DELAY_MS = 2U;
+    static constexpr uint8_t REG_DEVICE_CONFIG = 0x11U;
+    static constexpr uint8_t SOFT_RESET = 0x01U; // DEVICE_CONFIG bit0, wait 1 ms after
+    static constexpr uint32_t SOFT_RESET_DELAY_MS = 2U;
     static constexpr uint8_t REG_PWR_MGMT0 = 0x4EU;
     static constexpr uint8_t REG_ACCEL_CONFIG0 = 0x50U;
     static constexpr uint8_t REG_GYRO_CONFIG0 = 0x4FU;
