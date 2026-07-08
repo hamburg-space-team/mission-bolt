@@ -32,7 +32,8 @@ class BtcComputer final : public NodeComputer {
   protected:
     void on_init() override;
     void on_tick(uint32_t tick_start_us, uint16_t missed_periods) override;
-    void on_sensor_failed(StatusLeds::Fault code) override;
+    void on_drain(uint32_t deadline_ms) override;
+    void report_fault(StatusLeds::Fault code, const Error& err) override;
     void init_extra_sensors() override;
 
   private:
@@ -46,15 +47,16 @@ class BtcComputer final : public NodeComputer {
     uint16_t sync_count = 0U;
     bool lo_received = false;
     bool gc_done = false;
-    // One-shot guard: the latched downlink fault (Fault::UART) is reported
-    // exactly once per boot.
+
     bool uart_fault_reported = false;
+    bool imu_fault_reported = false;
     uint32_t lo_rtc_s = 0U;
 
     void send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason, uint32_t timestamp_us);
     void drain_exp_frames();
     void send_env_packet(uint32_t tick_start_us);
     void send_status_packet(uint32_t tick_start_us);
+    void send_imu_packet(uint32_t timestamp_us);
 
     ICM42686 imu{};
 };

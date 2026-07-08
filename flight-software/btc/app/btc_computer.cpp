@@ -5,6 +5,7 @@
 #include "packet_header.hpp"
 #include "packet_payloads.hpp"
 #include "packet_types.hpp"
+#include "timing.hpp"
 
 #include <array>
 
@@ -26,6 +27,13 @@ namespace {
     // SAFETY: written in EXTI ISR, read in main thread. bool read/write
     // is atomic on Cortex-M4.
     volatile bool lo_pending_g = false;
+
+    // IMU data-ready pipeline
+    volatile bool imu_drdy_g = false;
+    volatile uint32_t imu_drdy_ts_g = 0U;
+
+    // PB11 = IMU_INT1 (CubeMX label pending; EXTI11 on EXTI15_10_IRQn)
+    constexpr uint16_t IMU_INT1_PIN = GPIO_PIN_11;
 
     void configure_exact_filter(uint32_t stid, uint8_t bank, uint32_t fifo) {
         CAN_FilterTypeDef f{};
@@ -72,6 +80,10 @@ extern "C" void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* hcan) {
 extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if (GPIO_Pin == LO_Pin) {
         lo_pending_g = true;
+    }
+    if (GPIO_Pin == IMU_INT1_PIN) {
+        imu_drdy_ts_g = Timing::us_now();
+        imu_drdy_g = true;
     }
 }
 
@@ -122,16 +134,63 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
     }
 }
 
-void BtcComputer::on_sensor_failed(StatusLeds::Fault code) {
+void BtcComputer::report_fault(StatusLeds::Fault code, const Error& err) {
     leds.set_fault(code);
-    // For SENSOR_FAILED gaps the first_missing_tick field carries the fault
-    // code (same convention as the EXPs) - ground sees the source.
-    send_gap_to_uart(static_cast<uint16_t>(code), 1U, PacketProtocol::GapReason::SENSOR_FAILED, 0U);
+    // Header: timestamp = when the error occurred (from the Error
+    // itself), tick = current BTC tick at report time (0 during init).
+    if (auto len = pkt.build_fault(tx_buf.data(), PacketProtocol::Tick{sync_count}, static_cast<uint8_t>(code), err)) {
+        downlink.send(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+    }
 }
 
 void BtcComputer::init_extra_sensors() {
-    if (!imu.init(&i2c)) {
-        on_sensor_failed(StatusLeds::Fault::IMU);
+    if (auto r = imu.init(&i2c, ICM42686_ADDR, ICM42686Odr::ODR_200HZ, true); !r) {
+        imu_fault_reported = true; // reported here, not by the tick poll
+        report_fault(StatusLeds::Fault::IMU, r.error());
+    }
+}
+
+void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
+    using namespace PacketProtocol;
+
+    auto sample = imu.read_sample();
+    if (!sample) {
+        return; // runtime latch is reported once by poll_device_fault()
+    }
+
+    PayloadBtcImu p{};
+    p.accel_x_raw = sample->accel_x;
+    p.accel_y_raw = sample->accel_y;
+    p.accel_z_raw = sample->accel_z;
+    p.gyro_x_raw = sample->gyro_x;
+    p.gyro_y_raw = sample->gyro_y;
+    p.gyro_z_raw = sample->gyro_z;
+
+    if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_IMU, Tick{sync_count}, TimestampUs{timestamp_us}, &p,
+                             static_cast<uint8_t>(sizeof(p)))) {
+        downlink.send(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+    }
+}
+
+// Overrides NodeComputer::on_drain: instead of returning to run()'s
+// blocking sleep once the SD ring is empty, keep polling the DRDY flag
+// until the tick deadline - a 200 Hz sample must not wait 40 ms for the
+// next tick.
+void BtcComputer::on_drain(uint32_t deadline_ms) {
+    while (true) {
+        const uint32_t now = platform.tick_ms();
+        if ((now + MIN_TIME_FOR_WRITE_MS) >= deadline_ms) {
+            return;
+        }
+        if (imu_drdy_g) {
+            const uint32_t drdy_ts = imu_drdy_ts_g;
+            imu_drdy_g = false;
+            send_imu_packet(drdy_ts);
+            continue;
+        }
+        (void)storage.drain_one(); // no-op once the ring is empty
     }
 }
 
@@ -146,13 +205,6 @@ void BtcComputer::drain_exp_frames() {
 
 void BtcComputer::send_env_packet(uint32_t tick_start_us) {
     using namespace PacketProtocol;
-
-    if (baro.is_failed()) {
-        // SENSOR_FAILED convention: first_missing_tick = fault code.
-        send_gap_to_uart(static_cast<uint16_t>(StatusLeds::Fault::BARO), 1U, GapReason::SENSOR_FAILED,
-                         tick_start_us);
-        return;
-    }
 
     PayloadBtcEnv env{};
 
@@ -216,13 +268,16 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     // Error-LED pattern is pure tick counting - run it every tick.
     leds.error_tick();
 
-    // Downlink health: Rs422Downlink latches after 10 consecutive dropped
-    // frames. Report the fault exactly once; the LED code then rotates until
-    // reboot (ADR-005 latching).
+    // Downlink health: Rs422Downlink latches after 10 consecutive dropped frames.
     if (!uart_fault_reported && downlink.is_failed()) {
         uart_fault_reported = true;
-        leds.set_fault(StatusLeds::Fault::UART);
+        report_fault(StatusLeds::Fault::UART, make_error(ErrorCode::TIMEOUT, Step::UART_TX_RING));
     }
+
+    // Runtime latches of the sensors: ship the death trace once.
+    poll_device_fault(baro, StatusLeds::Fault::BARO, baro_fault_reported);
+    poll_device_fault(tmp, StatusLeds::Fault::TMP, tmp_fault_reported);
+    poll_device_fault(imu, StatusLeds::Fault::IMU, imu_fault_reported);
 
     if (lo_pending_g) {
         lo_pending_g = false;
