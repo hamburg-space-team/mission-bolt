@@ -80,6 +80,21 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadBtcStatus);
 
+    /// BTC_IMU - one full ICM42686 sample per data-ready interrupt
+    /// (200 Hz).
+    ///
+    /// @ingroup comms
+    struct __attribute__((packed)) PayloadBtcImu {
+        // Raw register values; at +-32g / +-2000 dps full scale
+        int16_t accel_x_raw;
+        int16_t accel_y_raw;
+        int16_t accel_z_raw;
+        int16_t gyro_x_raw;
+        int16_t gyro_y_raw;
+        int16_t gyro_z_raw;
+    };
+    PACKET_TYPE_CHECK(PayloadBtcImu);
+
     /// EXP1_SPECTRUM_A - AS7265X channels 1-9. Always paired with
     /// SPECTRUM_B (split because 18 channels exceed the 50B limit).
     ///
@@ -341,6 +356,38 @@ namespace PacketProtocol {
         GapReason reason;
     };
     PACKET_TYPE_CHECK(PayloadGapMarker);
+
+    /// FAULT - latched fault notification with error step trace
+    /// (ADR-012). Emitted once per fault source when a device latches
+    /// (or an init step fails). Header semantics differ from data
+    /// packets: timestamp_us is the moment the error OCCURRED at its
+    /// origin (ErrorClock stamp inside fail()), tick is the CAN tick
+    /// current when the fault was reported (0 during init).
+    ///
+    /// @ingroup comms
+    struct __attribute__((packed)) PayloadFault {
+        // Fault source = LED blink code (StatusLeds::Fault, 1-10). Same
+        // number the error LED blinks - see docs/handbook/led-blink-codes.md.
+        uint8_t fault_code;
+
+        // What went wrong: ErrorCode (TIMEOUT, BUS_ERROR, ...).
+        uint8_t error_code;
+
+        // bit 0 = trace truncated (real chain was deeper than 6 levels)
+        uint8_t flags;
+
+        // Number of valid entries in steps[].
+        uint8_t depth;
+
+        // Source line of the origin (fail() call site). Only meaningful
+        // together with the exact firmware build.
+        uint16_t line;
+
+        // Step dictionary values (docs/handbook/fault-trace-codes.md).
+        // steps[0] = origin, then outward through the call chain.
+        uint8_t steps[6]; // NOLINT(modernize-avoid-c-arrays)
+    };
+    PACKET_TYPE_CHECK(PayloadFault);
 
     /// BOOT - MCU startup notification. Sent at power-on before LO,
     /// tick=0 and timestamp_us=0 in header. Received during flight ->

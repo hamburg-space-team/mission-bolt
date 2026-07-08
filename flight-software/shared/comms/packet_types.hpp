@@ -11,6 +11,7 @@ namespace PacketProtocol {
         // BTC
         BTC_ENV = 0x10,    ///< PayloadBtcEnv
         BTC_STATUS = 0x11, ///< PayloadBtcStatus
+        BTC_IMU = 0x12,    ///< PayloadBtcImu - one sample per IMU data-ready
 
         // EXP1 - Space Disco
         EXP1_SPECTRUM_A = 0x20, ///< PayloadExp1SpectrumA - AS7265X channels 1-9
@@ -31,6 +32,7 @@ namespace PacketProtocol {
 
         // System
         GAP_MARKER = 0xF0, ///< PayloadGapMarker
+        FAULT = 0xF1,      ///< PayloadFault - latched fault + error step trace (ADR-012)
         BOOT = 0xFE,       ///< PayloadBoot
     };
 
@@ -47,7 +49,8 @@ namespace PacketProtocol {
         NO_DATA = 0x01,       ///< No valid CAN/source data inside the expected window
         CAN_CRC_FAIL = 0x02,  ///< CAN frame received but failed CRC
         LIFI_TIMEOUT = 0x03,  ///< No sample packets from an EXP3 stack inside the expected interval
-        SENSOR_FAILED = 0x04, ///< Source has marked a sensor as permanently disabled
+        SENSOR_FAILED = 0x04, ///< Superseded by PayloadType::FAULT (ADR-012) - value kept
+                              ///< wire-stable, no longer emitted
     };
 
 } // namespace PacketProtocol

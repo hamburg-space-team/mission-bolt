@@ -27,6 +27,8 @@ namespace {
 } // namespace
 
 extern "C" void app_main(void) {
+    __HAL_DBGMCU_FREEZE_IWDG();
+
     static const Platform platform{HAL_Delay, HAL_GetTick, kick_wdg, get_tick_us, led_can_write, led_err_write};
     static CmsisI2CBus i2c{&Driver_I2C1, HAL_GetTick};
     static SdStore storage{&hsd1};

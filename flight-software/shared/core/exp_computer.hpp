@@ -45,7 +45,9 @@ class ExpComputer : public NodeComputer {
     virtual void on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) = 0;
 
     void send_gap(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason, uint32_t timestamp_us);
-    void on_sensor_failed(StatusLeds::Fault code) override;
+    /// Latches the LED code and ships a FAULT packet (error step trace,
+    /// ADR-012) over CAN + SD.
+    void report_fault(StatusLeds::Fault code, const Error& err) override;
 
     CanTransport& can; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     static constexpr uint8_t STATUS_INTERVAL = 25U;
@@ -63,11 +65,9 @@ class ExpComputer : public NodeComputer {
     // restarted its counter (LO reset) -> re-baseline without a gap.
     static constexpr uint16_t MAX_REPORTABLE_GAP = 250U;
     uint16_t last_can_tick = NO_LAST_TICK;
+
     // Internal sequencing tick: +1 per executed tick, gap-free by
-    // construction. All interval gates (status, flush) run off this counter,
-    // so a jump in the BTC SYNC tick (gap, LO reset to 0) can never skip a
-    // boundary. The BTC tick is used only for the CAN LED phase and as the
-    // Tick stamp inside packets (ground-side correlation).
+    // construction.
     uint16_t local_tick = 0U;
     bool gc_done = false;
 

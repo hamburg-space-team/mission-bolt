@@ -2,8 +2,7 @@
 #include "bxcan_transport.hpp"
 #include "cmsis_i2c_bus.hpp"
 #include "exp1_computer.hpp"
-#include "null_store.hpp"
-// #include "sd_store.hpp"
+#include "sd_store.hpp"
 #include "timing.hpp"
 
 // NOLINTNEXTLINE(readability-identifier-naming)
@@ -13,11 +12,6 @@ extern SD_HandleTypeDef hsd1;
 
 namespace {
     static void kick_wdg() {
-        // IWDG runs with the window option (Window == Reload == 600): a refresh
-        // while the counter still reads 600 -- i.e. within the same ~1ms LSI
-        // tick as the previous refresh -- resets the MCU ("refreshed too
-        // early"). Rate-limit to one reload per millisecond so callers may kick
-        // freely.
         static uint32_t last_kick_ms;
         const uint32_t now = HAL_GetTick();
         if (now == last_kick_ms) {
@@ -41,8 +35,7 @@ namespace {
 extern "C" void app_main(void) {
     static const Platform platform{HAL_Delay, HAL_GetTick, kick_wdg, get_tick_us, led_can_write, led_err_write};
     static CmsisI2CBus i2c{&Driver_I2C1, HAL_GetTick};
-    // static SdStore storage{&hsd1};
-    static NullStore storage{};
+    static SdStore storage{&hsd1};
     static BxcanTransport can_transport;
     static Exp1Computer computer{platform, i2c, storage, can_transport};
     computer.run();

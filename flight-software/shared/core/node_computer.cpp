@@ -6,26 +6,33 @@ NodeComputer::NodeComputer(const Platform& platform, CmsisI2CBus& i2c, Store& st
 }
 
 void NodeComputer::init_sensors() {
-    if (!this->i2c.init()) {
-        on_sensor_failed(StatusLeds::Fault::I2C_BUS);
+    if (auto r = this->i2c.init(); !r) {
+        report_fault(StatusLeds::Fault::I2C_BUS, r.error());
         return;
     }
 
-    if (!this->baro.init(&this->i2c, MS5611_ADDR, MS5611Osr::OSR_4096, this->platform.delay_ms)) {
-        this->baro.disable();
-        on_sensor_failed(StatusLeds::Fault::BARO);
+    if (auto r = this->baro.init(&this->i2c, MS5611_ADDR, MS5611Osr::OSR_4096, this->platform.delay_ms); !r) {
+        this->baro.disable(r.error());
+        this->baro_fault_reported = true; // reported here, not by the tick poll
+        report_fault(StatusLeds::Fault::BARO, r.error());
     }
 
-    if (!this->tmp.init(&this->i2c, TMP117_ADDR)) {
-        this->tmp.disable();
-        on_sensor_failed(StatusLeds::Fault::TMP);
+    if (auto r = this->tmp.init(&this->i2c, TMP117_ADDR); !r) {
+        this->tmp.disable(r.error());
+        this->tmp_fault_reported = true;
+        report_fault(StatusLeds::Fault::TMP, r.error());
     }
 
     init_extra_sensors();
 }
 
 void NodeComputer::init_storage() {
-    if (!this->storage.init()) {
+    if (auto r = this->storage.init(); !r) {
+        // LED only, deliberately no FAULT packet: neither CAN nor the
+        // downlink are ready this early, and the SD itself (the failed
+        // part) could not log it. Ground sees sd_status in the status
+        // packets instead; the trace stays readable via the debugger.
+        (void)r.error();
         this->leds.set_fault(StatusLeds::Fault::SD);
     }
 }

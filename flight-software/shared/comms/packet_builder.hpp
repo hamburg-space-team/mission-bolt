@@ -63,7 +63,7 @@ namespace PacketProtocol {
             const uint16_t total = static_cast<uint16_t>(HEADER_SIZE) + payload_len + CRC_SIZE;
 
             if (payload_len > MAX_PAYLOAD || total > MAX_PACKET_SIZE) {
-                return std::unexpected(Error::OUTPUT_TOO_LARGE);
+                return fail(ErrorCode::OUTPUT_TOO_LARGE, Step::PKT_BUILD, __LINE__);
             }
 
             uint8_t offset = 0U;
@@ -105,6 +105,25 @@ namespace PacketProtocol {
         [[nodiscard]] Result<uint8_t> build_gap(uint8_t* buf, Tick tick, TimestampUs ts_us,
                                                 PayloadGapMarker gap) noexcept {
             return build(buf, PayloadType::GAP_MARKER, tick, ts_us, &gap, sizeof(gap));
+        }
+
+        /// Shortcut for a PayloadFault frame (ADR-012). The header
+        /// timestamp is taken from the Error itself - the moment the
+        /// failure occurred at its origin - while `tick` is the CAN tick
+        /// current at REPORT time (pass Tick{0} during init).
+        [[nodiscard]] Result<uint8_t> build_fault(uint8_t* buf, Tick tick, uint8_t fault_code,
+                                                  const Error& err) noexcept {
+            PayloadFault fault{};
+            fault.fault_code = fault_code;
+            fault.error_code = static_cast<uint8_t>(err.code);
+            fault.flags = err.truncated ? 0x01U : 0x00U;
+            fault.depth = err.depth;
+            fault.line = err.line;
+            static_assert(sizeof(fault.steps) == TRACE_DEPTH);
+            for (uint8_t i = 0U; i < TRACE_DEPTH; i++) {
+                fault.steps[i] = static_cast<uint8_t>(err.trace[i]);
+            }
+            return build(buf, PayloadType::FAULT, tick, TimestampUs{err.timestamp_us}, &fault, sizeof(fault));
         }
 
         /// Shortcut for a PayloadBoot frame. tick and timestamp default
