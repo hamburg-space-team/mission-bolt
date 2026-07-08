@@ -63,7 +63,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_SDMMC1_SD_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_UART4_Init(void);
 static void MX_USART2_UART_Init(void);
@@ -108,7 +107,6 @@ int main(void)
   MX_GPIO_Init();
   MX_CAN1_Init();
   MX_I2C1_Init();
-  MX_SDMMC1_SD_Init();
   MX_IWDG_Init();
   MX_UART4_Init();
   MX_USART2_UART_Init();
@@ -327,7 +325,7 @@ static void MX_IWDG_Init(void)
   * @param None
   * @retval None
   */
-static void MX_SDMMC1_SD_Init(void)
+void MX_SDMMC1_SD_Init(void)
 {
 
   /* USER CODE BEGIN SDMMC1_Init 0 */

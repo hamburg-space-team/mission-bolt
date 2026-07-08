@@ -27,66 +27,86 @@ SdStore::SdStore(void* hsd) noexcept : hsd(hsd) {
 Result<void> SdStore::init() {
     auto* hsd_typed = static_cast<SD_HandleTypeDef*>(this->hsd);
 
-    HAL_SD_CardInfoTypeDef info{};
-    if (HAL_SD_GetCardInfo(hsd_typed, &info) != HAL_OK) {
-        return std::unexpected(Error::IO_ERROR);
+    // Full card bring-up lives HERE, not in CubeMX's main(): probing the
+    // card must be free to fail - no card inserted is a reportable fault
+    // (LED code SD, sd_status bit 0 = 0), never an Error_Handler() boot
+    // abort. MX_SDMMC1_SD_Init() may be skipped or early-return; this
+    // re-initializes the handle from scratch either way.
+    if (hsd_typed->State != HAL_SD_STATE_RESET) {
+        (void)HAL_SD_DeInit(hsd_typed);
+    }
+    hsd_typed->Instance = SDMMC1;
+    hsd_typed->Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+    hsd_typed->Init.ClockBypass = SDMMC_CLOCK_BYPASS_DISABLE;
+    hsd_typed->Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+    hsd_typed->Init.BusWide = SDMMC_BUS_WIDE_4B;
+    hsd_typed->Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+    hsd_typed->Init.ClockDiv = 0U;
+    if (HAL_SD_Init(hsd_typed) != HAL_OK) {
+        return fail(ErrorCode::IO_ERROR, Step::SD_INIT, __LINE__);
     }
 
-    cfg.context = hsd_typed;
-    cfg.read = bd_read;
-    cfg.prog = bd_prog;
-    cfg.erase = bd_erase;
-    cfg.sync = bd_sync;
-    cfg.read_size = BLOCK_SIZE;
-    cfg.prog_size = BLOCK_SIZE;
-    cfg.block_size = BLOCK_SIZE;
-    cfg.block_count = info.BlockNbr;
-    cfg.block_cycles = BLOCK_CYCLES;
-    cfg.cache_size = CACHE_SIZE;
-    cfg.lookahead_size = LOOKAHEAD_SIZE;
-    cfg.read_buffer = read_buf.data();
-    cfg.prog_buffer = prog_buf.data();
-    cfg.lookahead_buffer = lookahead_buf.data();
+    HAL_SD_CardInfoTypeDef info{};
+    if (HAL_SD_GetCardInfo(hsd_typed, &info) != HAL_OK) {
+        return fail(ErrorCode::IO_ERROR, Step::SD_INIT, __LINE__);
+    }
 
+    this->cfg.context = hsd_typed;
+    this->cfg.read = bd_read;
+    this->cfg.prog = bd_prog;
+    this->cfg.erase = bd_erase;
+    this->cfg.sync = bd_sync;
+    this->cfg.read_size = BLOCK_SIZE;
+    this->cfg.prog_size = BLOCK_SIZE;
+    this->cfg.block_size = BLOCK_SIZE;
+    this->cfg.block_count = info.BlockNbr;
+    this->cfg.block_cycles = BLOCK_CYCLES;
+    this->cfg.cache_size = CACHE_SIZE;
+    this->cfg.lookahead_size = LOOKAHEAD_SIZE;
+    this->cfg.read_buffer = this->read_buf.data();
+    this->cfg.prog_buffer = this->prog_buf.data();
+    this->cfg.lookahead_buffer = this->lookahead_buf.data();
+
+    // mount_or_format / open_log self-identify (SD_MOUNT, SD_OPEN).
     if (auto r = mount_or_format(); !r) {
         return r;
     }
     if (auto r = open_log(); !r) {
-        lfs_unmount(&lfs);
+        lfs_unmount(&this->lfs);
         return r;
     }
 
-    mounted = true;
+    this->mounted = true;
     return {};
 }
 
 Result<void> SdStore::mount_or_format() {
-    int err = lfs_mount(&lfs, &cfg);
+    int err = lfs_mount(&this->lfs, &this->cfg);
     if (err < 0) {
         // First boot or corrupted filesystem
-        err = lfs_format(&lfs, &cfg);
+        err = lfs_format(&this->lfs, &this->cfg);
         if (err < 0) {
-            return std::unexpected(Error::IO_ERROR);
+            return fail(ErrorCode::IO_ERROR, Step::SD_MOUNT, __LINE__);
         }
-        err = lfs_mount(&lfs, &cfg);
+        err = lfs_mount(&this->lfs, &this->cfg);
         if (err < 0) {
-            return std::unexpected(Error::IO_ERROR);
+            return fail(ErrorCode::IO_ERROR, Step::SD_MOUNT, __LINE__);
         }
     }
     return {};
 }
 
 Result<void> SdStore::open_log() {
-    file_cfg.buffer = file_buf.data();
-    file_cfg.attrs = nullptr;
-    file_cfg.attr_count = 0U;
+    this->file_cfg.buffer = this->file_buf.data();
+    this->file_cfg.attrs = nullptr;
+    this->file_cfg.attr_count = 0U;
 
-    const int err =
-        lfs_file_opencfg(&lfs, &file, LOG_FILENAME.data(), LFS_O_WRONLY | LFS_O_CREAT | LFS_O_APPEND, &file_cfg);
+    const int err = lfs_file_opencfg(&this->lfs, &this->file, LOG_FILENAME.data(),
+                                     LFS_O_WRONLY | LFS_O_CREAT | LFS_O_APPEND, &this->file_cfg);
     if (err < 0) {
-        return std::unexpected(Error::IO_ERROR);
+        return fail(ErrorCode::IO_ERROR, Step::SD_OPEN, __LINE__);
     }
-    file_open = true;
+    this->file_open = true;
     return {};
 }
 
@@ -94,54 +114,51 @@ Result<void> SdStore::write(const uint8_t* data, uint8_t len) {
     // PRODUCER side of the ADR-004 ring buffer. Runs in on_tick() and
     // must complete in microseconds: no SDMMC traffic happens here.
     if (data == nullptr || len == 0U || len > SLOT_BYTES) {
-        return std::unexpected(Error::BAD_ARGUMENT);
+        return fail(ErrorCode::BAD_ARGUMENT, Step::SD_WRITE, __LINE__);
     }
-    if (!mounted || !file_open) {
-        return std::unexpected(Error::DISABLED);
+    if (!this->mounted || !this->file_open) {
+        return fail(ErrorCode::DISABLED, Step::SD_WRITE, __LINE__);
     }
 
-    const auto head = ring_head;
+    const auto head = this->ring_head;
     const auto next = static_cast<uint8_t>((head + 1U) % RING_CAPACITY);
-    if (next == ring_tail) {
-        // Ring full - the drain phase hasn't kept up (SD card has been
-        // stalled longer than the ring can absorb at the current
-        // production rate)
-        drops = static_cast<uint16_t>(drops + 1U);
-        return std::unexpected(Error::IO_ERROR);
+    if (next == this->ring_tail) {
+        this->drops = static_cast<uint16_t>(this->drops + 1U);
+        return fail(ErrorCode::IO_ERROR, Step::SD_WRITE, __LINE__);
     }
 
-    auto& slot = ring[head];
+    auto& slot = this->ring[head];
     std::memcpy(slot.data.data(), data, len);
     slot.len = len;
 
     std::atomic_signal_fence(std::memory_order_release);
-    ring_head = next;
+    this->ring_head = next;
     return {};
 }
 
 bool SdStore::drain_one() {
-    if (!mounted || !file_open) {
+    if (!this->mounted || !this->file_open) {
         return false;
     }
-    const auto tail = ring_tail;
-    if (tail == ring_head) {
+    const auto tail = this->ring_tail;
+    if (tail == this->ring_head) {
         return false; // ring empty
     }
 
     std::atomic_signal_fence(std::memory_order_acquire);
-    auto& slot = ring[tail];
-    (void)lfs_file_write(&lfs, &file, slot.data.data(), slot.len);
+    auto& slot = this->ring[tail];
+    (void)lfs_file_write(&this->lfs, &this->file, slot.data.data(), slot.len);
 
-    ring_tail = static_cast<uint8_t>((tail + 1U) % RING_CAPACITY);
+    this->ring_tail = static_cast<uint8_t>((tail + 1U) % RING_CAPACITY);
     return true;
 }
 
 Result<void> SdStore::flush() {
-    if (!mounted || !file_open) {
-        return std::unexpected(Error::DISABLED);
+    if (!this->mounted || !this->file_open) {
+        return fail(ErrorCode::DISABLED, Step::SD_FLUSH, __LINE__);
     }
-    if (lfs_file_sync(&lfs, &file) != 0) {
-        return std::unexpected(Error::IO_ERROR);
+    if (lfs_file_sync(&this->lfs, &this->file) != 0) {
+        return fail(ErrorCode::IO_ERROR, Step::SD_FLUSH, __LINE__);
     }
     return {};
 }

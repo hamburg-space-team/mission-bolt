@@ -67,7 +67,6 @@ static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SDMMC1_SD_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART2_UART_Init(void);
@@ -114,7 +113,6 @@ int main(void)
   MX_CAN1_Init();
   MX_I2C1_Init();
   MX_SDMMC1_SD_Init();
-  MX_USART1_UART_Init();
   MX_IWDG_Init();
   MX_TIM3_Init();
   MX_USART2_UART_Init();
@@ -338,7 +336,7 @@ static void MX_SDMMC1_SD_Init(void)
 {
 
   /* USER CODE BEGIN SDMMC1_Init 0 */
-
+    return;
   /* USER CODE END SDMMC1_Init 0 */
 
   /* USER CODE BEGIN SDMMC1_Init 1 */
@@ -419,7 +417,7 @@ static void MX_TIM3_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USART1_UART_Init(void)
+void MX_USART1_UART_Init(void)
 {
 
   /* USER CODE BEGIN USART1_Init 0 */
