@@ -18,8 +18,9 @@ namespace {
         uint8_t rgb_mask;           // LP5810C: OUT0=R, OUT1=G, OUT2=B
         uint8_t uvir_mask;          // LP5810D: OUT0=white, OUT1=IR, OUT2=UV
         uint8_t pwm;                // Manual_PWM duty for all channels
-        uint8_t integration_cycles; // x 2.8 ms
-        uint8_t block_ticks;        // smallest n with n*40ms >= IT*2.8ms + ~10ms setup
+        uint8_t integration_cycles; // one-shot (mode 3 = mode 2 timing) converts
+                                    // BOTH channel banks: real time = 2 x IT x 2.8 ms
+        uint8_t block_ticks;        // see IT_CONFIGS: readout first, then 2*IT*2.8ms integration
     };
     struct LedCfg {
         uint8_t rgb;
@@ -40,10 +41,17 @@ namespace {
         {0x07U, 0x07U}, // all LEDs
     }};
     constexpr std::array<uint8_t, 4> PWM_LEVELS = {0x40U, 0x80U, 0xC0U, 0xFFU}; // 25/50/75/100 %
-    // Pipeline constraint: cycles >= 25. The previous row's second read half
-    // ends <= ~64 ms after the in-flight measurement started; the integration
-    // must not complete (and overwrite the RAW registers) before that.
-    constexpr std::array<ItCfg, 2> IT_CONFIGS = {{{25U, 2U}, {50U, 4U}}};
+    // Block layout (see on_experiment_tick): tick 0 reads the completed
+    // row's dies 0+1, tick 1 reads die 2 + sends, THEN starts the next
+    // measurement (~tick 1 + 20 ms). The RAW registers are LIVE on this
+    // chip - starting a measurement resets them - so ALL reading must
+    // happen before the next start (seen on hardware: start-then-read
+    // returned ~zero counts of the fresh integration). Block length: the
+    // integration (2*IT*2.8 ms, starts ~60 ms into the block) must be
+    // complete before the NEXT block's tick-0 readout:
+    //   IT25: 60 + 140 = 200 ms -> 6 ticks (240 ms)
+    //   IT50: 60 + 280 = 340 ms -> 10 ticks (400 ms)
+    constexpr std::array<ItCfg, 2> IT_CONFIGS = {{{25U, 6U}, {50U, 10U}}};
 
     constexpr uint8_t MATRIX_SIZE =
         static_cast<uint8_t>(IT_CONFIGS.size() * (1U + (LED_CONFIGS.size() * PWM_LEVELS.size())));
@@ -97,11 +105,12 @@ void Exp1Computer::sensor_init() noexcept {
 
     // LEDs are best-effort illumination: a failure latches that driver (and
     // lights the error LED) but must not stop the spectrometer cycle.
-    if (!lp5810_rgb.init(&i2c, LP5810C_ADDR, LP5810_DOT_CURRENT, platform.delay_ms)) {
-        on_sensor_failed(StatusLeds::Fault::LED_RGB);
+    if (auto r = lp5810_rgb.init(&i2c, LP5810C_ADDR, LP5810_DOT_CURRENT, platform.delay_ms, LP5810_HIGH_CURRENT); !r) {
+        report_fault(StatusLeds::Fault::LED_RGB, r.error());
     }
-    if (!lp5810_uv_ir.init(&i2c, LP5810D_ADDR, LP5810_DOT_CURRENT, platform.delay_ms)) {
-        on_sensor_failed(StatusLeds::Fault::LED_UVIR);
+    if (auto r = lp5810_uv_ir.init(&i2c, LP5810D_ADDR, LP5810_DOT_CURRENT, platform.delay_ms, LP5810_HIGH_CURRENT);
+        !r) {
+        report_fault(StatusLeds::Fault::LED_UVIR, r.error());
     }
 
     // The spectrometer IS the experiment. On success, clear the recovery
@@ -109,8 +118,10 @@ void Exp1Computer::sensor_init() noexcept {
     // leave the counter intact: cycle_active stays true so the recovery state
     // machine engages on the next tick (spec.is_failed()) and keeps retrying
     // until SPEC_MAX_RECOVERIES is exhausted.
-    if (!spec.init(&i2c, platform.tick_ms, AS7265X_ADDR, AS7265X_INT_25_CYCLES, AS7265XGain::GAIN_1X, spec_int_read)) {
-        on_sensor_failed(StatusLeds::Fault::SPEC);
+    if (auto r = spec.init(&i2c, platform.tick_ms, AS7265X_ADDR, AS7265X_INT_25_CYCLES, SPEC_GAIN, spec_int_read,
+                           platform.delay_ms);
+        !r) {
+        report_fault(StatusLeds::Fault::SPEC, r.error());
     } else {
         spec_recovery_attempts = 0U;
     }
@@ -130,7 +141,25 @@ void Exp1Computer::on_experiment_init() noexcept {
     HAL_GPIO_WritePin(SPEC_RESET_GPIO_Port, SPEC_RESET_Pin, GPIO_PIN_RESET);
     platform.delay_ms(2U);
     HAL_GPIO_WritePin(SPEC_RESET_GPIO_Port, SPEC_RESET_Pin, GPIO_PIN_SET);
+    wait_spec_boot();
     sensor_init();
+}
+
+// Poll until the AS72651 ACKs on I2C. After a hardware reset it reloads its
+// firmware from SPI flash (up to ~1 s) and NACKs every access until done -
+// probing earlier fails spec.init() and burns a recovery attempt for
+// nothing. Blocking is fine here: runs before the tick loop starts.
+void Exp1Computer::wait_spec_boot() noexcept {
+    const uint32_t deadline = platform.tick_ms() + SPEC_BOOT_TIMEOUT_MS;
+    while (platform.tick_ms() < deadline) {
+        platform.kick_wdg();
+        if (i2c.read_reg8(AS7265X_ADDR, 0x00U)) { // STATUS read ACKs -> booted
+            return;
+        }
+        platform.delay_ms(SPEC_BOOT_POLL_MS);
+    }
+    // Timed out: fall through to sensor_init(), which reports the fault
+    // with the full trace.
 }
 
 void Exp1Computer::try_spec_recovery() {
@@ -180,12 +209,12 @@ void Exp1Computer::report_led_fault_once() noexcept {
 
     if (lp5810_rgb.is_failed()) {
         led_fault_reported = true;
-        on_sensor_failed(StatusLeds::Fault::LED_RGB);
+        report_fault(StatusLeds::Fault::LED_RGB, lp5810_rgb.last_error());
     }
 
     if (lp5810_uv_ir.is_failed()) {
         led_fault_reported = true;
-        on_sensor_failed(StatusLeds::Fault::LED_UVIR);
+        report_fault(StatusLeds::Fault::LED_UVIR, lp5810_uv_ir.last_error());
     }
 }
 
@@ -202,23 +231,38 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
     const MeasStep& step = MATRIX[step_idx];
 
     if (block_tick == 0U) {
-        // Setup tick. The measurement that integrated during the previous
-        // block becomes "prev" and is read out during THIS block while the
-        // new one integrates (pipelined readout).
+        // The measurement started last block has completed (the block length
+        // guarantees it) - promote it and read dies 0+1 while the chip is
+        // idle. The RAW registers are LIVE: they reset the moment the next
+        // measurement starts, so the whole readout happens BEFORE the next
+        // start (tick 1).
         prev_ready = cur_started;
         prev_valid = cur_valid;
         prev_step_idx = cur_step_idx;
         prev_start_tick = cur_start_tick;
         prev_start_us = cur_start_us;
 
+        if (prev_ready) {
+            const bool ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
+            prev_valid = prev_valid && ok;
+        }
+    } else if (block_tick == 1U) {
+        // Rest of the readout (die 2), ship the pair - only THEN touch the
+        // chip again for the next row.
+        if (prev_ready) {
+            const bool ok = spec.read_channels_dies(&result, 2U, 1U).has_value();
+            prev_valid = prev_valid && ok;
+
+            send_spectrum_pair(prev_step_idx, prev_valid, prev_start_tick, prev_start_us);
+            prev_ready = false;
+        }
+
         // LEDs for the new row: PWM brightness + enable mask on both chips
-        // (dark rows carry mask 0 on both).
+        // (dark rows carry mask 0 on both), then integration time (no-op
+        // unless the row changes it) and the one-shot start. Destroys the
+        // RAW window - all reads for this row happen next block.
         bool led_ok = lp5810_rgb.set_channels(step.rgb_mask, step.pwm).has_value();
         led_ok = lp5810_uv_ir.set_channels(step.uvir_mask, step.pwm).has_value() && led_ok;
-
-        // Integration time (no-op unless the row changes it) + start, both
-        // EARLY in the tick: the integration must be complete when this
-        // row's own readout begins block_ticks later (IT25: ~72 ms vs 80 ms).
         const bool it_ok = spec.set_integration(step.integration_cycles).has_value();
         const bool start_ok = spec.start_measurement().has_value();
 
@@ -227,27 +271,8 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         cur_step_idx = step_idx;
         cur_start_tick = can_tick;
         cur_start_us = timestamp_us;
-
-        // First readout half of the previous row (dies 0+1, ~23 ms). Runs
-        // while the new measurement integrates: the RAW registers keep the
-        // previous result until the in-flight integration completes.
-        if (prev_ready) {
-            const bool ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
-            prev_valid = prev_valid && ok;
-        }
-    } else if (block_tick == 1U) {
-        // Second half (die 2, ~12 ms), then ship the pair. Must finish
-        // before the in-flight integration completes - guaranteed by the
-        // IT >= 25 constraint on the matrix (see IT_CONFIGS).
-        if (prev_ready) {
-            const bool ok = spec.read_channels_dies(&result, 2U, 1U).has_value();
-            prev_valid = prev_valid && ok;
-
-            send_spectrum_pair(prev_step_idx, prev_valid, prev_start_tick, prev_start_us);
-            prev_ready = false;
-        }
     }
-    // block_tick >= 2: wait while long-integration rows finish integrating.
+    // block_tick >= 2: the integration runs; the LEDs stay on for the row.
 
     block_tick++;
     if (block_tick >= step.block_ticks) {
@@ -272,7 +297,7 @@ void Exp1Computer::send_spectrum_pair(uint8_t matrix_idx, bool valid, uint16_t s
     }
 
     spec_a.integration_cycles = MATRIX[matrix_idx].integration_cycles;
-    spec_a.gain = static_cast<uint8_t>(AS7265XGain::GAIN_1X);
+    spec_a.gain = static_cast<uint8_t>(SPEC_GAIN);
     // Matrix ROW INDEX, not a bitmask: identifies LED config, brightness and
     // integration setting via the MATRIX table (ICD-007 decodes with the
     // same table).

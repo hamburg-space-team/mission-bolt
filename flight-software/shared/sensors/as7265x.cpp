@@ -3,15 +3,17 @@
 static constexpr uint8_t REG_WRITE = 0x01U;
 
 Result<void> AS7265X::init(CmsisI2CBus* bus_in, tick_fn tick_in, uint8_t addr_in, uint8_t integration_cycles,
-                           AS7265XGain gain, data_rdy_fn int_pin) {
+                           AS7265XGain gain, data_rdy_fn int_pin, delay_fn delay) {
     this->bus = bus_in;
     this->tick = tick_in;
     this->addr = addr_in;
     this->data_rdy_pin = int_pin;
+    this->delay_ms = delay;
 
     if (auto r = write_virtual(VREG_INT_TIME, integration_cycles); !r) {
-        disable();
-        return r;
+        const auto marked = mark(r.error(), Step::SPEC_INIT);
+        disable(marked.error());
+        return marked;
     }
     this->current_cycles = integration_cycles;
 
@@ -21,8 +23,9 @@ Result<void> AS7265X::init(CmsisI2CBus* bus_in, tick_fn tick_in, uint8_t addr_in
         ctrl = static_cast<uint8_t>(ctrl | INT_ENABLE_BIT);
     }
     if (auto r = write_virtual(VREG_CONTROL, ctrl); !r) {
-        disable();
-        return r;
+        const auto marked = mark(r.error(), Step::SPEC_INIT);
+        disable(marked.error());
+        return marked;
     }
 
     clear_failures();
@@ -31,34 +34,37 @@ Result<void> AS7265X::init(CmsisI2CBus* bus_in, tick_fn tick_in, uint8_t addr_in
 
 Result<void> AS7265X::start_measurement() {
     if (is_failed()) {
-        return std::unexpected(Error::DISABLED);
+        return fail(ErrorCode::DISABLED, Step::SPEC_START_MEAS, __LINE__);
     }
 
     auto ctrl = read_virtual(VREG_CONTROL);
     if (!ctrl) {
-        register_failure();
-        return std::unexpected(ctrl.error());
+        const auto marked = mark(ctrl.error(), Step::SPEC_START_MEAS);
+        register_failure(marked.error());
+        return marked;
     }
 
     // Set BANK bits [3:2] to one-shot, preserve gain and INT bits.
     const auto new_ctrl = static_cast<uint8_t>((*ctrl & 0xF3U) | static_cast<uint8_t>(MODE_ONE_SHOT << 2U));
     if (auto r = write_virtual(VREG_CONTROL, new_ctrl); !r) {
-        register_failure();
-        return r;
+        const auto marked = mark(r.error(), Step::SPEC_START_MEAS);
+        register_failure(marked.error());
+        return marked;
     }
     return {};
 }
 
 Result<void> AS7265X::set_integration(uint8_t cycles) {
     if (is_failed()) {
-        return std::unexpected(Error::DISABLED);
+        return fail(ErrorCode::DISABLED, Step::SPEC_SET_INTEGRATION, __LINE__);
     }
     if (cycles == this->current_cycles) {
         return {};
     }
     if (auto r = write_virtual(VREG_INT_TIME, cycles); !r) {
-        register_failure();
-        return r;
+        const auto marked = mark(r.error(), Step::SPEC_SET_INTEGRATION);
+        register_failure(marked.error());
+        return marked;
     }
     this->current_cycles = cycles;
     return {};
@@ -84,24 +90,17 @@ Result<void> AS7265X::read_channels(AS7265XResult* result) {
 
 Result<void> AS7265X::read_channels_dies(AS7265XResult* result, uint8_t first_die, uint8_t die_count) {
     if (result == nullptr || (static_cast<uint16_t>(first_die) + die_count) > DEVICE_COUNT) {
-        return std::unexpected(Error::BAD_ARGUMENT);
+        return fail(ErrorCode::BAD_ARGUMENT, Step::SPEC_READ_DIES, __LINE__);
     }
     if (is_failed()) {
-        return std::unexpected(Error::DISABLED);
+        return fail(ErrorCode::DISABLED, Step::SPEC_READ_DIES, __LINE__);
     }
 
-    // The AS7265x is three sensor dies behind one master. The RAW window
-    // 0x08-0x13 only ever shows the die selected via VREG_DEV_SEL; the bytes
-    // from 0x14 on are the calibrated IEEE-754 floats. Reading 18 channels
-    // linearly from 0x08 therefore returned floats-as-uint16 garbage for
-    // channels 6-17 (issue #24). Correct: select each die, read its six RAW
-    // channels. Result order: [0..5] = die 0 (AS72651), [6..11] = die 1
-    // (AS72652), [12..17] = die 2 (AS72653); wavelength mapping happens on
-    // ground (ADR-009 / ICD-007).
     for (uint8_t dev = first_die; dev < first_die + die_count; dev++) {
         if (auto r = write_virtual(VREG_DEV_SEL, dev); !r) {
-            register_failure();
-            return r;
+            const auto marked = mark(r.error(), Step::SPEC_DEV_SEL);
+            register_failure(marked.error());
+            return marked;
         }
         for (uint8_t i = 0U; i < CHANNELS_PER_DEVICE; i++) {
             const auto vreg_hi = static_cast<uint8_t>(FIRST_CHANNEL_VREG + i * 2U);
@@ -109,13 +108,15 @@ Result<void> AS7265X::read_channels_dies(AS7265XResult* result, uint8_t first_di
 
             auto hi = read_virtual(vreg_hi);
             if (!hi) {
-                register_failure();
-                return std::unexpected(hi.error());
+                const auto marked = mark(hi.error(), Step::SPEC_READ_DIES);
+                register_failure(marked.error());
+                return marked;
             }
             auto lo = read_virtual(vreg_lo);
             if (!lo) {
-                register_failure();
-                return std::unexpected(lo.error());
+                const auto marked = mark(lo.error(), Step::SPEC_READ_DIES);
+                register_failure(marked.error());
+                return marked;
             }
 
             result->channels[(dev * CHANNELS_PER_DEVICE) + i] =
@@ -127,40 +128,45 @@ Result<void> AS7265X::read_channels_dies(AS7265XResult* result, uint8_t first_di
     // (VREG_CONTROL polling, start_measurement) see the same device state
     // as after boot.
     if (auto r = write_virtual(VREG_DEV_SEL, 0U); !r) {
-        register_failure();
-        return r;
+        const auto marked = mark(r.error(), Step::SPEC_DEV_SEL);
+        register_failure(marked.error());
+        return marked;
     }
 
     clear_failures();
     return {};
 }
 
-// Poll STATUS until `done(status)` is true. The register pointer persists
-// between transactions on the AS72651, so only the FIRST poll pays for the
-// pointer write (write_read); every further poll is a bare 1-byte read at
-// roughly half the bus time. With ~8 polls per virtual-register access the
-// polling dominates the read cost, so this halves most of it (issue #24).
+Result<uint8_t> AS7265X::hw_read_reg(uint8_t reg) {
+    if (auto r = this->bus->write(this->addr, &reg, 1U); !r) {
+        return std::unexpected(r.error());
+    }
+    uint8_t value = 0U;
+    if (auto r = this->bus->read(this->addr, &value, 1U); !r) {
+        return std::unexpected(r.error());
+    }
+    return value;
+}
+
 Result<void> AS7265X::wait_status(uint8_t mask, uint8_t want) {
     const uint32_t deadline = (this->tick != nullptr) ? (this->tick() + TIMEOUT_MS) : 0U;
 
-    auto status = this->bus->read_reg8(this->addr, REG_STATUS); // sets the pointer
     for (uint32_t i = 0U; i < BUSY_ITER; i++) {
+        auto status = hw_read_reg(REG_STATUS);
         if (!status) {
-            return std::unexpected(status.error());
+            return mark(status.error(), Step::SPEC_WAIT_STATUS);
         }
         if ((*status & mask) == want) {
             return {};
         }
         if (this->tick != nullptr && this->tick() >= deadline) {
-            return std::unexpected(Error::TIMEOUT);
+            return fail(ErrorCode::TIMEOUT, Step::SPEC_WAIT_STATUS, __LINE__);
         }
-        uint8_t raw = 0U;
-        if (auto r = this->bus->read(this->addr, &raw, 1U); !r) { // pointer still on STATUS
-            return std::unexpected(r.error());
+        if (this->delay_ms != nullptr) {
+            this->delay_ms(POLLING_DELAY_MS);
         }
-        status = raw;
     }
-    return std::unexpected(Error::TIMEOUT);
+    return fail(ErrorCode::TIMEOUT, Step::SPEC_WAIT_STATUS, __LINE__);
 }
 
 Result<void> AS7265X::wait_tx_ready() {
@@ -173,26 +179,42 @@ Result<void> AS7265X::wait_rx_ready() {
 
 Result<void> AS7265X::write_virtual(uint8_t vreg, uint8_t value) {
     if (auto r = wait_tx_ready(); !r) {
-        return r;
+        return mark(r.error(), Step::SPEC_VREG_WRITE);
     }
     if (auto r = this->bus->write_reg8(this->addr, REG_WRITE, static_cast<uint8_t>(vreg | VWRITE_FLAG)); !r) {
-        return r;
+        return mark(r.error(), Step::SPEC_VREG_WRITE);
     }
     if (auto r = wait_tx_ready(); !r) {
-        return r;
+        return mark(r.error(), Step::SPEC_VREG_WRITE);
     }
-    return this->bus->write_reg8(this->addr, REG_WRITE, value);
+    if (auto r = this->bus->write_reg8(this->addr, REG_WRITE, value); !r) {
+        return mark(r.error(), Step::SPEC_VREG_WRITE);
+    }
+    return {};
 }
 
 Result<uint8_t> AS7265X::read_virtual(uint8_t vreg) {
+    // AMS virtual-register protocol: a previous read that TIMED OUT after
+    // writing its address leaves the (late) answer latched in the READ
+    // mailbox with RX_VALID set. It must be flushed before requesting a new
+    // address, or every following read returns the stale byte and the
+    // mailbox state machine stays desynchronised (SparkFun's reference
+    // driver does the same flush).
+    if (auto status = hw_read_reg(REG_STATUS); status && ((*status & STATUS_RX_VALID) != 0U)) {
+        (void)hw_read_reg(REG_READ);
+    }
     if (auto r = wait_tx_ready(); !r) {
-        return std::unexpected(r.error());
+        return mark(r.error(), Step::SPEC_VREG_READ);
     }
     if (auto r = this->bus->write_reg8(this->addr, REG_WRITE, vreg); !r) {
-        return std::unexpected(r.error());
+        return mark(r.error(), Step::SPEC_VREG_READ);
     }
     if (auto r = wait_rx_ready(); !r) {
-        return std::unexpected(r.error());
+        return mark(r.error(), Step::SPEC_VREG_READ);
     }
-    return this->bus->read_reg8(this->addr, REG_READ);
+    auto value = hw_read_reg(REG_READ);
+    if (!value) {
+        return mark(value.error(), Step::SPEC_VREG_READ);
+    }
+    return value;
 }

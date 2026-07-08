@@ -15,11 +15,10 @@
 /// Runs a measurement MATRIX (table in exp1_computer.cpp): every row
 /// combines an LED configuration (each LED alone, all together, dark
 /// reference) with a PWM brightness (25/50/75/100 %) and an integration
-/// time (25/50 cycles). Readout is PIPELINED: while row N+1 integrates,
-/// row N's 18 channels are read in two tick-sized halves (dies 0+1, then
-/// die 2) - full science rate with every tick inside the 40 ms budget.
-/// A full matrix pass is 58 rows / 174 ticks (~7 s). led_mask in the
-/// spectrum packets carries the MATRIX ROW INDEX (ICD-007).
+/// time (25/50 cycles).A full matrix pass is 58 rows / 464 ticks
+/// (~19 s; the one-shot mode converts both channel banks, so integration
+/// = 2 x IT x 2.8 ms). led_mask in the spectrum packets carries the
+/// MATRIX ROW INDEX (ICD-007).
 ///
 /// @ingroup apps
 class Exp1Computer final : public ExpComputer {
@@ -46,17 +45,20 @@ class Exp1Computer final : public ExpComputer {
     // datasheet (Table 7-4): variant C = 0x58, variant D = 0x5C.
     static constexpr uint8_t LP5810C_ADDR = 0x58U; // RGB LED driver   (0x58-0x5B)
     static constexpr uint8_t LP5810D_ADDR = 0x5CU; // UV/IR LED driver (0x5C-0x5F)
-    // Per-channel dot current (0xFF = 25.5 mA at max_current=0). D-360:
-    // keep illumination below detector saturation.
+    // Per-channel dot current (0xFF = full scale, 51 mA at max_current=1).
     static constexpr uint8_t LP5810_DOT_CURRENT = 0xFFU;
+    static constexpr bool LP5810_HIGH_CURRENT = false;
+    // AS7265X analog gain. 1x used <0.05 % of the ADC range on the bench;
+    // 16x brings the matrix into a usable SNR region. Goes out in the
+    // spectrum packets' gain field.
+    static constexpr AS7265XGain SPEC_GAIN = AS7265XGain::GAIN_16X;
     // LP5810C channel mask: OUT0=R, OUT1=G, OUT2=B
     static constexpr uint8_t RGB_CHANNELS = 0x07U;
     // LP5810D channel masks: OUT0=white, OUT1=IR 940nm, OUT2=UV 400nm
     static constexpr uint8_t WHITE_CHANNEL = 0x01U;
     static constexpr uint8_t IR_CHANNEL = 0x02U;
     static constexpr uint8_t UV_CHANNEL = 0x04U;
-    // AS72651 firmware boot from SPI flash after reset: up to ~1s before the
-    // device ACKs on I2C. Polled in wait_spec_boot().
+
     static constexpr uint32_t SPEC_BOOT_TIMEOUT_MS = 1500U;
     static constexpr uint32_t SPEC_BOOT_POLL_MS = 25U;
 

@@ -14,11 +14,13 @@ class LP5810 : public DeviceBase {
     using delay_fn = void (*)(uint32_t ms);
 
     /// addr:  page-0 I2C address (e.g. 0x58 for the C variant)
-    /// dc:    per-channel dot current 0x00-0xFF, scales 0-25.5 mA
-    ///        (max_current=0)
+    /// dc:    per-channel dot current 0x00-0xFF; full scale is 25.5 mA
+    ///        (high_current=false) or 51 mA (high_current=true, sets
+    ///        CFG0.max_current)
     /// delay: millisecond delay for the post-reset boot time; nullptr
     ///        skips the wait (host tests only)
-    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr, uint8_t dc = 0xFFU, delay_fn delay = nullptr);
+    [[nodiscard]] Result<void> init(CmsisI2CBus* bus, uint8_t addr, uint8_t dc = 0xFFU, delay_fn delay = nullptr,
+                                    bool high_current = false);
 
     /// Set all four channels' PWM duty (0xFF = 100 %), then write mask
     /// (bits 3:0) to LED_EN - enables those channels, disables the rest.
@@ -73,5 +75,6 @@ class LP5810 : public DeviceBase {
     CmsisI2CBus* bus = nullptr;
     uint8_t addr = 0U;
     uint8_t dot_current = 0xFFU; // per-channel dot current, retained for re-init
+    bool max_current = false;    // CFG0.max_current: false=25.5mA, true=51mA full scale
     delay_fn delay_ms = nullptr; // post-reset boot delay, retained for re-init
 };
