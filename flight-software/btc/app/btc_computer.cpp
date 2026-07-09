@@ -284,6 +284,14 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
         sync_count = 0U;
         lo_rtc_s = read_rtc_s();
         lo_received = true;
+    } else if (!lo_received && HAL_GPIO_ReadPin(LO_GPIO_Port, LO_Pin) == GPIO_PIN_RESET) {
+        if (++lo_level_ticks >= LO_LEVEL_DEBOUNCE_TICKS) {
+            sync_count = 0U;
+            lo_rtc_s = read_rtc_s();
+            lo_received = true;
+        }
+    } else {
+        lo_level_ticks = 0U;
     }
 
     if (missed_periods > 0U) {
