@@ -38,6 +38,9 @@ class Exp1Computer final : public ExpComputer {
     [[nodiscard]] PacketProtocol::PayloadType exp_status_type() const noexcept override {
         return PacketProtocol::PayloadType::EXP1_STATUS;
     }
+    /// Transient failure counters into the status packet: which link of
+    /// a matrix row's chain fails when rows go out with valid = 0.
+    void fill_status(PacketProtocol::PayloadExpStatus& status) noexcept override;
 
   private:
     // Hardware addresses
@@ -101,6 +104,12 @@ class Exp1Computer final : public ExpComputer {
     uint32_t cur_start_us = 0U;
     uint16_t prev_start_tick = 0U;
     uint32_t prev_start_us = 0U;
+
+    // Transient failure counters (saturating, since boot) - shipped in
+    // every EXP1_STATUS via fill_status().
+    uint8_t led_write_fails = 0U;
+    uint8_t spec_start_fails = 0U;
+    uint8_t data_ready_fails = 0U;
 
     AS7265XResult result{};
 };

@@ -115,7 +115,8 @@ namespace PacketProtocol {
         // 0=dark  1=RGB  2=white  3=IR (940 nm)  4=UV (400 nm)
         uint8_t led_mask;
 
-        // 1 if DATA_READY was set when result was collected; 0 = may be incomplete.
+        // 1 = DATA_RDY (SPEC_INT pin) was asserted at collection AND the
+        // full readout chain succeeded; 0 = values may be incomplete.
         uint8_t measurement_valid;
     };
     PACKET_TYPE_CHECK(PayloadExp1SpectrumA);
@@ -169,7 +170,14 @@ namespace PacketProtocol {
         // bit 1 = failed (3+ consecutive errors, writes suppressed)
         uint8_t sd_status;
 
-        uint8_t reserved[3]; // NOLINT(modernize-avoid-c-arrays)
+        // Transient per-row failure counters since boot, saturating at
+        // 255 (formerly reserved, always 0). EXP1 fills them from the
+        // spectrometer matrix; EXP2 sends zeros. They pinpoint which
+        // link of a row's chain failed when spectra arrive with
+        // measurement_valid = 0 but no FAULT latch.
+        uint8_t led_write_fails;  // LP5810 set_channels failed
+        uint8_t spec_start_fails; // set_integration/start_measurement failed
+        uint8_t data_ready_fails; // DATA_RDY/INT not asserted at readout
     };
     PACKET_TYPE_CHECK(PayloadExpStatus);
 

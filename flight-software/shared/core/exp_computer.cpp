@@ -154,6 +154,7 @@ void ExpComputer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
     PayloadExpStatus status{};
     status.uptime_s = this->platform.tick_ms() / 1000U;
     status.sd_status = static_cast<uint8_t>(this->storage.is_mounted() ? 0x01U : 0x00U);
+    fill_status(status);
 
     if (auto len = this->pkt.build(this->tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us},
                                    &status, static_cast<uint8_t>(sizeof(status)))) {

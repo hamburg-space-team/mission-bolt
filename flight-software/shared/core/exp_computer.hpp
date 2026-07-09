@@ -2,6 +2,7 @@
 
 #include "can_transport.hpp"
 #include "node_computer.hpp"
+#include "packet_payloads.hpp"
 #include "packet_types.hpp"
 
 #include <cstdint>
@@ -39,6 +40,12 @@ class ExpComputer : public NodeComputer {
     // Packet builders - EXP3 overrides send_env_packet() for PayloadExp3Env
     virtual void send_env_packet(uint16_t can_tick, uint32_t timestamp_us);
     virtual void send_status_packet(uint16_t can_tick, uint32_t timestamp_us);
+
+    /// Board-specific extras for the status payload (EXP1: transient
+    /// spectrometer failure counters). Base leaves the fields at 0.
+    virtual void fill_status(PacketProtocol::PayloadExpStatus& status) noexcept {
+        (void)status;
+    }
 
     virtual void on_experiment_init() noexcept {
     }
