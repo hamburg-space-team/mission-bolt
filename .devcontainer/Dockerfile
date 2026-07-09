@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # debug/flash/inspect
     openocd gdb-multiarch stlink-tools usbutils \
     # serial console for the RS-422/debug UART (downlink dumps)
-    picocom python3 python3-serial \
+    # udev: provides `udevadm`, which the VS Code Serial Monitor
+    # extension shells out to on view init to enumerate serial ports
+    picocom python3 python3-serial udev \
     # docs (sources are doxygen-annotated)
     doxygen graphviz \
     # misc
