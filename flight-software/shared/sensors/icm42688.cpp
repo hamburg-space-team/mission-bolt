@@ -83,7 +83,16 @@ Result<ICM42688Result> ICM42688::read_sample() {
 
     uint8_t start_reg = REG_ACCEL_DATA_X1;
     std::array<uint8_t, 12> buf{};
-    if (auto r = this->bus->write_read(this->addr, &start_reg, 1U, buf.data(), buf.size()); !r) {
+    auto r = this->bus->write_read(this->addr, &start_reg, 1U, buf.data(), buf.size());
+    if (!r) {
+        const uint8_t alt = (this->addr == ICM42688_ADDR) ? ICM42688_ADDR_ALT : ICM42688_ADDR;
+        const auto who = this->bus->read_reg8(alt, REG_WHO_AM_I);
+        if (who && *who == EXPECTED_WHO_AM_I) {
+            this->addr = alt;
+            r = this->bus->write_read(this->addr, &start_reg, 1U, buf.data(), buf.size());
+        }
+    }
+    if (!r) {
         const auto marked = mark(r.error(), Step::IMU_READ);
         register_failure(marked.error());
         return marked;
