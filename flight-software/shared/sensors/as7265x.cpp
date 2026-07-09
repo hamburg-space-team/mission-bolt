@@ -193,6 +193,17 @@ Result<void> AS7265X::write_virtual(uint8_t vreg, uint8_t value) {
     return {};
 }
 
+Result<void> AS7265X::probe(CmsisI2CBus* bus_in, tick_fn tick_in, delay_fn delay) {
+    this->bus = bus_in;
+    this->tick = tick_in;
+    this->delay_ms = delay;
+    this->addr = AS7265X_ADDR;
+    if (auto r = read_virtual(VREG_HW_VERSION); !r) {
+        return std::unexpected(r.error());
+    }
+    return {};
+}
+
 Result<uint8_t> AS7265X::read_virtual(uint8_t vreg) {
     // AMS virtual-register protocol: a previous read that TIMED OUT after
     // writing its address leaves the (late) answer latched in the READ

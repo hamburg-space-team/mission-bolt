@@ -52,6 +52,9 @@ class AS7265X : public DeviceBase {
                                     AS7265XGain gain = AS7265XGain::GAIN_1X, data_rdy_fn int_pin = nullptr,
                                     delay_fn delay = nullptr);
 
+    /// Boot probe
+    [[nodiscard]] Result<void> probe(CmsisI2CBus* bus, tick_fn tick, delay_fn delay);
+
     /// Trigger a one-shot measurement. Returns immediately; record the
     /// start timestamp right after.
     [[nodiscard]] Result<void> start_measurement();
@@ -78,6 +81,7 @@ class AS7265X : public DeviceBase {
     [[nodiscard]] Result<void> read_channels_dies(AS7265XResult* result, uint8_t first_die, uint8_t die_count);
 
   private:
+    static constexpr uint8_t VREG_HW_VERSION = 0x01U;
     static constexpr uint8_t VREG_CONTROL = 0x04U;
     static constexpr uint8_t VREG_INT_TIME = 0x05U;
     static constexpr uint8_t REG_STATUS = 0x00U;

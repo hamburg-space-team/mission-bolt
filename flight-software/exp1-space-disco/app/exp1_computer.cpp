@@ -145,15 +145,12 @@ void Exp1Computer::on_experiment_init() noexcept {
     sensor_init();
 }
 
-// Poll until the AS72651 ACKs on I2C. After a hardware reset it reloads its
-// firmware from SPI flash (up to ~1 s) and NACKs every access until done -
-// probing earlier fails spec.init() and burns a recovery attempt for
-// nothing. Blocking is fine here: runs before the tick loop starts.
+// Poll until the AS72651 actually SERVES the virtual-register protocol.
 void Exp1Computer::wait_spec_boot() noexcept {
     const uint32_t deadline = platform.tick_ms() + SPEC_BOOT_TIMEOUT_MS;
     while (platform.tick_ms() < deadline) {
         platform.kick_wdg();
-        if (i2c.read_reg8(AS7265X_ADDR, 0x00U)) { // STATUS read ACKs -> booted
+        if (spec.probe(&i2c, platform.tick_ms, platform.delay_ms)) {
             return;
         }
         platform.delay_ms(SPEC_BOOT_POLL_MS);
@@ -202,6 +199,12 @@ void Exp1Computer::try_spec_recovery() {
     }
 }
 
+void Exp1Computer::fill_status(PacketProtocol::PayloadExpStatus& status) noexcept {
+    status.led_write_fails = led_write_fails;
+    status.spec_start_fails = spec_start_fails;
+    status.data_ready_fails = data_ready_fails;
+}
+
 void Exp1Computer::report_led_fault_once() noexcept {
     if (led_fault_reported) {
         return;
@@ -243,8 +246,16 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         prev_start_us = cur_start_us;
 
         if (prev_ready) {
+            // DATA_RDY (hardware INT pin, SPEC_INT) must be asserted before
+            // touching the RAW registers: the block length guarantees the
+            // timing, but a mid-run chip reboot would otherwise deliver a
+            // phantom readout with measurement_valid = 1.
+            const bool rdy = spec.data_ready();
+            if (!rdy && data_ready_fails != 0xFFU) {
+                data_ready_fails++;
+            }
             const bool ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
-            prev_valid = prev_valid && ok;
+            prev_valid = prev_valid && rdy && ok;
         }
     } else if (block_tick == 1U) {
         // Rest of the readout (die 2), ship the pair - only THEN touch the
@@ -265,6 +276,14 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         led_ok = lp5810_uv_ir.set_channels(step.uvir_mask, step.pwm).has_value() && led_ok;
         const bool it_ok = spec.set_integration(step.integration_cycles).has_value();
         const bool start_ok = spec.start_measurement().has_value();
+
+        // Transient diagnostics: count which link failed (EXP1_STATUS).
+        if (!led_ok && led_write_fails != 0xFFU) {
+            led_write_fails++;
+        }
+        if ((!it_ok || !start_ok) && spec_start_fails != 0xFFU) {
+            spec_start_fails++;
+        }
 
         cur_started = true;
         cur_valid = led_ok && it_ok && start_ok;
