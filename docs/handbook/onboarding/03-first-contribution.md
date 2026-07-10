@@ -51,7 +51,7 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`,
 
 Example:
 
-```
+```text
 fix(flight): drop AS7265X gain on saturated channels
 
 If a channel reads >= 60000 ADC counts at the current gain, step

@@ -95,7 +95,6 @@ bun install
 
 Full bring-up: [running-ground-station](../../guides/running-ground-station.md).
 
-
 ## Troubleshooting
 
 Ask in `#bolt_software`.
