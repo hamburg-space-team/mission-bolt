@@ -2,44 +2,77 @@
 
 Reference page. You'll come back to it.
 
-## OS
+> **Since July 2026 we use devcontainers.** The container ships the
+> whole flight-side toolchain pinned and preconfigured -- you don't
+> install compilers, CMSIS-Toolbox or clangd by hand anymore. The
+> manual setup below is kept as a fallback for people who can't run
+> Docker.
 
-Anything works for host-side tests (Linux, macOS, Windows + WSL).
-For flashing real boards, Linux or macOS are smoother. Examples
-below use Ubuntu; translate as needed.
+## Devcontainer (default path)
 
-## Flight Side
+**Prerequisites:**
 
-**Cross-compiler:**
+- Docker (Docker Desktop on Windows/macOS, docker-ce on Linux;
+  on Windows enable the WSL integration)
+- VS Code + the **Dev Containers** extension
+  (`ms-vscode-remote.remote-containers`)
 
-```bash
-sudo apt install gcc-arm-none-eabi
-arm-none-eabi-gcc --version       # want 13.3.1
-```
-
-If your distro's package is older, grab the official build from
-ARM. See [ADR-006](../../decisions/ADR-006-cmsis-toolbox.md).
-
-**CMSIS-Toolbox 2.12.0** -- follow the upstream release notes.
-Verify `cbuild --version`.
-
-**Host tests:**
+**Bring-up:**
 
 ```bash
-sudo apt install cmake g++ python3
+git clone https://github.com/hamburg-space-team/mission-bolt.git
 ```
 
-**Flashing / debug:**
+Open the `mission-bolt` folder (the repo root -- the one containing
+`.devcontainer/`) in VS Code, then `F1` -> **Dev Containers: Reopen
+in Container**. Do NOT pick "Clone in Container Volume" -- the
+workspace must stay a bind mount of your local clone (CubeMX on the
+host writes into the same tree).
+
+First start takes several minutes: the image build downloads the
+toolchain, and `post-create.sh` pulls the CMSIS packs for all five
+targets. Packs live on a named docker volume and survive rebuilds;
+every later start takes seconds.
+
+**What's inside** (pinned in `.devcontainer/Dockerfile`):
+
+| Tool | Version |
+| --- | --- |
+| Arm GNU toolchain | 15.2.Rel1 |
+| CMSIS-Toolbox | 2.14.1 |
+| clangd / clang-format / clang-tidy | latest stable |
+| g++-14, CMake (Kitware), Ninja | host tests, C++23 |
+| OpenOCD, stlink-tools, gdb-multiarch, picocom | flash / debug / serial |
+
+Build:
 
 ```bash
-sudo apt install openocd gdb-multiarch
+cbuild flight-software/bolt.csolution.yml --context btc.Debug+btc
 ```
 
-On Linux, install the OpenOCD udev rules so you can flash without
-root, then add yourself to `plugdev` / `dialout`. Log out and back
-in.
+Host tests:
 
-## Ground Side
+```bash
+cmake -S flight-software -B build/tests -DCMAKE_BUILD_TYPE=Debug -G Ninja
+cmake --build build/tests
+ctest --test-dir build/tests --output-on-failure
+```
+
+**Flashing from inside the container:** the ST-Link reaches the
+container via USB passthrough (WSL: `usbipd bind` once, `usbipd
+attach --wsl` per plug-in) or via an external GDB server over TCP.
+Both variants step-by-step:
+[.devcontainer/README.md](../../../.devcontainer/README.md).
+
+**STM32CubeMX stays on the host** (GUI + ST license). The workspace
+is a bind mount, so regenerating on the host and building in the
+container just works.
+
+**Editor:** clangd, Cortex-Debug and the CMSIS extensions are
+installed into the container automatically. The clangd-version
+dance from the manual setup does not apply here.
+
+## Ground Side (host, not containerized yet)
 
 ```bash
 sudo apt install python3.12 python3.12-venv
@@ -48,74 +81,8 @@ curl -fsSL https://bun.sh/install | bash
 ```
 
 `pip`/`npm` work as fallbacks. Team default is `uv` + `bun`.
-
-Optional, for the Go variant of the sensor-api: `sudo apt install golang-go`.
-
-## Editor
-
-VS Code is the default. Extensions worth installing:
-
-- clangd, CMake Tools, Cortex-Debug
-- ESLint, Python, Pylance
-
-The `flight-software/.vscode/` folder ships tasks for build/flash/
-format/test. Open the `flight-software` folder as a workspace.
-
-Other editors are fine. clangd reads the merged
-`compile_commands.json` no matter the wrapper.
-
-### clangd version
-
-We use C++23 (`std::expected`, `gnu++23`). The Ubuntu 22.04 system
-`clangd` (version 14) and the `clangd-15` package are **too old** --
-they don't parse `std::expected` or accept `gnu++23`. You need
-**clangd >= 22.x** or LLVM >= 17.
-
-Quick install (no sudo):
-
-```bash
-mkdir -p ~/.local/clangd && cd /tmp && \
-  curl -L -o clangd.zip https://github.com/clangd/clangd/releases/download/22.1.6/clangd-linux-22.1.6.zip && \
-  unzip -q clangd.zip && mv clangd_22.1.6 ~/.local/clangd/
-```
-
-Then set `clangd.path` in your VS Code settings to
-`~/.local/clangd/clangd_22.1.6/bin/clangd`.
-
-Full setup, troubleshooting, and the per-folder `.clangd` routing
-are in [setting-up-clangd.md](../../guides/setting-up-clangd.md).
-Read it before opening the project in VS Code -- you'll lose a day
-hunting `'expected' file not found` and `invalid value 'gnu++23'`
-otherwise.
-
-## Clone and First Build
-
-```bash
-git clone https://github.com/hamburg-space-team/mission-bolt.git
-cd mission-bolt/flight-software
-```
-
-Host tests first (no CMSIS packs needed):
-
-```bash
-cmake -S . -B build/tests -DCMAKE_BUILD_TYPE=Debug
-cmake --build build/tests
-ctest --test-dir build/tests --output-on-failure
-```
-
-Then flight:
-
-```bash
-cpackget update-index
-cpackget add ARM::CMSIS@6.3.0 ARM::CMSIS-Compiler@2.2.0 \
-             ARM::CMSIS-Driver_STM32@1.3.0 Keil::STM32L4xx_DFP@3.1.0
-cbuild bolt.csolution.yml --context btc.Debug+btc
-```
-
-See [building-flight-software](../../guides/building-flight-software.md)
-for the other targets.
-
-## Ground Station
+Optional, for the Go variant of the sensor-api:
+`sudo apt install golang-go`.
 
 ```bash
 cd ground-station
@@ -128,20 +95,10 @@ bun install
 
 Full bring-up: [running-ground-station](../../guides/running-ground-station.md).
 
-## Smoke Test
-
-You're good when:
-
-1. `cbuild ... btc.Debug+btc` produces `out/btc/btc/Debug/btc.elf`.
-2. `ctest --test-dir build/tests` is green.
-3. clangd shows no red squiggles in
-   [`crc16.hpp`](../../../flight-software/shared/utils/crc16.hpp).
-4. The synthetic-source + sensor-api + dashboard chain renders live
-   data in a browser.
 
 ## Troubleshooting
 
-Aask in `#bolt_software`.
+Ask in `#bolt_software`.
 
 ## Next
 

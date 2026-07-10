@@ -1,12 +1,13 @@
 # Contributing to BOLT THHOR
 
-First off, thanks for taking the time to contribute! 
+First off, thanks for taking the time to contribute!
 
-All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions. 
+All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions.
 
 For information about how we work as a team, see [docs/handbook/](docs/handbook/).
 
 > And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation, which we would also be very happy about:
+>
 > - Star the project
 > - Tweet about it
 > - Refer this project in your project's readme
@@ -31,14 +32,12 @@ For information about how we work as a team, see [docs/handbook/](docs/handbook/
 - [Pull Request Workflow](#pull-request-workflow)
 - [Join The Project Team](#join-the-project-team)
 
-
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
 [BOLT THHOR Code of Conduct](CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to <conduct@thhor.space>.
-
 
 ## I Have a Question
 
@@ -57,10 +56,10 @@ Team members can also discuss in our Slack workspace. Ask for an invite during o
 
 We will then take care of it as soon as possible.
 
-
 ## I Want To Contribute
 
 > ### Legal Notice <!-- omit in toc -->
+>
 > When contributing to this project, you must agree that you have authored 100% of the content and that you have the necessary rights to the content.
 
 ### Reporting Bugs
@@ -85,7 +84,7 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 <!-- omit in toc -->
 #### How Do I Submit a Good Bug Report?
 
-> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead, sensitive bugs must be sent by email to <security@thhor.space>. See [SECURITY.md](SECURITY.md) for details.
+> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead, sensitive bugs must be sent by email to <security@hamburgspace.de>. See [SECURITY.md](SECURITY.md) for details.
 
 We use GitHub issues to track bugs and errors. If you run into an issue with the project:
 
@@ -99,7 +98,6 @@ Once it's filed:
 - The issue will be labeled accordingly.
 - Someone from the team will try to reproduce the issue with your provided steps. If there are no reproduction steps or no obvious way to reproduce the issue, we will ask you for those steps and mark the issue as `needs-repro`. Bugs with the `needs-repro` tag will not be addressed until they are reproduced.
 - If the issue can be reproduced, it will be marked `needs-fix`, possibly along with other tags (such as `critical`), and the issue will be left to be [implemented by someone](#your-first-code-contribution).
-
 
 ### Suggesting Enhancements
 
@@ -125,7 +123,6 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/hambur
 - You may want to **include diagrams or sketches** which help you demonstrate the proposal. PlantUML and Mermaid sources are preferred over images so they can be versioned.
 - **Explain why this enhancement would be useful** to BOLT THHOR and our missions. Mention any related ADRs or ICDs if applicable.
 
-
 ### Your First Code Contribution
 
 #### Setting Up Your Environment
@@ -150,7 +147,6 @@ See the [Pull Request Workflow](#pull-request-workflow) section below.
 
 For your first PR, expect more detailed review feedback than usual. This is part of learning our standards, not criticism of your work. Other team members will help you understand the why behind the feedback.
 
-
 ### Improving The Documentation
 
 Documentation contributions are highly valued. Documentation lives in several places:
@@ -170,7 +166,6 @@ To improve documentation:
 
 If documentation is missing, that itself is a contribution opportunity. Open an issue describing what is missing and where it should live.
 
-
 ### Architectural Changes
 
 Changes affecting the system architecture require an Architecture Decision Record (ADR) before implementation.
@@ -185,7 +180,6 @@ The workflow:
 
 See existing ADRs in [docs/decisions/](docs/decisions/) for examples.
 
-
 ### Interface Changes
 
 Changes affecting interfaces between components require updates to the corresponding Interface Control Document (ICD).
@@ -199,7 +193,6 @@ The workflow:
 5. Update all implementations atomically (preferably in the same PR)
 
 Interfaces include CAN protocol, packet formats, UART protocols to LiFi transceivers, and the RS-422 link to RXSM. See the ICD index in [docs/interfaces/README.md](docs/interfaces/README.md) for the full list.
-
 
 ## Styleguides
 
@@ -234,7 +227,6 @@ for the full format, type list, and examples.
 - Follow templates in [docs/standards/documentation/](docs/standards/documentation/)
 - Write in English throughout the repository
 
-
 ## Pull Request Workflow
 
 For our complete branching, issue, and PR conventions, see [docs/standards/process/](docs/standards/process/).
@@ -268,10 +260,10 @@ Every PR must:
 - Update documentation if applicable
 - Include tests for new functionality
 
-
 ## Join The Project Team
 
 BOLT THHOR is built primarily by students of TU Hamburg. If you are a TUHH student interested in joining the team:
+
 - Visit our information sessions (announced via Hamburg Space Team channels)
 - Contact us at <bolt@thhor.space>
 - Read our [onboarding documentation](docs/handbook/onboarding/) to understand what we do
@@ -280,7 +272,8 @@ New members typically start with an onboarding period, paired with an experience
 
 External contributors (non-TUHH) are also welcome to contribute via pull requests, following the standard contribution workflow described above.
 
-
 <!-- omit in toc -->
 ## Attribution
-This guide is based on the [contributing.md](https://contributing.md/generator) template, adapted for the BOLT THHOR project at TUHH Orbital Research.
+
+This guide is based on the [contributing.md](https://contributing.md/generator) template,
+adapted for the BOLT THHOR project at TUHH Orbital Research.
