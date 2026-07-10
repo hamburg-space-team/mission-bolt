@@ -279,6 +279,20 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     poll_device_fault(tmp, StatusLeds::Fault::TMP, tmp_fault_reported);
     poll_device_fault(imu, StatusLeds::Fault::IMU, imu_fault_reported);
 
+    // PROTOTYPE BRIDGE (rev-A board, AD0 unrouted): the chip drops off the
+    // bus for a few seconds while the floating address pin drifts through
+    // the undefined band, then sits stable on the other address. Instead of
+    // staying latched, retry a full re-init once per second - after the pin
+    // settles the IMU comes back for good. The next PCB revision straps
+    // AD0 in copper; this block never triggers there and can be removed.
+    if (imu.is_failed() && ++imu_retry_ticks >= IMU_RETRY_TICKS) {
+        imu_retry_ticks = 0U;
+        imu = ICM42686{};
+        if (imu.init(&i2c, ICM42686_ADDR, ICM42686Odr::ODR_200HZ, true)) {
+            imu_fault_reported = false;
+        }
+    }
+
     if (lo_pending_g) {
         lo_pending_g = false;
         sync_count = 0U;

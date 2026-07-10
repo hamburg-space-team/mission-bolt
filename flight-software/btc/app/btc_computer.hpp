@@ -40,6 +40,8 @@ class BtcComputer final : public NodeComputer {
     static constexpr uint8_t SAVE_INTERVAL = 25U;
     static constexpr uint8_t LO_LEVEL_DEBOUNCE_TICKS = 3U;
 
+    static constexpr uint8_t IMU_RETRY_TICKS = 25U;
+
     static constexpr uint32_t DOWNLINK_BAUD = 38400U;
 
     Rs422Downlink downlink;
@@ -48,6 +50,7 @@ class BtcComputer final : public NodeComputer {
     uint16_t sync_count = 0U;
     bool lo_received = false;
     uint8_t lo_level_ticks = 0U;
+    uint8_t imu_retry_ticks = 0U;
     bool gc_done = false;
 
     bool uart_fault_reported = false;
