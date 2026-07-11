@@ -2,6 +2,11 @@
     "name": "mission-bolt",
     "build": { "dockerfile": "Dockerfile" },
 
+    "features": {
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+    },
+
     "privileged": true,
     "mounts": [
         "source=/dev/bus/usb,target=/dev/bus/usb,type=bind",
@@ -10,8 +15,6 @@
     ],
 
     "containerEnv": {
-        // Host path of the workspace - post-create derives the Claude
-        // Code project slug from it (works for every team member's path).
         "HOST_PROJECT_DIR": "${localWorkspaceFolder}"
     },
 
@@ -38,7 +41,8 @@
                 "ms-vscode.vscode-serial-monitor",
                 "bradlc.vscode-tailwindcss",
                 "Arm.vscode-cmsis-debugger",
-                "Arm.keil-studio-pack"
+                "Arm.keil-studio-pack",
+                "rust-lang.rust-analyzer"
             ],
             "settings": {
                 "clangd.arguments": [

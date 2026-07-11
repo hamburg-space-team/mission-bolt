@@ -7,22 +7,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # --- Base packages -----------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # host builds + unit tests (g++-14: <expected>, C++23)
     build-essential g++-14 ninja-build ccache \
-    # debug/flash/inspect
     openocd gdb-multiarch stlink-tools usbutils \
-    # serial console for the RS-422/debug UART (downlink dumps)
-    # udev: provides `udevadm`, which the VS Code Serial Monitor
-    # extension shells out to on view init to enumerate serial ports
     picocom python3 python3-serial udev \
-    # docs (sources are doxygen-annotated)
     doxygen graphviz \
-    # misc
+    libhdf5-dev libudev-dev pkg-config \
     git git-lfs curl wget gnupg ca-certificates xz-utils lsb-release \
     software-properties-common libncursesw6 \
     && rm -rf /var/lib/apt/lists/*
 
-# --- CMake (latest via Kitware repo; toolbox needs >= 3.25) -------------
+# --- CMake -------------
 RUN curl -fsSL https://apt.kitware.com/keys/kitware-archive-latest.asc \
       | gpg --dearmor -o /usr/share/keyrings/kitware.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/kitware.gpg] https://apt.kitware.com/ubuntu/ noble main" \
@@ -55,10 +49,9 @@ RUN curl -fsSL -o /tmp/ctools.tar.gz \
     && rm /tmp/ctools.tar.gz
 
 ENV PATH="/opt/cmsis-toolbox/bin:/opt/arm-gnu-toolchain/bin:${PATH}"
-# CMSIS-Toolbox toolchain registration: GCC_TOOLCHAIN_<major>_<minor>_<patch>.
-# Arm GNU x.y.rel1 identifies as gcc x.y.1 -> 15.2.rel1 = 15.2.1.
+
 ENV GCC_TOOLCHAIN_15_2_1=/opt/arm-gnu-toolchain/bin
-# Pack cache on a named docker volume (devcontainer.json) - survives rebuilds.
+
 ENV CMSIS_PACK_ROOT=/opt/cmsis-packs
 
 RUN mkdir -p /opt/cmsis-packs && chown vscode:vscode /opt/cmsis-packs

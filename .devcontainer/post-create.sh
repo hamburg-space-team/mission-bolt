@@ -24,5 +24,27 @@ if [ -n "${HOST_PROJECT_DIR:-}" ] && [ -d "$HOME/.claude/projects" ]; then
     fi
 fi
 
+# --- telemetry-tools (Bolt): Rust codec/CLIs + VS Code extension ---
+if [ -d telemetry-tools ]; then
+    echo "== building telemetry-tools (Bolt) =="
+    ( cd telemetry-tools && cargo build ) \
+        || ( echo "telemetry-tools: build with hdf5 failed (check libhdf5) - building without hdf5"; \
+             cd telemetry-tools && cargo build --no-default-features )
+    ( cd telemetry-tools/extension && npm install && npm run compile ) \
+        || echo "telemetry-tools: extension build failed"
+
+    ext_dir="$HOME/.vscode-server/extensions"
+    code_server="$(ls -1 "$HOME"/.vscode-server/bin/*/bin/code-server \
+        /vscode/vscode-server/bin/*/bin/code-server 2>/dev/null | head -1)"
+    if [ -n "$code_server" ] && \
+       ( cd telemetry-tools/extension && npx --yes @vscode/vsce package --no-dependencies -o bolt.vsix ); then
+        "$code_server" --install-extension "$PWD/telemetry-tools/extension/bolt.vsix" \
+            --extensions-dir "$ext_dir" --force \
+            || echo "telemetry-tools: auto-install failed - build the extension and reload the window"
+    else
+        echo "telemetry-tools: code-server/vsce unavailable - build the extension and reload the window"
+    fi
+fi
+
 echo "Devcontainer ready. Build with:"
 echo "  cbuild flight-software/bolt.csolution.yml --context btc.Debug+btc"
