@@ -1,0 +1,18 @@
+.tabulator { background: var(--vscode-editor-background); color: var(--vscode-foreground); border: 1px solid var(--vscode-widget-border, #8884); font-size: 12px; }
+.tabulator .tabulator-header, .tabulator .tabulator-header .tabulator-col { background: var(--vscode-editorWidget-background); color: var(--vscode-foreground); border-color: var(--vscode-widget-border, #8884); }
+.tabulator .tabulator-header .tabulator-col { border-right: 1px solid var(--vscode-widget-border, #8884); }
+.tabulator-row, .tabulator-row.tabulator-row-even { background: var(--vscode-editor-background); color: var(--vscode-foreground); border-bottom: 1px solid var(--vscode-widget-border, #8884); }
+.tabulator-row:hover { background: var(--vscode-list-hoverBackground) !important; }
+.tabulator-row.bad .tabulator-cell { color: var(--vscode-errorForeground); }
+.tabulator .tabulator-header .tabulator-col .tabulator-header-filter input { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, #8884); }
+.tabulator select, .tabulator .tabulator-page-size {
+  background: var(--vscode-dropdown-background, var(--vscode-input-background));
+  color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, #8884)); }
+.tabulator select option { background: var(--vscode-dropdown-background, var(--vscode-input-background)); color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground)); }
+.tabulator .tabulator-footer { background: var(--vscode-editorWidget-background); color: var(--vscode-foreground); border-color: var(--vscode-widget-border, #8884); }
+.tabulator .tabulator-footer .tabulator-page, .tabulator .tabulator-footer .tabulator-paginator label, .tabulator .tabulator-footer .tabulator-page-counter { color: var(--vscode-foreground); }
+.tabulator .tabulator-footer .tabulator-page { background: var(--vscode-button-secondaryBackground, #3a3d41); color: var(--vscode-button-secondaryForeground, #fff); border: none; }
+.tabulator .tabulator-footer .tabulator-page.active { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.tabulator-menu, .tabulator-edit-list { background: var(--vscode-editorWidget-background); color: var(--vscode-foreground); border: 1px solid var(--vscode-widget-border, #8884); }
+.tabulator-edit-list .tabulator-edit-list-item.active, .tabulator-edit-list .tabulator-edit-list-item:hover { background: var(--vscode-list-hoverBackground); }

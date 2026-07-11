@@ -1,0 +1,9 @@
+src/**
+webview/**
+node_modules/**
+tsconfig.json
+vite.config.ts
+out/**/*.map
+**/*.ts
+.vscode/**
+bolt.vsix

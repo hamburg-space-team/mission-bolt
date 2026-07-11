@@ -1,0 +1,330 @@
+{
+  "name": "bolt",
+  "displayName": "Bolt",
+  "description": "Live + post-flight telemetry review for THHOR-BOLT (REXUS 37). Decodes via the shared bolt-codec.",
+  "version": "0.1.0",
+  "publisher": "hamburg-space-team",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Debuggers",
+    "Other"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hamburg-space-team/mission-bolt"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "bolt",
+          "title": "BOLT",
+          "icon": "media/bolt.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "boltPanel",
+          "title": "BOLT",
+          "icon": "media/bolt.svg"
+        }
+      ]
+    },
+    "views": {
+      "bolt": [
+        {
+          "id": "bolt.session",
+          "name": "Session",
+          "icon": "$(rss)"
+        },
+        {
+          "id": "bolt.health",
+          "name": "Health",
+          "icon": "$(pulse)"
+        },
+        {
+          "id": "bolt.packets",
+          "name": "Packets",
+          "icon": "$(package)"
+        },
+        {
+          "id": "bolt.uplink",
+          "name": "Uplink",
+          "icon": "$(package)"
+        },
+        {
+          "id": "bolt.export",
+          "name": "Export",
+          "icon": "$(package)"
+        }
+      ],
+      "boltPanel": [
+        {
+          "id": "bolt.feed",
+          "name": "Feed",
+          "type": "webview",
+          "icon": "$(package)"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "bolt.overview",
+        "displayName": "Bolt Overview",
+        "selector": [
+          {
+            "filenamePattern": "*.raw"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "bolt.connect",
+        "title": "Bolt: Connect Serial (Live)",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "bolt.disconnect",
+        "title": "Bolt: Disconnect",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "bolt.openCapture",
+        "title": "Bolt: Open Raw Capture (Post-Flight)",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "bolt.openOverview",
+        "title": "Bolt: Open Overview Window",
+        "icon": "$(window)"
+      },
+      {
+        "command": "bolt.openExperiment",
+        "title": "Bolt: Open Experiment Window",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "bolt.export.hdf5",
+        "title": "Bolt: Export HDF5",
+        "icon": "$(database)"
+      },
+      {
+        "command": "bolt.export.manifest",
+        "title": "Bolt: Export manifest.json",
+        "icon": "$(json)"
+      },
+      {
+        "command": "bolt.export.csv",
+        "title": "Bolt: Export Packet Type as CSV",
+        "icon": "$(export)"
+      },
+      {
+        "command": "bolt.uplink.arm",
+        "title": "Bolt: Toggle Uplink Arm",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "bolt.send.resetTick",
+        "title": "Bolt: Send ▸ Reset Tick"
+      },
+      {
+        "command": "bolt.send.startExperiment",
+        "title": "Bolt: Send ▸ Start Experiment"
+      },
+      {
+        "command": "bolt.send.activateCamera",
+        "title": "Bolt: Send ▸ Activate Camera"
+      },
+      {
+        "command": "bolt.send.fullSystemTest",
+        "title": "Bolt: Send ▸ Full System Test"
+      },
+      {
+        "command": "bolt.inspectFault",
+        "title": "Bolt: Inspect Fault (open trace handbook)"
+      },
+      {
+        "command": "bolt.showPackets",
+        "title": "Bolt: Show Packets of Type (formatted)"
+      },
+      {
+        "command": "bolt.filterFeed",
+        "title": "Bolt: Filter Live Feed by Packet…",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "bolt.refreshInspector",
+        "title": "Bolt: Refresh Inspector",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "bolt.connect",
+          "when": "view == bolt.session && !bolt.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "bolt.disconnect",
+          "when": "view == bolt.session && bolt.connected",
+          "group": "navigation"
+        },
+        {
+          "command": "bolt.openCapture",
+          "when": "view == bolt.session",
+          "group": "navigation"
+        },
+        {
+          "command": "bolt.openExperiment",
+          "when": "view == bolt.session",
+          "group": "navigation"
+        },
+        {
+          "command": "bolt.openExperiment",
+          "when": "view == bolt.packets",
+          "group": "navigation"
+        },
+        {
+          "command": "bolt.uplink.arm",
+          "when": "view == bolt.uplink",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "bolt.send.resetTick",
+          "when": "viewItem == bolt.cmd.reset_tick",
+          "group": "inline"
+        },
+        {
+          "command": "bolt.export.csv",
+          "when": "viewItem == bolt.export.csv",
+          "group": "inline"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "bolt.openExperiment",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e"
+      }
+    ],
+    "configuration": {
+      "title": "Bolt",
+      "properties": {
+        "bolt.baud": {
+          "type": "number",
+          "default": 38400,
+          "markdownDescription": "RXSM downlink baud rate. The flight link is fixed **38400**; change only for a bench setup or a different UART."
+        },
+        "bolt.mission": {
+          "type": "string",
+          "default": "bolt",
+          "description": "Mission spec id (pins packet layout + calibration)."
+        },
+        "bolt.statsIntervalMs": {
+          "type": "number",
+          "default": 500,
+          "description": "How often the live bridge emits health/stats (LO/SOE/SODS, CRC, counts), in milliseconds."
+        },
+        "bolt.decimateHz": {
+          "type": "number",
+          "default": 50,
+          "description": "Max redraw rate for high-rate live plots (e.g. 200 Hz IMU)."
+        },
+        "bolt.tableRowLimit": {
+          "type": "number",
+          "default": 100000,
+          "description": "Max rows a post-flight packet table / panel loads from the cache DB per query (paginated client-side)."
+        },
+        "bolt.binDir": {
+          "type": "string",
+          "default": "telemetry-tools/target/debug",
+          "description": "Directory of the built Rust binaries, relative to the workspace root (or absolute)."
+        },
+        "bolt.firmwareSha": {
+          "type": "string",
+          "default": "",
+          "description": "Firmware build git SHA. Needed to resolve FAULT source lines to the exact build in flight-software/."
+        },
+        "bolt.autoPostflight": {
+          "type": "boolean",
+          "default": true,
+          "description": "After a live session, decode its recorded .raw into HDF5 + manifest automatically."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "bolt.start",
+        "title": "Bolt: Connect · Decode · Review",
+        "description": "Get telemetry flowing in three steps.",
+        "steps": [
+          {
+            "id": "build",
+            "title": "Build the decoder",
+            "description": "Run `cargo build` in `telemetry-tools/` inside the devcontainer.",
+            "media": {
+              "markdown": "media/walkthrough-build.md"
+            }
+          },
+          {
+            "id": "connect",
+            "title": "Go live",
+            "description": "[Connect Serial](command:bolt.connect) to your RXSM link.",
+            "media": {
+              "markdown": "media/walkthrough-connect.md"
+            }
+          },
+          {
+            "id": "review",
+            "title": "Review a capture",
+            "description": "[Open a .raw](command:bolt.openCapture) to review offline.",
+            "media": {
+              "markdown": "media/walkthrough-connect.md"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./ && tsc -p webview/tsconfig.json && vite build --mode development",
+    "typecheck": "tsc -p ./ && tsc -p webview/tsconfig.json",
+    "build:webview": "vite build --mode development",
+    "watch:host": "tsc -watch -p ./",
+    "watch:webview": "vite build --watch --mode development",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/vscode": "^1.90.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4",
+    "vite": "^5.4.21"
+  },
+  "dependencies": {
+    "tabulator-tables": "^6.5.2"
+  }
+}

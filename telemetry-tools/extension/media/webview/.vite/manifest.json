@@ -1,0 +1,52 @@
+{
+  "_chunk-!~{001}~.js": {
+    "file": "format.css",
+    "src": "_chunk-!~{001}~.js"
+  },
+  "_chunk-myRcYhpq.js": {
+    "file": "chunk-myRcYhpq.js",
+    "name": "format",
+    "css": [
+      "format.css"
+    ]
+  },
+  "webview/src/entries/experiment.tsx": {
+    "file": "experiment.js",
+    "name": "experiment",
+    "src": "webview/src/entries/experiment.tsx",
+    "isEntry": true,
+    "imports": [
+      "_chunk-myRcYhpq.js"
+    ]
+  },
+  "webview/src/entries/feed.tsx": {
+    "file": "feed.js",
+    "name": "feed",
+    "src": "webview/src/entries/feed.tsx",
+    "isEntry": true,
+    "imports": [
+      "_chunk-myRcYhpq.js"
+    ]
+  },
+  "webview/src/entries/overview.tsx": {
+    "file": "overview.js",
+    "name": "overview",
+    "src": "webview/src/entries/overview.tsx",
+    "isEntry": true,
+    "imports": [
+      "_chunk-myRcYhpq.js"
+    ]
+  },
+  "webview/src/entries/packets.tsx": {
+    "file": "packets.js",
+    "name": "packets",
+    "src": "webview/src/entries/packets.tsx",
+    "isEntry": true,
+    "imports": [
+      "_chunk-myRcYhpq.js"
+    ],
+    "css": [
+      "packets.css"
+    ]
+  }
+}
