@@ -103,13 +103,18 @@ Result<void> MS5611::start_conversion(uint8_t cmd) {
 // Read the ADC result of the in-flight conversion and store it into the
 // d1/d2 slot selected by `pending`.
 Result<void> MS5611::collect_pending() {
-    const auto adc = read_adc_result();
+    auto adc = read_adc_result();
     if (!adc) {
         return std::unexpected(adc.error());
     }
+    if (*adc == 0U && this->delay_ms != nullptr) {
+        this->delay_ms(CONV_TIME_MS[static_cast<uint8_t>(this->osr)]);
+        adc = read_adc_result();
+        if (!adc) {
+            return std::unexpected(adc.error());
+        }
+    }
     if (*adc == 0U) {
-        // Datasheet: the ADC reads 0 if the conversion was not finished -
-        // means the >=1-conversion-time-per-tick assumption broke.
         return fail(ErrorCode::PROTOCOL_ERROR, Step::BARO_COLLECT, __LINE__);
     }
     if (this->pending == Pending::D2) {

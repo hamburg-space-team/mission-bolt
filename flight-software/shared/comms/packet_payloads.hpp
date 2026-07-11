@@ -29,7 +29,6 @@ namespace PacketProtocol {
     struct __attribute__((packed)) PayloadBtcEnv {
         // bit 0 = ms5611 valid
         // bit 1 = tmp117 valid
-        // bit 2 = icm42686 valid
         uint8_t valid_mask;
 
         uint8_t reserved[1]; // NOLINT(modernize-avoid-c-arrays)
@@ -40,16 +39,6 @@ namespace PacketProtocol {
         // MS5611 - D1 (pressure) and D2 (temperature) raw values
         uint32_t ms_pressure;
         uint32_t ms_temperature;
-
-        // ICM-42686-P accelerometer - raw 16-bit register values
-        int16_t accel_x_raw;
-        int16_t accel_y_raw;
-        int16_t accel_z_raw;
-
-        // ICM-42686-P gyroscope - raw 16-bit register values
-        int16_t gyro_x_raw;
-        int16_t gyro_y_raw;
-        int16_t gyro_z_raw;
     };
     PACKET_TYPE_CHECK(PayloadBtcEnv);
 
@@ -133,6 +122,9 @@ namespace PacketProtocol {
 
         // Timestamp when the measurement was STARTED. Unit: us since LO.
         uint32_t start_timestamp_us;
+
+        // Mirrors SpectrumA: 1 = DATA_RDY asserted and readout ok
+        uint8_t measurement_valid;
     };
     PACKET_TYPE_CHECK(PayloadExp1SpectrumB);
 
@@ -300,30 +292,6 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp3StackB);
 
-    /// EXP3_ENV - EXP3 controller environmental + IMU data, sent every
-    /// tick.
-    ///
-    /// @ingroup comms
-    struct __attribute__((packed)) PayloadExp3Env {
-        // TMP117 - raw register value, 1 LSB = 1/128 degC (16-bit signed)
-        int16_t tmp_raw;
-
-        // MS5611 - D1 (pressure) and D2 (temperature) raw values
-        uint32_t ms_pressure;
-        uint32_t ms_temperature;
-
-        // ICM-42686-P accelerometer - raw 16-bit register values
-        int16_t imu_accel_x_raw;
-        int16_t imu_accel_y_raw;
-        int16_t imu_accel_z_raw;
-
-        // ICM-42686-P gyroscope - raw 16-bit register values
-        int16_t imu_gyro_x_raw;
-        int16_t imu_gyro_y_raw;
-        int16_t imu_gyro_z_raw;
-    };
-    PACKET_TYPE_CHECK(PayloadExp3Env);
-
     /// EXP3_STATUS - EXP3 control-loop diagnostics, sent every 25 ticks
     /// (1 Hz).
     ///
@@ -345,6 +313,20 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp3Status);
 
+    /// EXP3_IMU
+    ///
+    /// @ingroup comms
+    struct __attribute__((packed)) PayloadExp3Imu {
+        // Raw register values; +-32 g / +-2000 dps full scale.
+        int16_t accel_x_raw;
+        int16_t accel_y_raw;
+        int16_t accel_z_raw;
+        int16_t gyro_x_raw;
+        int16_t gyro_y_raw;
+        int16_t gyro_z_raw;
+    };
+    PACKET_TYPE_CHECK(PayloadExp3Imu);
+
     // ---------------------------------------------------------------------------
     // System payloads
     // ---------------------------------------------------------------------------
@@ -362,6 +344,9 @@ namespace PacketProtocol {
 
         // Reason for the gap - see GapReason in packet_types.hpp
         GapReason reason;
+
+        // Origin node (NodeId).
+        NodeId source_node;
     };
     PACKET_TYPE_CHECK(PayloadGapMarker);
 
@@ -394,6 +379,9 @@ namespace PacketProtocol {
         // Step dictionary values (docs/handbook/fault-trace-codes.md).
         // steps[0] = origin, then outward through the call chain.
         uint8_t steps[6]; // NOLINT(modernize-avoid-c-arrays)
+
+        // Origin node (NodeId).
+        NodeId source_node;
     };
     PACKET_TYPE_CHECK(PayloadFault);
 
@@ -409,7 +397,19 @@ namespace PacketProtocol {
 
         // Total boots since first power-on. 0 = first ever boot.
         uint16_t reboot_count;
+
+        //  Origin node (NodeId).
+        NodeId source_node;
     };
     PACKET_TYPE_CHECK(PayloadBoot);
+
+    /// Acknowledges a received uplink command
+    /// @ingroup comms
+    struct __attribute__((packed)) PayloadCmdAck {
+        uint8_t opcode; // echoed uplink CommandOpcode
+        uint8_t seq;    // echoed uplink sequence number
+        uint8_t status; // CommandAckStatus
+    };
+    PACKET_TYPE_CHECK(PayloadCmdAck);
 
 } // namespace PacketProtocol

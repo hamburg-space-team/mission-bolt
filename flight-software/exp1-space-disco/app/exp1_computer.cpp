@@ -41,17 +41,20 @@ namespace {
         {0x07U, 0x07U}, // all LEDs
     }};
     constexpr std::array<uint8_t, 4> PWM_LEVELS = {0x40U, 0x80U, 0xC0U, 0xFFU}; // 25/50/75/100 %
-    // Block layout (see on_experiment_tick): tick 0 reads the completed
-    // row's dies 0+1, tick 1 reads die 2 + sends, THEN starts the next
-    // measurement (~tick 1 + 20 ms). The RAW registers are LIVE on this
-    // chip - starting a measurement resets them - so ALL reading must
-    // happen before the next start (seen on hardware: start-then-read
-    // returned ~zero counts of the fresh integration). Block length: the
-    // integration (2*IT*2.8 ms, starts ~60 ms into the block) must be
-    // complete before the NEXT block's tick-0 readout:
-    //   IT25: 60 + 140 = 200 ms -> 6 ticks (240 ms)
-    //   IT50: 60 + 280 = 340 ms -> 10 ticks (400 ms)
-    constexpr std::array<ItCfg, 2> IT_CONFIGS = {{{25U, 6U}, {50U, 10U}}};
+
+    // {integration_cycles, block_ticks}. One-shot mode 3 integrates both banks:
+    // real time = 2 * cycles * 2.8 ms. The measurement starts at block_tick 1
+    // and is read at block_tick 0 of the NEXT block, so it must finish within
+    // (block_ticks - 1) * 40 ms:
+    //   block_ticks >= ceil(2*cycles*2.8 / 40) + 1 + ~2-3 ticks jitter margin.
+    //   IT80 : 448 ms -> 12 + 1 = 13, use 15 (~2.8 ticks margin)
+    //   IT160: 896 ms -> 23 + 1 = 24, use 26 (~2.6 ticks margin)
+    // Paired with SPEC_GAIN = 3.7x: bright rows stay off the 16-bit ceiling
+    // while the long integration lifts SNR on the faint UV/NIR + dark rows.
+    // Cost is measurement rate (rows now 0.6 s / 1.04 s); downlink is unaffected
+    // (fewer, larger-spaced packets). Raise cycles further for still-cleaner
+    // dark/faint data if the slower matrix cycle is acceptable.
+    constexpr std::array<ItCfg, 2> IT_CONFIGS = {{{80U, 15U}, {160U, 26U}}};
 
     constexpr uint8_t MATRIX_SIZE =
         static_cast<uint8_t>(IT_CONFIGS.size() * (1U + (LED_CONFIGS.size() * PWM_LEVELS.size())));
@@ -323,6 +326,7 @@ void Exp1Computer::send_spectrum_pair(uint8_t matrix_idx, bool valid, uint16_t s
     spec_a.led_mask = matrix_idx;
     spec_a.measurement_valid = valid ? 1U : 0U;
     spec_b.start_timestamp_us = start_us;
+    spec_b.measurement_valid = valid ? 1U : 0U;
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM_A, Tick{start_tick}, TimestampUs{start_us},
                              &spec_a, static_cast<uint8_t>(sizeof(spec_a)))) {

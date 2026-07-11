@@ -37,6 +37,20 @@ class ExpComputer : public NodeComputer {
     [[nodiscard]] virtual PacketProtocol::PayloadType exp_env_type() const noexcept = 0;
     [[nodiscard]] virtual PacketProtocol::PayloadType exp_status_type() const noexcept = 0;
 
+    /// Origin node for FAULT/GAP/BOOT stamping
+    [[nodiscard]] PacketProtocol::NodeId source_node() const noexcept {
+        switch (static_cast<uint8_t>(exp_status_type()) >> 4U) {
+        case 0x2U:
+            return PacketProtocol::NodeId::EXP1;
+        case 0x3U:
+            return PacketProtocol::NodeId::EXP2;
+        case 0x4U:
+            return PacketProtocol::NodeId::EXP3;
+        default:
+            return PacketProtocol::NodeId::UNKNOWN;
+        }
+    }
+
     // Packet builders - EXP3 overrides send_env_packet() for PayloadExp3Env
     virtual void send_env_packet(uint16_t can_tick, uint32_t timestamp_us);
     virtual void send_status_packet(uint16_t can_tick, uint32_t timestamp_us);

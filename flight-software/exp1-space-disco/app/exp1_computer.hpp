@@ -15,8 +15,8 @@
 /// Runs a measurement MATRIX (table in exp1_computer.cpp): every row
 /// combines an LED configuration (each LED alone, all together, dark
 /// reference) with a PWM brightness (25/50/75/100 %) and an integration
-/// time (25/50 cycles).A full matrix pass is 58 rows / 464 ticks
-/// (~19 s; the one-shot mode converts both channel banks, so integration
+/// time (80/160 cycles). A full matrix pass is 58 rows / 1189 ticks
+/// (~48 s; the one-shot mode converts both channel banks, so integration
 /// = 2 x IT x 2.8 ms). led_mask in the spectrum packets carries the
 /// MATRIX ROW INDEX (ICD-007).
 ///
@@ -51,10 +51,8 @@ class Exp1Computer final : public ExpComputer {
     // Per-channel dot current (0xFF = full scale, 51 mA at max_current=1).
     static constexpr uint8_t LP5810_DOT_CURRENT = 0xFFU;
     static constexpr bool LP5810_HIGH_CURRENT = false;
-    // AS7265X analog gain. 1x used <0.05 % of the ADC range on the bench;
-    // 16x brings the matrix into a usable SNR region. Goes out in the
-    // spectrum packets' gain field.
-    static constexpr AS7265XGain SPEC_GAIN = AS7265XGain::GAIN_16X;
+    // AS7265X analog gain.
+    static constexpr AS7265XGain SPEC_GAIN = AS7265XGain::GAIN_37X;
     // LP5810C channel mask: OUT0=R, OUT1=G, OUT2=B
     static constexpr uint8_t RGB_CHANNELS = 0x07U;
     // LP5810D channel masks: OUT0=white, OUT1=IR 940nm, OUT2=UV 400nm

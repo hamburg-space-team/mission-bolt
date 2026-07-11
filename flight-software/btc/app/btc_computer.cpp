@@ -112,7 +112,7 @@ void BtcComputer::on_init() {
     init_storage();
     init_sensors();
 
-    if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count)) {
+    if (auto len = pkt.build_boot(tx_buf.data(), boot.reason, boot.reboot_count, PacketProtocol::NodeId::BTC)) {
         downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
         // Critical event: BOOT must hit durable storage before any
@@ -127,8 +127,43 @@ void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketPro
     gap.first_missing_tick = first_tick;
     gap.count = count;
     gap.reason = reason;
+    gap.source_node = PacketProtocol::NodeId::BTC;
     if (auto len = pkt.build_gap(tx_buf.data(), PacketProtocol::Tick{first_tick},
                                  PacketProtocol::TimestampUs{timestamp_us}, gap)) {
+        downlink.send(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+    }
+}
+
+void BtcComputer::poll_uplink(uint32_t timestamp_us) {
+    uint8_t byte = 0U;
+    PacketProtocol::UplinkParser::Frame frame{};
+
+    while (downlink.rx_pop(byte)) {
+        if (uplink.push(byte, frame)) {
+            handle_uplink(frame.opcode, frame.seq, timestamp_us);
+        }
+    }
+}
+
+void BtcComputer::handle_uplink(uint8_t opcode, uint8_t seq, uint32_t timestamp_us) {
+    using PacketProtocol::CommandAckStatus;
+    using PacketProtocol::CommandOpcode;
+
+    CommandAckStatus status = CommandAckStatus::ACCEPTED;
+    switch (static_cast<CommandOpcode>(opcode)) {
+    case CommandOpcode::RESET_TICK:
+    case CommandOpcode::START_EXPERIMENT:
+    case CommandOpcode::ACTIVATE_CAMERA:
+    case CommandOpcode::FULL_SYSTEM_TEST:
+        break;
+    default:
+        status = CommandAckStatus::UNKNOWN_OPCODE;
+        break;
+    }
+
+    if (auto len = pkt.build_cmd_ack(tx_buf.data(), PacketProtocol::Tick{sync_count},
+                                     PacketProtocol::TimestampUs{timestamp_us}, opcode, seq, status)) {
         downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
@@ -138,7 +173,8 @@ void BtcComputer::report_fault(StatusLeds::Fault code, const Error& err) {
     leds.set_fault(code);
     // Header: timestamp = when the error occurred (from the Error
     // itself), tick = current BTC tick at report time (0 during init).
-    if (auto len = pkt.build_fault(tx_buf.data(), PacketProtocol::Tick{sync_count}, static_cast<uint8_t>(code), err)) {
+    if (auto len = pkt.build_fault(tx_buf.data(), PacketProtocol::Tick{sync_count}, static_cast<uint8_t>(code), err,
+                                   PacketProtocol::NodeId::BTC)) {
         downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
@@ -174,10 +210,7 @@ void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
     }
 }
 
-// Overrides NodeComputer::on_drain: instead of returning to run()'s
-// blocking sleep once the SD ring is empty, keep polling the DRDY flag
-// until the tick deadline - a 200 Hz sample must not wait 40 ms for the
-// next tick.
+// Called from main thread to drain the UART ring before a deadline. The
 void BtcComputer::on_drain(uint32_t deadline_ms) {
     while (true) {
         const uint32_t now = platform.tick_ms();
@@ -219,16 +252,6 @@ void BtcComputer::send_env_packet(uint32_t tick_start_us) {
         env.valid_mask |= 0x02U;
     }
 
-    if (auto imu_result = imu.read_sample()) {
-        env.accel_x_raw = imu_result->accel_x;
-        env.accel_y_raw = imu_result->accel_y;
-        env.accel_z_raw = imu_result->accel_z;
-        env.gyro_x_raw = imu_result->gyro_x;
-        env.gyro_y_raw = imu_result->gyro_y;
-        env.gyro_z_raw = imu_result->gyro_z;
-        env.valid_mask |= 0x04U;
-    }
-
     if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_ENV, Tick{sync_count}, TimestampUs{tick_start_us}, &env,
                              static_cast<uint8_t>(sizeof(env)))) {
         downlink.send(tx_buf.data(), *len);
@@ -267,6 +290,8 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
 void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     // Error-LED pattern is pure tick counting - run it every tick.
     leds.error_tick();
+
+    poll_uplink(tick_start_us);
 
     // Downlink health: Rs422Downlink latches after 10 consecutive dropped frames.
     if (!uart_fault_reported && downlink.is_failed()) {

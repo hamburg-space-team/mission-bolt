@@ -47,7 +47,8 @@ void ExpComputer::on_init() {
     init_sensors();
     on_experiment_init();
 
-    if (auto len = this->pkt.build_boot(this->tx_buf.data(), this->boot.reason, this->boot.reboot_count)) {
+    if (auto len = this->pkt.build_boot(this->tx_buf.data(), this->boot.reason, this->boot.reboot_count,
+                                        source_node())) {
         this->can.send(exp_can_id(), this->tx_buf.data(), *len);
         (void)this->storage.write(this->tx_buf.data(), *len);
         // Critical event: BOOT packet must hit durable storage before
@@ -114,6 +115,7 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     this->local_tick++;
 
     on_experiment_tick(can_tick, tick_start_us);
+
     send_env_packet(can_tick, tick_start_us);
     if ((this->local_tick % STATUS_INTERVAL) == 0U) {
         send_status_packet(can_tick, tick_start_us);
@@ -168,8 +170,8 @@ void ExpComputer::report_fault(StatusLeds::Fault code, const Error& err) {
     // Header: timestamp = when the error occurred (from the Error
     // itself), tick = CAN tick at report time (0 before the first SYNC).
     const uint16_t tick = (this->last_can_tick != NO_LAST_TICK) ? this->last_can_tick : 0U;
-    if (auto len =
-            this->pkt.build_fault(this->tx_buf.data(), PacketProtocol::Tick{tick}, static_cast<uint8_t>(code), err)) {
+    if (auto len = this->pkt.build_fault(this->tx_buf.data(), PacketProtocol::Tick{tick}, static_cast<uint8_t>(code),
+                                         err, source_node())) {
         this->can.send(exp_can_id(), this->tx_buf.data(), *len);
         (void)this->storage.write(this->tx_buf.data(), *len);
     }
@@ -181,6 +183,7 @@ void ExpComputer::send_gap(uint16_t first_tick, uint8_t count, PacketProtocol::G
     gap.first_missing_tick = first_tick;
     gap.count = count;
     gap.reason = reason;
+    gap.source_node = source_node();
     if (auto len = this->pkt.build_gap(this->tx_buf.data(), PacketProtocol::Tick{first_tick},
                                        PacketProtocol::TimestampUs{timestamp_us}, gap)) {
         this->can.send(exp_can_id(), this->tx_buf.data(), *len);

@@ -7,8 +7,7 @@
 
 #include <cstdint>
 
-/// EXP3 "Floaty Boi" controller. Hosts its own ICM-42686-P and reports
-/// a richer env packet (PayloadExp3Env: TMP/MS5611 + IMU).
+/// EXP3 "Floaty Boi" controller.
 ///
 /// The wired magnetometer for the EXP3 stack (F-60) and the burst
 /// pipeline producing PayloadExp3StackA / PayloadExp3StackB is still

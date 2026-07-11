@@ -111,8 +111,8 @@ namespace PacketProtocol {
         /// timestamp is taken from the Error itself - the moment the
         /// failure occurred at its origin - while `tick` is the CAN tick
         /// current at REPORT time (pass Tick{0} during init).
-        [[nodiscard]] Result<uint8_t> build_fault(uint8_t* buf, Tick tick, uint8_t fault_code,
-                                                  const Error& err) noexcept {
+        [[nodiscard]] Result<uint8_t> build_fault(uint8_t* buf, Tick tick, uint8_t fault_code, const Error& err,
+                                                  NodeId source_node) noexcept {
             PayloadFault fault{};
             fault.fault_code = fault_code;
             fault.error_code = static_cast<uint8_t>(err.code);
@@ -123,15 +123,28 @@ namespace PacketProtocol {
             for (uint8_t i = 0U; i < TRACE_DEPTH; i++) {
                 fault.steps[i] = static_cast<uint8_t>(err.trace[i]);
             }
+            fault.source_node = source_node;
             return build(buf, PayloadType::FAULT, tick, TimestampUs{err.timestamp_us}, &fault, sizeof(fault));
+        }
+
+        /// Shortcut for a PayloadCmdAck frame
+        [[nodiscard]] Result<uint8_t> build_cmd_ack(uint8_t* buf, Tick tick, TimestampUs ts_us, uint8_t opcode,
+                                                    uint8_t seq, CommandAckStatus status) noexcept {
+            PayloadCmdAck ack{};
+            ack.opcode = opcode;
+            ack.seq = seq;
+            ack.status = static_cast<uint8_t>(status);
+            return build(buf, PayloadType::CMD_ACK, tick, ts_us, &ack, sizeof(ack));
         }
 
         /// Shortcut for a PayloadBoot frame. tick and timestamp default
         /// to 0 (LO has not yet been received at boot).
-        [[nodiscard]] Result<uint8_t> build_boot(uint8_t* buf, BootReason reason, uint16_t reboot_count) noexcept {
+        [[nodiscard]] Result<uint8_t> build_boot(uint8_t* buf, BootReason reason, uint16_t reboot_count,
+                                                 NodeId source_node) noexcept {
             PayloadBoot boot{};
             boot.reason = reason;
             boot.reboot_count = reboot_count;
+            boot.source_node = source_node;
             return build(buf, PayloadType::BOOT, Tick{0U}, TimestampUs{0U}, &boot, sizeof(boot));
         }
     };

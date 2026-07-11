@@ -27,13 +27,31 @@ namespace PacketProtocol {
         // EXP3 - Floaty Boi
         EXP3_STACK_A = 0x40, ///< PayloadExp3StackA - wired stack sample
         EXP3_STACK_B = 0x41, ///< PayloadExp3StackB - wireless stack sample
-        EXP3_ENV = 0x42,     ///< PayloadExp3Env
+        EXP3_ENV = 0x42,     ///< PayloadExpEnv (shared: TMP117 + MS5611, no IMU)
         EXP3_STATUS = 0x43,  ///< PayloadExp3Status
+        EXP3_IMU = 0x44,     ///< PayloadExp3Imu - controller ICM-42686 sample
 
         // System
         GAP_MARKER = 0xF0, ///< PayloadGapMarker
         FAULT = 0xF1,      ///< PayloadFault - latched fault + error step trace (ADR-012)
+        CMD_ACK = 0xF2,    ///< PayloadCmdAck - acknowledges a received uplink command
         BOOT = 0xFE,       ///< PayloadBoot
+    };
+
+    /// Uplink command opcodes (RXSM TC -> BTC)
+    /// @ingroup comms
+    enum class CommandOpcode : uint8_t {
+        RESET_TICK = 0x01,
+        START_EXPERIMENT = 0x02,
+        ACTIVATE_CAMERA = 0x03,
+        FULL_SYSTEM_TEST = 0x04,
+    };
+
+    /// Result reported back in PayloadCmdAck.status
+    /// @ingroup comms
+    enum class CommandAckStatus : uint8_t {
+        ACCEPTED = 0x00,       ///< Known command received (handler is a no-op for now)
+        UNKNOWN_OPCODE = 0x01, ///< Opcode not recognised - nothing done
     };
 
     /// @ingroup comms
@@ -51,6 +69,16 @@ namespace PacketProtocol {
         LIFI_TIMEOUT = 0x03,  ///< No sample packets from an EXP3 stack inside the expected interval
         SENSOR_FAILED = 0x04, ///< Superseded by PayloadType::FAULT (ADR-012) - value kept
                               ///< wire-stable, no longer emitted
+    };
+
+    /// Origin node of a FAULT / GAP_MARKER / BOOT packet
+    /// @ingroup comms
+    enum class NodeId : uint8_t {
+        BTC = 0x00,
+        EXP1 = 0x01,
+        EXP2 = 0x02,
+        EXP3 = 0x03,
+        UNKNOWN = 0xFF,
     };
 
 } // namespace PacketProtocol

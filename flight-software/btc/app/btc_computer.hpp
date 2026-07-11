@@ -7,6 +7,7 @@
 #include "packet_types.hpp"
 #include "rs422_downlink.hpp"
 #include "sync_broadcaster.hpp"
+#include "uplink_parser.hpp"
 
 #include <cstdint>
 
@@ -47,6 +48,7 @@ class BtcComputer final : public NodeComputer {
     Rs422Downlink downlink;
     CanReassembler reassembler;
     SyncBroadcaster sync_tx;
+    PacketProtocol::UplinkParser uplink;
     uint16_t sync_count = 0U;
     bool lo_received = false;
     uint8_t lo_level_ticks = 0U;
@@ -58,6 +60,11 @@ class BtcComputer final : public NodeComputer {
     uint32_t lo_rtc_s = 0U;
 
     void send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason, uint32_t timestamp_us);
+    /// Drain any received uplink bytes, frame them, and acknowledge each
+    /// complete command. The command handlers themselves are intentionally a
+    /// no-op for now (hook in handle_uplink); the ACK confirms receipt.
+    void poll_uplink(uint32_t timestamp_us);
+    void handle_uplink(uint8_t opcode, uint8_t seq, uint32_t timestamp_us);
     void drain_exp_frames();
     void send_env_packet(uint32_t tick_start_us);
     void send_status_packet(uint32_t tick_start_us);

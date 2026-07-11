@@ -74,8 +74,8 @@ bool AS7265X::data_ready() {
     if (is_failed()) {
         return false;
     }
-    if (this->data_rdy_pin != nullptr) {
-        return this->data_rdy_pin();
+    if (this->data_rdy_pin != nullptr && this->data_rdy_pin()) {
+        return true;
     }
     auto ctrl = read_virtual(VREG_CONTROL);
     if (!ctrl) {
