@@ -6,6 +6,9 @@
 # CMSIS-pack managed run-time environment
 **/RTE/**                  linguist-generated=true
 
+# Vendored third-party libraries
+flight-software/lib/littlefs/** linguist-vendored=true
+
 # Build outputs
 **/target/**               linguist-generated=true
 **/out/**                  linguist-generated=true
