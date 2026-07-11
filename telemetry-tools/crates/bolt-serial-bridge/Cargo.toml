@@ -1,0 +1,23 @@
+[package]
+name = "bolt-serial-bridge"
+description = "Live UART <-> stdio bridge: decode via bolt-codec, tee raw, send uplink commands"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "bolt-serial-bridge"
+path = "src/main.rs"
+
+[features]
+default = ["serial"]
+serial = ["dep:serialport"]
+
+[dependencies]
+bolt-codec = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+heapless = { workspace = true }
+serialport = { version = "4", optional = true }
