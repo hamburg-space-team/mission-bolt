@@ -9,6 +9,10 @@
             "path": "ground-station"
         },
         {
+            "name": "Telemetry Tools",
+            "path": "telemetry-tools"
+        },
+        {
             "name": "Docs",
             "path": "docs"
         },
