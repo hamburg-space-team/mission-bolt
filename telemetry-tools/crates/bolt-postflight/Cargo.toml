@@ -1,0 +1,23 @@
+[package]
+name = "bolt-postflight"
+description = "Decode a recorded .raw into HDF5 (heavy arrays) + manifest.json (light index)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "bolt-postflight"
+path = "src/main.rs"
+
+[features]
+default = ["hdf5"]
+hdf5 = ["dep:hdf5"]
+
+[dependencies]
+bolt-codec = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+rusqlite = { workspace = true }
+hdf5 = { version = "0.8", optional = true }

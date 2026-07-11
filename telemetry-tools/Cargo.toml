@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
     "crates/bolt-codec",
+    "crates/bolt-serial-bridge",
+    "crates/bolt-postflight",
 ]
 
 [workspace.package]
