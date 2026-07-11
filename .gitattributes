@@ -1,0 +1,25 @@
+# STM32CubeMX output: HAL/LL drivers, CMSIS, startup, generated Core/config
+**/generated/**            linguist-generated=true
+**/MX_Device/**            linguist-generated=true
+*.ioc                      linguist-generated=true
+
+# CMSIS-pack managed run-time environment
+**/RTE/**                  linguist-generated=true
+
+# Build outputs
+**/target/**               linguist-generated=true
+**/out/**                  linguist-generated=true
+**/build/**                linguist-generated=true
+
+# Bundled/minified webview assets (Vite output + any vendored libs)
+telemetry-tools/extension/media/webview/** linguist-generated=true
+*.min.js                   linguist-vendored=true
+*.min.css                  linguist-vendored=true
+*.map                      linguist-generated=true
+
+# Dependencies
+**/node_modules/**         linguist-vendored=true
+
+# Lockfiles
+Cargo.lock                 linguist-generated=true
+**/package-lock.json       linguist-generated=true
