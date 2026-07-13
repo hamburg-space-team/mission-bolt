@@ -2,6 +2,7 @@ layer:
   description: BOLT shared firmware components
 
   add-path:
+    - ../../interfaces/include
     - ./bus
     - ./comms
     - ./core

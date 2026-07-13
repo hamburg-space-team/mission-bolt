@@ -1,5 +1,5 @@
 #include "can_reassembler.hpp"
-#include "packet_header.hpp"
+#include <bolt/wire/header.hpp>
 
 #include <atomic>
 #include <cstring>

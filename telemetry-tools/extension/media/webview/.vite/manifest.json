@@ -1,13 +1,17 @@
 {
   "_chunk-!~{001}~.js": {
-    "file": "format.css",
+    "file": "api.css",
     "src": "_chunk-!~{001}~.js"
   },
-  "_chunk-myRcYhpq.js": {
-    "file": "chunk-myRcYhpq.js",
-    "name": "format",
+  "_chunk-CG4_lz18.js": {
+    "file": "chunk-CG4_lz18.js",
+    "name": "format"
+  },
+  "_chunk-DHH7KV4w.js": {
+    "file": "chunk-DHH7KV4w.js",
+    "name": "api",
     "css": [
-      "format.css"
+      "api.css"
     ]
   },
   "webview/src/entries/experiment.tsx": {
@@ -16,7 +20,7 @@
     "src": "webview/src/entries/experiment.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-myRcYhpq.js"
+      "_chunk-DHH7KV4w.js"
     ]
   },
   "webview/src/entries/feed.tsx": {
@@ -25,7 +29,8 @@
     "src": "webview/src/entries/feed.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-myRcYhpq.js"
+      "_chunk-DHH7KV4w.js",
+      "_chunk-CG4_lz18.js"
     ]
   },
   "webview/src/entries/overview.tsx": {
@@ -34,7 +39,8 @@
     "src": "webview/src/entries/overview.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-myRcYhpq.js"
+      "_chunk-DHH7KV4w.js",
+      "_chunk-CG4_lz18.js"
     ]
   },
   "webview/src/entries/packets.tsx": {
@@ -43,7 +49,8 @@
     "src": "webview/src/entries/packets.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-myRcYhpq.js"
+      "_chunk-DHH7KV4w.js",
+      "_chunk-CG4_lz18.js"
     ],
     "css": [
       "packets.css"

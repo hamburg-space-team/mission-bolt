@@ -4,7 +4,7 @@
 #include "can_reassembler.hpp"
 #include "icm42686.hpp"
 #include "node_computer.hpp"
-#include "packet_types.hpp"
+#include <bolt/wire/types.hpp>
 #include "rs422_downlink.hpp"
 #include "sync_broadcaster.hpp"
 #include "uplink_parser.hpp"
@@ -69,6 +69,8 @@ class BtcComputer final : public NodeComputer {
     void send_env_packet(uint32_t tick_start_us);
     void send_status_packet(uint32_t tick_start_us);
     void send_imu_packet(uint32_t timestamp_us);
+    // Downlink BTC's worst-case scope timings (RS-422), ~1 Hz.
+    void send_timing(uint32_t timestamp_us);
 
     ICM42686 imu{};
 };

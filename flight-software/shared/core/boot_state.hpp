@@ -1,6 +1,6 @@
 #pragma once
 
-#include "packet_types.hpp"
+#include <bolt/wire/types.hpp>
 #include <cstdint>
 
 /// Boot recovery helpers (ADR-008). .noinit RAM survives IWDG / soft

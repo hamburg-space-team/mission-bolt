@@ -11,12 +11,10 @@ namespace PacketProtocol {
     constexpr uint16_t HEADER_SIZE = 12U;
     constexpr uint16_t CRC_SIZE = 2U;
     constexpr uint16_t MAX_PAYLOAD = MAX_PACKET_SIZE - HEADER_SIZE - CRC_SIZE;
-    constexpr uint8_t SPECTRUM_CHANNELS = 9U;
+    constexpr uint8_t SPECTRUM_CHANNELS = 18U;
     static constexpr uint8_t HEADER_LENGTH_OFFSET = 5U;
 
-    /// 12-byte downlink packet header. Little-endian on the wire (matches
-    /// Cortex-M); sync bytes fixed. CRC at the end of the packet covers
-    /// everything after the two sync bytes.
+    /// Downlink packet header
     ///
     /// @ingroup comms
     struct __attribute__((packed)) PacketHeader {

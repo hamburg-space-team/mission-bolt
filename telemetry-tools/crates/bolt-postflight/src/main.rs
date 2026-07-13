@@ -28,6 +28,10 @@ struct Args {
     #[arg(long = "type")]
     ty: Option<String>,
 
+    // Query filter: only this source (btc/exp1/exp2/exp3/system).
+    #[arg(long)]
+    source: Option<String>,
+
     // Query filter: timestamp_us >= this.
     #[arg(long)]
     since_us: Option<i64>,
@@ -301,8 +305,9 @@ impl DbWriter {
     fn finish(self) -> Result<u64> {
         self.conn.execute_batch(
             "COMMIT;
-             CREATE INDEX idx_name ON packets(name);
-             CREATE INDEX idx_ts   ON packets(timestamp_us);",
+             CREATE INDEX idx_name   ON packets(name);
+             CREATE INDEX idx_source ON packets(source);
+             CREATE INDEX idx_ts     ON packets(timestamp_us);",
         )?;
         Ok(self.count)
     }
@@ -324,6 +329,10 @@ fn run_query(args: &Args) -> Result<()> {
     if let Some(t) = &args.ty {
         clauses.push("name = ?");
         params.push(Box::new(t.clone()));
+    }
+    if let Some(s) = &args.source {
+        clauses.push("source = ?");
+        params.push(Box::new(s.clone()));
     }
 
     if let Some(s) = args.since_us {

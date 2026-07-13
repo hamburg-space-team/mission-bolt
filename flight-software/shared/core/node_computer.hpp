@@ -7,6 +7,7 @@
 #include "status_leds.hpp"
 #include "store.hpp"
 #include "tmp117.hpp"
+#include "wcet.hpp"
 
 #include <array>
 #include <cstdint>
@@ -76,4 +77,8 @@ class NodeComputer : public FlightComputer {
     StatusLeds leds;
     BootState::State boot;
     std::array<uint8_t, TX_BUF_SIZE> tx_buf{};
+
+    // Per-scope worst-case durations (WCET); each node downlinks its maxima as
+    // PayloadTiming at 1 Hz and resets. Filled via BOLT_TIME scopes.
+    Wcet::Timing timings{};
 };

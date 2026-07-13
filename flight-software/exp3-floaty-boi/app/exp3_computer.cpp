@@ -1,7 +1,8 @@
 #include "exp3_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
-#include "packet_payloads.hpp"
+#include <bolt/wire/payloads.hpp>
+#include "wcet.hpp"
 
 extern CAN_HandleTypeDef hcan1;
 
@@ -34,8 +35,8 @@ void Exp3Computer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
     PayloadExpEnv env{};
 
     if (auto result = baro.read()) {
-        env.ms_pressure = result->d1;
-        env.ms_temperature = result->d2;
+        env.ms_pressure_raw = result->d1;
+        env.ms_temperature_raw = result->d2;
         env.valid_mask |= 0x01U;
     }
 
@@ -64,7 +65,12 @@ void Exp3Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
     poll_device_fault(imu, StatusLeds::Fault::IMU, imu_fault_reported);
 
     // EXP3 controller IMU -> its own EXP3_IMU packet (mirrors BTC_IMU).
-    if (auto sample = imu.read_sample()) {
+    auto sample = [this] {
+        BOLT_TIME(timings, READ);
+        return imu.read_sample();
+    }();
+
+    if (sample) {
         PayloadExp3Imu p{};
         p.accel_x_raw = sample->accel_x;
         p.accel_y_raw = sample->accel_y;
@@ -72,6 +78,7 @@ void Exp3Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         p.gyro_x_raw = sample->gyro_x;
         p.gyro_y_raw = sample->gyro_y;
         p.gyro_z_raw = sample->gyro_z;
+        BOLT_TIME(timings, SEND);
         if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP3_IMU, Tick{can_tick}, TimestampUs{timestamp_us}, &p,
                                  static_cast<uint8_t>(sizeof(p)))) {
             can.send(exp_can_id(), tx_buf.data(), *len);

@@ -1,4 +1,4 @@
-// AS7265x 18 channels (A[0-8] then B[0-8]); UV/NIR bands approximated
+// AS7265x 18 channels (one atomic packet); UV/NIR bands approximated
 const WL = [410, 435, 460, 485, 510, 535, 560, 365, 340, 585, 610, 645, 680, 705, 730, 760, 810, 940];
 
 function wlRGB(wl: number): [number, number, number] {
@@ -16,8 +16,8 @@ function wlRGB(wl: number): [number, number, number] {
   return [c(r), c(g), c(b)];
 }
 
-export function Spectrometer({ a, b, valid }: { a?: number[]; b?: number[]; valid?: boolean }) {
-  const chans = [...(a ?? Array(9).fill(0)), ...(b ?? Array(9).fill(0))];
+export function Spectrometer({ channels, valid }: { channels?: number[]; valid?: boolean }) {
+  const chans = channels ?? Array(18).fill(0);
   const order = WL.map((_, i) => i).sort((x, y) => WL[x] - WL[y]);
   const max = Math.max(1, ...chans);
   return (

@@ -94,8 +94,9 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
   reg("bolt.openOverview", () => overview.openLive());
 
-  reg("bolt.openExperiment", async (name?: string) => {
-    let src = name;
+  reg("bolt.openExperiment", async (name?: unknown) => {
+    // A toolbar/menu invocation passes a non-string context arg; ignore it.
+    let src = typeof name === "string" ? name : undefined;
     if (!src) {
       const counts = session.stats?.counts ?? session.manifest?.packet_counts ?? {};
       const seen = new Set(

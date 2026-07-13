@@ -1,7 +1,8 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import { r as reactExports, u as useMessages, j as jsxRuntimeExports, f as fmtValue, c as createRoot } from "./chunk-myRcYhpq.js";
+import { r as reactExports, u as useMessages, s as saveState, j as jsxRuntimeExports, c as createRoot } from "./chunk-DHH7KV4w.js";
+import { f as fmtValue } from "./chunk-CG4_lz18.js";
 class CoreFeature {
   constructor(table) {
     this.table = table;
@@ -22405,6 +22406,7 @@ function Packets() {
     if (m.type === "packets") {
       setName(m.name);
       setRows(flatten(m.records));
+      saveState({ name: m.name });
     }
   });
   reactExports.useEffect(() => {

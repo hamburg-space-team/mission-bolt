@@ -1,15 +1,17 @@
 #pragma once
 
 #include "errors.hpp"
-#include "packet_header.hpp"
-#include "packet_payloads.hpp"
-#include "packet_types.hpp"
+#include <bolt/wire/header.hpp>
+#include <bolt/wire/payloads.hpp>
+#include <bolt/wire/types.hpp>
+#include <bolt/wire/uplink.hpp>
 
 #include <array>
 #include <cstdint>
 #include <cstring>
 
 #include "crc16_hw.hpp"
+#include "wcet.hpp"
 
 static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "little-endian required");
 
@@ -135,6 +137,19 @@ namespace PacketProtocol {
             ack.seq = seq;
             ack.status = static_cast<uint8_t>(status);
             return build(buf, PayloadType::CMD_ACK, tick, ts_us, &ack, sizeof(ack));
+        }
+
+        /// Shortcut for a PayloadTiming frame - the per-scope worst-case
+        /// durations for WCET analysis. Caller resets the table after sending.
+        [[nodiscard]] Result<uint8_t> build_timing(uint8_t* buf, Tick tick, TimestampUs ts_us, NodeId source_node,
+                                                   const ::Wcet::Timing& t) noexcept {
+            static_assert(::Wcet::POINT_COUNT == 6U, "PayloadTiming.max_us size must match Wcet::POINT_COUNT");
+            PayloadTiming pt{};
+            pt.source_node = source_node;
+            for (uint8_t i = 0U; i < ::Wcet::POINT_COUNT; i++) {
+                pt.max_us[i] = t.max_us[i];
+            }
+            return build(buf, PayloadType::TIMING, tick, ts_us, &pt, sizeof(pt));
         }
 
         /// Shortcut for a PayloadBoot frame. tick and timestamp default

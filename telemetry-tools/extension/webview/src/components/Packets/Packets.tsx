@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { TabulatorFull as Tabulator } from "tabulator-tables";
-import { useMessages } from "../../utils/api";
+import { useMessages, saveState } from "../../utils/api";
 import { fmtValue } from "../../utils/format";
 import type { PacketRecord } from "../../../../src/messages";
 
@@ -54,7 +54,7 @@ export function Packets() {
   const [k0, setK0] = useState(""); const [k1, setK1] = useState("");
 
   useMessages((m) => {
-    if (m.type === "packets") { setName(m.name); setRows(flatten(m.records)); }
+    if (m.type === "packets") { setName(m.name); setRows(flatten(m.records)); saveState({ name: m.name }); }
   });
 
   useEffect(() => {

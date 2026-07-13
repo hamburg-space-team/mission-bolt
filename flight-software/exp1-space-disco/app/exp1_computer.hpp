@@ -4,7 +4,7 @@
 #include "can_protocol.hpp"
 #include "exp_computer.hpp"
 #include "lp5810.hpp"
-#include "packet_types.hpp"
+#include <bolt/wire/types.hpp>
 
 #include <cstdint>
 
@@ -63,9 +63,9 @@ class Exp1Computer final : public ExpComputer {
     static constexpr uint32_t SPEC_BOOT_TIMEOUT_MS = 1500U;
     static constexpr uint32_t SPEC_BOOT_POLL_MS = 25U;
 
-    /// Ship the AS7265XResult in `result` as an EXP1_SPECTRUM_A/B pair.
+    /// Ship the AS7265XResult in `result` as one atomic EXP1_SPECTRUM packet.
     /// matrix_idx = MATRIX row of the measurement (goes out as led_mask).
-    void send_spectrum_pair(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us);
+    void send_spectrum(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us);
     void sensor_init() noexcept;
     void try_spec_recovery();
     void wait_spec_boot() noexcept;

@@ -57,7 +57,9 @@ impl Command {
 
     #[must_use]
     pub fn is_dangerous(&self) -> bool {
-        matches!(self, Command::ResetTick | Command::FullSystemTest)
+        // Single source: the `.danger` annotation on CommandOpcode (schema.json),
+        // generated into command_danger() - no hardcoded list here.
+        crate::model::command_danger(self.opcode())
     }
 }
 

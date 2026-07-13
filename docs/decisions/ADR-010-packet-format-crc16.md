@@ -31,7 +31,7 @@ sync(2) ver(1) type(1) seq(1) len(1) tick(2 LE) ts_us(4 LE)
 **CRC-16/CCITT-FALSE** (poly `0x1021`, init `0xFFFF`, no reflection),
 covering bytes 2..end-of-payload, written big-endian.
 
-Header constants are in [`packet_header.hpp`](../../flight-software/shared/comms/packet_header.hpp):
+Header constants are in [`bolt/wire/header.hpp`](../../interfaces/include/bolt/wire/header.hpp):
 `MAX_PACKET_SIZE = 64`, `HEADER_SIZE = 12`, `CRC_SIZE = 2`,
 `MAX_PAYLOAD = 50`.
 

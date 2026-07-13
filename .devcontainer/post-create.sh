@@ -24,6 +24,14 @@ if [ -n "${HOST_PROJECT_DIR:-}" ] && [ -d "$HOME/.claude/projects" ]; then
     fi
 fi
 
+# Regenerate the payload schema from the bolt/wire WIRE(...) annotations so
+# bolt-codec's build.rs picks up any change (C++26 reflection via clang-p2996).
+if [ -f interfaces/tools/schemagen/run-schemagen.sh ]; then
+    echo "== regenerating payload schema.json =="
+    interfaces/tools/schemagen/run-schemagen.sh \
+        || echo "schemagen: skipped (schema.json kept as committed)"
+fi
+
 # --- telemetry-tools (Bolt): Rust codec/CLIs + VS Code extension ---
 if [ -d telemetry-tools ]; then
     echo "== building telemetry-tools (Bolt) =="

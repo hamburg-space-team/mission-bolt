@@ -1,7 +1,7 @@
 #include "exp_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
-#include "packet_payloads.hpp"
+#include <bolt/wire/payloads.hpp>
 #include "platform.hpp"
 
 extern CAN_HandleTypeDef hcan1;
@@ -114,15 +114,43 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     // Internal sequencing tick
     this->local_tick++;
 
+    roll_timing_window(can_tick, tick_start_us);
+    BOLT_TIME(this->timings, TICK); // whole-tick scope, runs to end of on_tick
+
     on_experiment_tick(can_tick, tick_start_us);
+    send_periodic(can_tick, tick_start_us);
+}
 
-    send_env_packet(can_tick, tick_start_us);
+// Fold the finished tick's per-scope sums into the window maxima, then ~1 Hz
+// downlink the worst-case timings and start a fresh window.
+void ExpComputer::roll_timing_window(uint16_t can_tick, uint32_t timestamp_us) {
+    this->timings.tick_end();
     if ((this->local_tick % STATUS_INTERVAL) == 0U) {
-        send_status_packet(can_tick, tick_start_us);
+        send_timing(can_tick, timestamp_us);
+        this->timings.reset();
     }
+}
 
+// Env every tick, status + flush on their intervals; timed as SEND / STORE.
+void ExpComputer::send_periodic(uint16_t can_tick, uint32_t timestamp_us) {
+    {
+        BOLT_TIME(this->timings, SEND);
+        send_env_packet(can_tick, timestamp_us);
+        if ((this->local_tick % STATUS_INTERVAL) == 0U) {
+            send_status_packet(can_tick, timestamp_us);
+        }
+    }
     if ((this->local_tick % FLUSH_INTERVAL) == 0U) {
+        BOLT_TIME(this->timings, STORE);
         (void)this->storage.flush();
+    }
+}
+
+void ExpComputer::send_timing(uint16_t can_tick, uint32_t timestamp_us) {
+    if (auto len = this->pkt.build_timing(this->tx_buf.data(), PacketProtocol::Tick{can_tick},
+                                          PacketProtocol::TimestampUs{timestamp_us}, source_node(), this->timings)) {
+        this->can.send(exp_can_id(), this->tx_buf.data(), *len);
+        (void)this->storage.write(this->tx_buf.data(), *len);
     }
 }
 
@@ -132,8 +160,8 @@ void ExpComputer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
     PayloadExpEnv env{};
 
     if (auto result = this->baro.read()) {
-        env.ms_pressure = result->d1;
-        env.ms_temperature = result->d2;
+        env.ms_pressure_raw = result->d1;
+        env.ms_temperature_raw = result->d2;
         env.valid_mask |= 0x01U;
     }
 

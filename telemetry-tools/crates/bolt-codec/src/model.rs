@@ -61,21 +61,17 @@ pub enum Sample {
     Imu {
         accel_ms2: [f32; 3],
         gyro_dps: [f32; 3],
+        // ICM reset/not-ready sentinel: all 3 gyro axes at raw 0x8000 at once
+        invalid: bool,
     },
     Spectrum {
-        half: char,
-        // Gain-normalized counts.
-        channels: [f32; 9],
-        #[serde(skip_serializing_if = "Option::is_none")]
-        gain_index: Option<u8>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        led_mask: Option<u8>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        integration_cycles: Option<u8>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        measurement_valid: Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        start_timestamp_us: Option<u32>,
+        // All 18 AS7265x channels, gain-normalized (one atomic measurement).
+        channels: [f32; 18],
+        gain_index: u8,
+        led_mask: u8,
+        integration_cycles: u8,
+        measurement_valid: bool,
+        start_timestamp_us: u32,
     },
     Status {
         source: &'static str,
@@ -107,7 +103,7 @@ pub enum Sample {
         gyro_dps: [f32; 3],
         temp_c: f32,
         #[serde(skip_serializing_if = "Option::is_none")]
-        cap_voltage: Option<u16>,
+        cap_voltage_raw: Option<u16>,
         latency_us: u32,
         burst_index: u8,
         valid_mask: u8,
@@ -148,16 +144,24 @@ pub enum Sample {
         command: &'static str,
         result: &'static str,
     },
+    Timing {
+        source_node: u8,
+        node: &'static str,
+        // Worst-case us per scope since the last send (WCET / tick budget).
+        tick_us: u16,
+        read_us: u16,
+        cfg_us: u16,
+        drive_us: u16,
+        send_us: u16,
+        store_us: u16,
+    },
 }
 
 impl Sample {
     #[must_use]
     pub fn columns(&self) -> Vec<(&'static str, f64)> {
-        let xyz = |base: &'static [&'static str; 3], v: &[f32; 3]| {
-            vec![(base[0], v[0] as f64), (base[1], v[1] as f64), (base[2], v[2] as f64)]
-        };
-        // Like xyz, but emits NaN when the sensor's valid bit is clear, so
-        // invalid samples are never plotted/stored as if they were real
+        // Emit NaN when the sensor's valid bit is clear, so invalid samples
+        // are never plotted as if they were real
         let nan_xyz = |base: &'static [&'static str; 3], v: &[f32; 3], ok: bool| {
             let g = |x: f32| if ok { x as f64 } else { f64::NAN };
             vec![(base[0], g(v[0])), (base[1], g(v[1])), (base[2], g(v[2]))]
@@ -166,8 +170,10 @@ impl Sample {
         const A: [&str; 3] = ["accel_x", "accel_y", "accel_z"];
         const G: [&str; 3] = ["gyro_x", "gyro_y", "gyro_z"];
         const M: [&str; 3] = ["mag_x", "mag_y", "mag_z"];
-        const CH: [&str; 9] =
-            ["ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8"];
+        const CH: [&str; 18] = [
+            "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9", "ch10", "ch11", "ch12", "ch13",
+            "ch14", "ch15", "ch16", "ch17",
+        ];
         match self {
             Sample::Env { temp_c, pressure_mbar, accel_ms2, gyro_dps, valid_mask, .. } => {
                 let ms_ok = valid_mask & 0x01 != 0; // ms5611
@@ -188,14 +194,17 @@ impl Sample {
                 }
                 out
             }
-            Sample::Imu { accel_ms2, gyro_dps } => {
-                let mut out = xyz(&A, accel_ms2);
-                out.extend(xyz(&G, gyro_dps));
+            Sample::Imu { accel_ms2, gyro_dps, invalid } => {
+                // NaN out the ICM reset sentinel so plots never show the spike;
+                // raw_columns() still keeps the real bytes for lossless export.
+                let ok = !*invalid;
+                let mut out = nan_xyz(&A, accel_ms2, ok);
+                out.extend(nan_xyz(&G, gyro_dps, ok));
                 out
             }
             Sample::Spectrum { channels, measurement_valid, .. } => {
                 // Only a DATA_RDY-confirmed readout is a real spectrum.
-                let ok = measurement_valid.unwrap_or(true);
+                let ok = *measurement_valid;
                 CH.iter().zip(channels).map(|(n, v)| (*n, gate(*v, ok))).collect()
             }
             Sample::Status { uptime_s, .. } => vec![("uptime_s", *uptime_s as f64)],
@@ -219,6 +228,14 @@ impl Sample {
                 ("latency_a_us", *latency_a_estimated_us as f64),
                 ("latency_b_us", *latency_b_estimated_us as f64),
             ],
+            Sample::Timing { tick_us, read_us, cfg_us, drive_us, send_us, store_us, .. } => vec![
+                ("tick_us", *tick_us as f64),
+                ("read_us", *read_us as f64),
+                ("cfg_us", *cfg_us as f64),
+                ("drive_us", *drive_us as f64),
+                ("send_us", *send_us as f64),
+                ("store_us", *store_us as f64),
+            ],
             Sample::Gap { .. } | Sample::Fault { .. } | Sample::Boot { .. } | Sample::CmdAck { .. } => Vec::new(),
         }
     }
@@ -232,8 +249,10 @@ impl Sample {
         const A: [&str; 3] = ["accel_x", "accel_y", "accel_z"];
         const G: [&str; 3] = ["gyro_x", "gyro_y", "gyro_z"];
         const M: [&str; 3] = ["mag_x", "mag_y", "mag_z"];
-        const CH: [&str; 9] =
-            ["ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8"];
+        const CH: [&str; 18] = [
+            "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9", "ch10", "ch11", "ch12", "ch13",
+            "ch14", "ch15", "ch16", "ch17",
+        ];
         match self {
             Sample::Env { temp_c, pressure_mbar, ms_temp_c, ms_pressure_raw, ms_temperature_raw, accel_ms2, gyro_dps, valid_mask, .. } => {
                 let mut o: Vec<(&'static str, f64)> = vec![("valid_mask", *valid_mask as f64)];
@@ -246,19 +265,20 @@ impl Sample {
                 if let Some(g) = gyro_dps { o.extend(xyz(&G, g)); }
                 o
             }
-            Sample::Imu { accel_ms2, gyro_dps } => {
+            Sample::Imu { accel_ms2, gyro_dps, .. } => {
                 let mut o = xyz(&A, accel_ms2);
                 o.extend(xyz(&G, gyro_dps));
                 o
             }
-            Sample::Spectrum { channels, gain_index, led_mask, integration_cycles, measurement_valid, start_timestamp_us, .. } => {
-                let mut o: Vec<(&'static str, f64)> = Vec::new();
-                if let Some(g) = gain_index { o.push(("gain_index", *g as f64)); }
-                if let Some(l) = led_mask { o.push(("led_mask", *l as f64)); }
-                if let Some(i) = integration_cycles { o.push(("integration_cycles", *i as f64)); }
-                if let Some(mv) = measurement_valid { o.push(("measurement_valid", bit(*mv))); }
+            Sample::Spectrum { channels, gain_index, led_mask, integration_cycles, measurement_valid, start_timestamp_us } => {
+                let mut o: Vec<(&'static str, f64)> = vec![
+                    ("gain_index", *gain_index as f64),
+                    ("led_mask", *led_mask as f64),
+                    ("integration_cycles", *integration_cycles as f64),
+                    ("measurement_valid", bit(*measurement_valid)),
+                ];
                 for (n, v) in CH.iter().zip(channels) { o.push((n, *v as f64)); }
-                if let Some(ts) = start_timestamp_us { o.push(("start_timestamp_us", *ts as f64)); }
+                o.push(("start_timestamp_us", *start_timestamp_us as f64));
                 o
             }
             Sample::Status { uptime_s, lo_rtc_s, signal, sd, led_write_fails, spec_start_fails, data_ready_fails, .. } => {
@@ -286,7 +306,7 @@ impl Sample {
                 ("latency_us", *latency_us as f64),
                 ("measurement_valid", bit(*measurement_valid)),
             ],
-            Sample::Stack { mag_ut, accel_ms2, gyro_dps, temp_c, cap_voltage, latency_us, burst_index, valid_mask, .. } => {
+            Sample::Stack { mag_ut, accel_ms2, gyro_dps, temp_c, cap_voltage_raw, latency_us, burst_index, valid_mask, .. } => {
                 let mut o = xyz(&M, mag_ut);
                 o.extend(xyz(&A, accel_ms2));
                 o.extend(xyz(&G, gyro_dps));
@@ -294,7 +314,7 @@ impl Sample {
                 o.push(("latency_us", *latency_us as f64));
                 o.push(("burst_index", *burst_index as f64));
                 o.push(("valid_mask", *valid_mask as f64));
-                if let Some(cv) = cap_voltage { o.push(("cap_voltage", *cv as f64)); }
+                if let Some(cv) = cap_voltage_raw { o.push(("cap_voltage_raw", *cv as f64)); }
                 o
             }
             Sample::Exp3Status { latency_a_estimated_us, latency_b_estimated_us, wait_a_used_us, sd } => vec![
@@ -326,6 +346,14 @@ impl Sample {
             Sample::CmdAck { opcode, seq, status, .. } => {
                 vec![("opcode", *opcode as f64), ("seq", *seq as f64), ("status", *status as f64)]
             }
+            Sample::Timing { tick_us, read_us, cfg_us, drive_us, send_us, store_us, .. } => vec![
+                ("tick_us", *tick_us as f64),
+                ("read_us", *read_us as f64),
+                ("cfg_us", *cfg_us as f64),
+                ("drive_us", *drive_us as f64),
+                ("send_us", *send_us as f64),
+                ("store_us", *store_us as f64),
+            ],
         }
     }
 
@@ -340,13 +368,57 @@ impl Sample {
                     || (temp_c.is_some() && valid_mask & 0x02 == 0)
                     || (accel_ms2.is_some() && valid_mask & 0x04 == 0)
             }
-            Sample::Spectrum { measurement_valid, .. } => *measurement_valid == Some(false),
+            Sample::Spectrum { measurement_valid, .. } => !*measurement_valid,
             Sample::Stack { valid_mask, .. } => valid_mask & 0x07 != 0x07,
+            Sample::Imu { invalid, .. } => *invalid,
             _ => false,
         }
     }
 }
 
+// BtcEnv + the three EXP env payloads share this (identical layout, diff source).
+fn env_sample(source: &'static str, valid_mask: u8, temp_raw: i16, ms_pressure_raw: u32, ms_temperature_raw: u32,
+              c: &Calibration) -> Sample {
+    let (pm, mt) = ms5611_opt(ms_pressure_raw, ms_temperature_raw, &c.ms5611_coeffs, valid_mask & 0x01 != 0);
+    Sample::Env {
+        source,
+        temp_c: (valid_mask & 0x02 != 0).then(|| temp_c(temp_raw, c)),
+        pressure_mbar: pm,
+        ms_temp_c: mt,
+        ms_pressure_raw: Some(ms_pressure_raw),
+        ms_temperature_raw: Some(ms_temperature_raw),
+        accel_ms2: None,
+        gyro_dps: None,
+        valid_mask,
+    }
+}
+
+// The two EXP status payloads (EXP3 has its own PayloadExp3Status).
+fn exp_status_sample(source: &'static str, uptime_s: u32, sd_status: u8, led_write_fails: u8, spec_start_fails: u8,
+                     data_ready_fails: u8) -> Sample {
+    Sample::Status {
+        source,
+        uptime_s,
+        lo_rtc_s: None,
+        signal: None,
+        sd: Sd::from_status(sd_status),
+        led_write_fails: Some(led_write_fails),
+        spec_start_fails: Some(spec_start_fails),
+        data_ready_fails: Some(data_ready_fails),
+    }
+}
+
+// BtcImu and Exp3Imu are byte-identical; share the sample construction.
+fn imu_sample(accel: [i16; 3], gyro: [i16; 3], c: &Calibration) -> Sample {
+    Sample::Imu {
+        accel_ms2: accel_ms2(accel, c),
+        gyro_dps: gyro_dps(gyro, c),
+        // All 3 gyro axes pinned to i16::MIN = the ICM "gyro not ready" sentinel
+        // after a reset; a real flight never hits the exact negative rail on all
+        // 3 at once, so this flags only the re-init glitch, not real motion.
+        invalid: gyro == [i16::MIN; 3],
+    }
+}
 fn accel_ms2(raw: [i16; 3], c: &Calibration) -> [f32; 3] {
     raw.map(|v| v as f32 / c.accel_lsb_per_g * G_TO_MS2)
 }
@@ -406,40 +478,16 @@ fn ms5611_opt(d1: u32, d2: u32, coeffs: &[u32; 6], valid: bool) -> (Option<f32>,
     }
 }
 
-fn spectrum(chans: [u32; 9], gain_index: u8, c: &Calibration) -> [f32; 9] {
+fn spectrum(chans: [u16; 18], gain_index: u8, c: &Calibration) -> [f32; 18] {
     let g = *c.spectrum_gain.get(gain_index as usize).unwrap_or(&1.0);
     chans.map(|v| v as f32 / g)
 }
 
-fn gap_reason(r: u8) -> &'static str {
-    match r {
-        0x01 => "no_data",
-        0x02 => "can_crc_fail",
-        0x03 => "lifi_timeout",
-        0x04 => "sensor_failed",
-        _ => "unknown",
-    }
-}
-fn boot_reason(r: u8) -> &'static str {
-    match r {
-        0x01 => "cold_start",
-        0x02 => "watchdog",
-        0x03 => "soft_reset",
-        _ => "unknown",
-    }
-}
-
-// Decode a NodeId byte (FAULT/GAP source_node) to a source name.
-fn node_name(n: u8) -> &'static str {
-    match n {
-        0 => "btc",
-        1 => "exp1",
-        2 => "exp2",
-        3 => "exp3",
-        0xFF => "unknown",
-        _ => "?",
-    }
-}
+// Enum byte->name lookups, generated from schema["enums"] - the WIRE(.desc)
+// annotated enums in bolt/wire/types.hpp + uplink.hpp. Provides gap_reason,
+// boot_reason, node_name, command_name and ack_status_name; single source, no
+// hand-mirroring of the firmware enums.
+include!(concat!(env!("OUT_DIR"), "/enums_gen.rs"));
 
 // Convert a raw [`Payload`] to a normalized [`Sample`] using the mission's
 // calibration.
@@ -447,58 +495,21 @@ fn node_name(n: u8) -> &'static str {
 pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
     let c = &spec.calibration;
     match payload {
-        Payload::BtcEnv(p) => {
-            let (pm, mt) = ms5611_opt(p.ms_pressure, p.ms_temperature, &c.ms5611_coeffs, p.valid_mask & 0x01 != 0);
-            Sample::Env {
-                source: "btc",
-                temp_c: (p.valid_mask & 0x02 != 0).then(|| temp_c(p.temp_raw, c)),
-                pressure_mbar: pm,
-                ms_temp_c: mt,
-                ms_pressure_raw: Some(p.ms_pressure),
-                ms_temperature_raw: Some(p.ms_temperature),
-                // IMU no longer in BTC_ENV - it's the BTC_IMU stream.
-                accel_ms2: None,
-                gyro_dps: None,
-                valid_mask: p.valid_mask,
-            }
-        }
-        Payload::ExpEnv { source, data } => {
-            let (pm, mt) = ms5611_opt(data.ms_pressure, data.ms_temperature, &c.ms5611_coeffs, data.valid_mask & 0x01 != 0);
-            Sample::Env {
-                source,
-                temp_c: (data.valid_mask & 0x02 != 0).then(|| temp_c(data.temp_raw, c)),
-                pressure_mbar: pm,
-                ms_temp_c: mt,
-                ms_pressure_raw: Some(data.ms_pressure),
-                ms_temperature_raw: Some(data.ms_temperature),
-                accel_ms2: None,
-                gyro_dps: None,
-                valid_mask: data.valid_mask,
-            }
-        }
-        Payload::BtcImu(p) | Payload::Exp3Imu(p) => Sample::Imu {
-            accel_ms2: accel_ms2(p.accel_raw, c),
-            gyro_dps: gyro_dps(p.gyro_raw, c),
-        },
-        Payload::SpectrumA(p) => Sample::Spectrum {
-            half: 'A',
+        Payload::BtcEnv(p) => env_sample("btc", p.valid_mask, p.temp_raw, p.ms_pressure_raw, p.ms_temperature_raw, c),
+        Payload::Exp1Env(p) => env_sample("exp1", p.valid_mask, p.temp_raw, p.ms_pressure_raw, p.ms_temperature_raw, c),
+        Payload::Exp2Env(p) => env_sample("exp2", p.valid_mask, p.temp_raw, p.ms_pressure_raw, p.ms_temperature_raw, c),
+        Payload::Exp3Env(p) => env_sample("exp3", p.valid_mask, p.temp_raw, p.ms_pressure_raw, p.ms_temperature_raw, c),
+        Payload::BtcImu(p) => imu_sample([p.accel_x_raw, p.accel_y_raw, p.accel_z_raw],
+                                         [p.gyro_x_raw, p.gyro_y_raw, p.gyro_z_raw], c),
+        Payload::Exp3Imu(p) => imu_sample([p.accel_x_raw, p.accel_y_raw, p.accel_z_raw],
+                                          [p.gyro_x_raw, p.gyro_y_raw, p.gyro_z_raw], c),
+        Payload::Spectrum(p) => Sample::Spectrum {
             channels: spectrum(p.channels, p.gain, c),
-            gain_index: Some(p.gain),
-            led_mask: Some(p.led_mask),
-            integration_cycles: Some(p.integration_cycles),
-            measurement_valid: Some(p.measurement_valid != 0),
-            start_timestamp_us: None,
-        },
-        Payload::SpectrumB(p) => Sample::Spectrum {
-            half: 'B',
-            // B carries no gain byte; store as raw counts (gain 1x) - the UI
-            // pairs it with the same-tick A frame that has the real gain.
-            channels: p.channels.map(|v| v as f32),
-            gain_index: None,
-            led_mask: None,
-            integration_cycles: None,
-            measurement_valid: p.measurement_valid.map(|v| v != 0),
-            start_timestamp_us: Some(p.start_timestamp_us),
+            gain_index: p.gain,
+            led_mask: p.led_mask,
+            integration_cycles: p.integration_cycles,
+            measurement_valid: p.measurement_valid != 0,
+            start_timestamp_us: p.start_timestamp_us,
         },
         Payload::BtcStatus(p) => Sample::Status {
             source: "btc",
@@ -510,16 +521,10 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             spec_start_fails: None,
             data_ready_fails: None,
         },
-        Payload::ExpStatus { source, data } => Sample::Status {
-            source,
-            uptime_s: data.uptime_s,
-            lo_rtc_s: None,
-            signal: None,
-            sd: Sd::from_status(data.sd_status),
-            led_write_fails: Some(data.led_write_fails),
-            spec_start_fails: Some(data.spec_start_fails),
-            data_ready_fails: Some(data.data_ready_fails),
-        },
+        Payload::Exp1Status(p) => exp_status_sample("exp1", p.uptime_s, p.sd_status, p.led_write_fails,
+                                                    p.spec_start_fails, p.data_ready_fails),
+        Payload::Exp2Status(p) => exp_status_sample("exp2", p.uptime_s, p.sd_status, p.led_write_fails,
+                                                    p.spec_start_fails, p.data_ready_fails),
         Payload::Exp2Ber(p) => Sample::Ber {
             rate_index: p.rate_index,
             bits_sent: p.bits_sent,
@@ -530,23 +535,23 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
         },
         Payload::Exp3StackA(p) => Sample::Stack {
             which: 'A',
-            mag_ut: mag_ut(p.mag_raw, c),
-            accel_ms2: accel_ms2(p.accel_raw, c),
-            gyro_dps: gyro_dps(p.gyro_raw, c),
-            temp_c: temp_c(p.tmp_raw, c),
-            cap_voltage: None,
-            latency_us: p.latency_us,
+            mag_ut: mag_ut([p.mag_x_raw, p.mag_y_raw, p.mag_z_raw], c),
+            accel_ms2: accel_ms2([p.accel_x_raw, p.accel_y_raw, p.accel_z_raw], c),
+            gyro_dps: gyro_dps([p.gyro_x_raw, p.gyro_y_raw, p.gyro_z_raw], c),
+            temp_c: temp_c(p.temp_raw, c),
+            cap_voltage_raw: None,
+            latency_us: p.latency_a_us,
             burst_index: p.burst_index,
             valid_mask: p.valid_mask,
         },
         Payload::Exp3StackB(p) => Sample::Stack {
             which: 'B',
-            mag_ut: mag_ut(p.mag_raw, c),
-            accel_ms2: accel_ms2(p.accel_raw, c),
-            gyro_dps: gyro_dps(p.gyro_raw, c),
-            temp_c: temp_c(p.tmp_raw, c),
-            cap_voltage: Some(p.cap_voltage),
-            latency_us: p.latency_us,
+            mag_ut: mag_ut([p.mag_x_raw, p.mag_y_raw, p.mag_z_raw], c),
+            accel_ms2: accel_ms2([p.accel_x_raw, p.accel_y_raw, p.accel_z_raw], c),
+            gyro_dps: gyro_dps([p.gyro_x_raw, p.gyro_y_raw, p.gyro_z_raw], c),
+            temp_c: temp_c(p.temp_raw, c),
+            cap_voltage_raw: Some(p.cap_voltage_raw),
+            latency_us: p.latency_b_us,
             burst_index: p.burst_index,
             valid_mask: p.valid_mask,
         },
@@ -586,24 +591,16 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             command: command_name(p.opcode),
             result: ack_status_name(p.status),
         },
-    }
-}
-
-fn command_name(op: u8) -> &'static str {
-    match op {
-        0x01 => "reset_tick",
-        0x02 => "start_experiment",
-        0x03 => "activate_camera",
-        0x04 => "full_system_test",
-        _ => "unknown",
-    }
-}
-
-fn ack_status_name(s: u8) -> &'static str {
-    match s {
-        0 => "accepted",
-        1 => "unknown_opcode",
-        _ => "unknown",
+        Payload::Timing(p) => Sample::Timing {
+            source_node: p.source_node,
+            node: node_name(p.source_node),
+            tick_us: p.max_us[0],
+            read_us: p.max_us[1],
+            cfg_us: p.max_us[2],
+            drive_us: p.max_us[3],
+            send_us: p.max_us[4],
+            store_us: p.max_us[5],
+        },
     }
 }
 
@@ -617,8 +614,8 @@ mod tests {
 
     // Real BTC_STATUS frame from the bench dump
     const STATUS: &[u8] = &[
-        0xb0, 0x17, 0x01, 0x11, 0x00, 0x0c, 0x00, 0x00, 0x23, 0x3b, 0x01, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x01, 0x10,
+        0xb0, 0x17, 0x01, 0x11, 0x00, 0x0a, 0x00, 0x00, 0x23, 0x3b, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x07, 0x61,
     ];
 
     fn first_frame(bytes: &[u8]) -> Frame {
@@ -640,5 +637,23 @@ mod tests {
         assert!(!sig.lo, "LO must be false in the bench capture");
         assert!(sig.soe && sig.sods, "SOE + SODS active (mask 0x06)");
         assert_eq!(lo, 0);
+    }
+
+    #[test]
+    fn imu_gyro_sentinel_is_suspect_but_real_motion_is_not() {
+        use crate::payloads::BtcImu;
+        let spec = default_mission();
+        let imu = |accel: [i16; 3], gyro: [i16; 3]| {
+            Payload::BtcImu(BtcImu {
+                accel_x_raw: accel[0], accel_y_raw: accel[1], accel_z_raw: accel[2],
+                gyro_x_raw: gyro[0], gyro_y_raw: gyro[1], gyro_z_raw: gyro[2],
+            })
+        };
+        // ICM reset sentinel: all 3 gyro axes at 0x8000 -> invalid.
+        assert!(normalize(&imu([100, 0, -1000], [i16::MIN; 3]), spec).suspect());
+        // Real flight: one axis at the rail, others normal -> NOT flagged.
+        assert!(!normalize(&imu([0, 0, -16384], [i16::MIN, 200, -50]), spec).suspect());
+        // Positive saturation on all axes -> NOT the sentinel, NOT flagged.
+        assert!(!normalize(&imu([0, 0, 0], [i16::MAX; 3]), spec).suspect());
     }
 }

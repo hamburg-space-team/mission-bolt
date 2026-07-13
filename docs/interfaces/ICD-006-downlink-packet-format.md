@@ -50,7 +50,7 @@ Total: 14-64 bytes.
        \------ CRC scope (sync excluded) -----/
 ```
 
-Constants in [`packet_header.hpp`](../../flight-software/shared/comms/packet_header.hpp):
+Constants in [`bolt/wire/header.hpp`](../../interfaces/include/bolt/wire/header.hpp):
 `MAX_PACKET_SIZE = 64`, `HEADER_SIZE = 12`, `CRC_SIZE = 2`,
 `MAX_PAYLOAD = 50`.
 
@@ -113,7 +113,7 @@ re-pairs by tick.
 ## Compile-Time Checks
 
 Every payload struct passes `PACKET_TYPE_CHECK(T)` in
-[`packet_payloads.hpp`](../../flight-software/shared/comms/packet_payloads.hpp):
+[`bolt/wire/payloads.hpp`](../../interfaces/include/bolt/wire/payloads.hpp):
 
 - `std::is_trivially_copyable<T>`
 - `std::is_standard_layout<T>`

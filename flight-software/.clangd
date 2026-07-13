@@ -2,6 +2,7 @@ CompileFlags:
   Add:
     - -std=gnu++2b
     - -xc++
+    - -I../interfaces/include
     - -Ishared/bus
     - -Ishared/led
     - -Ishared/comms

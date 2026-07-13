@@ -79,9 +79,8 @@ export interface PortInfo {
   serial_number: string | null;
 }
 
-export const UPLINK_COMMANDS = [
-  { id: "reset_tick", label: "Reset Tick", dangerous: true },
-  { id: "start_experiment", label: "Start Experiment", dangerous: false },
-  { id: "activate_camera", label: "Activate Camera", dangerous: false },
-  { id: "full_system_test", label: "Full System Test", dangerous: true },
-] as const;
+// Uplink command set - generated from the wire schema (CommandOpcode + its
+// `.danger` annotation) by scripts/gen-commands.mjs. Single source of truth is
+// bolt/wire/uplink.hpp, so labels and the dangerous flag never drift from the
+// firmware / bolt-codec.
+export { UPLINK_COMMANDS } from "./protocol.gen";

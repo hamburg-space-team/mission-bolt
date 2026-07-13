@@ -1,0 +1,34 @@
+# clangd config for the bolt wire interface.
+#
+# The headers are plain C++ when BOLT_SCHEMAGEN is undefined - WIRE(...) and
+# PACKET(...) expand to nothing - so clangd parses them cleanly. We deliberately
+# do NOT define BOLT_SCHEMAGEN here: the reflection annotations it turns on need
+# clang-p2996, which the bundled clangd is not. Editing the contract stays
+# error-free; the real annotation build runs via tools/schemagen/run-schemagen.sh.
+#
+# The include path is given three ways so it resolves whichever folder is open
+# (interfaces/ standalone, or the repo root) and even if clangd inherits the ARM
+# flight compile-command for these out-of-DB headers. The Remove block strips the
+# ARM-GCC-only flags that leak in from that inherited command (clang rejects them).
+CompileFlags:
+  Add:
+    - -std=gnu++2b
+    - -xc++
+    - -I/workspaces/mission-bolt/interfaces/include # devcontainer-absolute (robust vs inherited CWD)
+    - -Iinclude            # when interfaces/ is the opened folder
+    - -Iinterfaces/include # when the repo root is the opened folder
+  Remove:
+    - -masm-syntax-unified # ARM GCC-only flag, not recognized by clangd/clang
+    - -masm=* # same family
+    - --specs=* # linker spec leaking into compile commands
+    - -fstack-usage # GCC-only codegen flag
+    - -std=* # replaced by Add above
+---
+# schemagen.cpp uses C++26 reflection (P2996 + P3394) that only clang-p2996 can
+# parse; the bundled clangd would flag every ^^, template-for and consteval. It
+# is a host tool, not the contract - silence the noise so it does not drown the
+# real header diagnostics.
+If:
+  PathMatch: .*tools/schemagen/.*
+Diagnostics:
+  Suppress: "*"

@@ -2,7 +2,7 @@
 
 #include "errors.hpp"
 #include "lfs.h"
-#include "packet_header.hpp"
+#include <bolt/wire/header.hpp>
 #include "store.hpp"
 
 #include <array>

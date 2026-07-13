@@ -9,5 +9,8 @@ license.workspace = true
 serde = { workspace = true }
 heapless = { workspace = true }
 
+[build-dependencies]
+serde_json = { workspace = true }
+
 [dev-dependencies]
 serde_json = { workspace = true }

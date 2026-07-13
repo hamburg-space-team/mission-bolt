@@ -6966,6 +6966,9 @@ const vscode = acquireVsCodeApi();
 function post(msg) {
   vscode.postMessage(msg);
 }
+function saveState(state) {
+  vscode.setState(state);
+}
 function useMessages(handler) {
   reactExports.useEffect(() => {
     const onMessage = (e) => handler(e.data);
@@ -6974,23 +6977,12 @@ function useMessages(handler) {
     return () => window.removeEventListener("message", onMessage);
   }, []);
 }
-function fmtValue(v2) {
-  if (v2 == null) return "";
-  if (Array.isArray(v2)) return v2.join(" → ");
-  if (typeof v2 === "object") {
-    return Object.entries(v2).map(([k2, x2]) => `${k2}=${x2}`).join(", ");
-  }
-  if (typeof v2 === "number") return Number.isInteger(v2) ? String(v2) : v2.toFixed(3);
-  return String(v2);
-}
-const magnitude = (a) => Array.isArray(a) ? Math.hypot(Number(a[0]), Number(a[1]), Number(a[2])) : 0;
 export {
   createRoot as c,
-  fmtValue as f,
   jsxRuntimeExports as j,
-  magnitude as m,
   post as p,
   reactExports as r,
+  saveState as s,
   useMessages as u
 };
-//# sourceMappingURL=chunk-myRcYhpq.js.map
+//# sourceMappingURL=chunk-DHH7KV4w.js.map
