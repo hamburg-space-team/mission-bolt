@@ -1,7 +1,7 @@
 ---
 name: Architecture Proposal
 about: Propose an architectural change requiring an ADR
-title: 'arch: '
+title: '[Arch] '
 labels: architecture
 assignees: ''
 ---
