@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Recreate USB-serial /dev nodes inside the dev container.
-#
-# Usage: bash .devcontainer/fix-serial.sh   (or add an alias; needs sudo)
+
 set -euo pipefail
 
 OWNER="${SERIAL_OWNER:-vscode}"   # extension host runs as vscode

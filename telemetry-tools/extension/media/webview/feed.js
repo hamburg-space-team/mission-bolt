@@ -1,4 +1,5 @@
-import { r as reactExports, j as jsxRuntimeExports, f as fmtValue, u as useMessages, p as post, c as createRoot } from "./chunk-myRcYhpq.js";
+import { r as reactExports, j as jsxRuntimeExports, u as useMessages, p as post, c as createRoot } from "./chunk-DHH7KV4w.js";
+import { f as fmtValue } from "./chunk-CG4_lz18.js";
 const num = (v) => v === "" ? null : Number(v);
 function FilterBar(p) {
   const [t0, setT0] = reactExports.useState("");
@@ -172,6 +173,11 @@ function summary(r) {
       return `gap tick ${s.first_missing_tick} ×${s.count} · ${s.reason}`;
     case "cmd_ack":
       return `${s.command} (seq ${s.seq}) · ${s.result}`;
+    case "timing": {
+      const tick = Number(s.tick_us);
+      const over = tick > 4e4 ? " ⚠ OVER 40 ms" : "";
+      return `tick ${(tick / 1e3).toFixed(1)} ms${over} · read ${s.read_us} · cfg ${s.cfg_us} · drive ${s.drive_us} · send ${s.send_us} · store ${s.store_us} µs`;
+    }
     default: {
       const keys = Object.keys(s).filter((k) => k !== "kind");
       return keys.slice(0, 4).map((k) => `${k}=${fmtValue(s[k])}`).join("  ");

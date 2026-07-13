@@ -13,6 +13,10 @@
             "path": "telemetry-tools"
         },
         {
+            "name": "Interfaces",
+            "path": "interfaces"
+        },
+        {
             "name": "Docs",
             "path": "docs"
         },

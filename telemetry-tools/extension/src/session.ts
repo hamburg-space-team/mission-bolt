@@ -10,6 +10,7 @@ import { CaptureCache, CacheEntry } from "./cache";
 // Filters/pagination for a cache DB query
 export interface PacketQuery {
   type?: string;
+  source?: string;
   sinceUs?: number;
   untilUs?: number;
   limit?: number;
@@ -389,6 +390,7 @@ export class SessionManager implements vscode.Disposable {
   async queryPackets(entry: CacheEntry, q: PacketQuery = {}): Promise<Record<string, unknown>[]> {
     const args = ["--query", "--db", entry.dbPath];
     if (q.type) args.push("--type", q.type);
+    if (q.source) args.push("--source", q.source);
     if (q.sinceUs != null) args.push("--since-us", String(q.sinceUs));
     if (q.untilUs != null) args.push("--until-us", String(q.untilUs));
     if (q.limit != null) args.push("--limit", String(q.limit));

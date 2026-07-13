@@ -1,0 +1,9 @@
+{
+    "// note": "Override the workspace-wide '**/generated: true' hide (meant for STM32CubeMX output) so the generated wire schema stays visible in this root.",
+    "files.exclude": {
+        "**/generated": false
+    },
+    "search.exclude": {
+        "**/generated": false
+    }
+}

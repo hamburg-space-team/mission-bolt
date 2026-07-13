@@ -53,3 +53,8 @@ tr.bad td { color: var(--vscode-errorForeground); }
 .spectro-bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
 .spectro-fill { width: 100%; border-radius: 3px 3px 0 0; min-height: 1px; transition: height .12s; }
 .spectro-wl { font-size: 9px; opacity: .7; margin-top: 3px; white-space: nowrap; }
+
+.rocket { display: flex; align-items: center; gap: 20px; background: var(--vscode-editorWidget-background); border-radius: 10px; padding: 10px 16px; }
+.rocket-readout { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.rocket-readout div { display: flex; flex-direction: column; }
+.rocket-readout b { font-size: 18px; font-weight: 600; }

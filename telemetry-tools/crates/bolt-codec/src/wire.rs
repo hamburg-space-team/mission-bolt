@@ -11,7 +11,7 @@ pub const CRC_SIZE: usize = 2;
 pub const MAX_PACKET_SIZE: usize = 64;
 pub const MAX_PAYLOAD: usize = MAX_PACKET_SIZE - HEADER_SIZE - CRC_SIZE; // 50
 
-/// 12-byte packet header, decoded from the wire.
+// 12-byte packet header, decoded from the wire.
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct Header {
     pub version: u8,
@@ -35,8 +35,8 @@ impl Header {
     }
 }
 
-/// One decoded frame. `crc_ok == false` means the sync/version/length
-/// framed cleanly but the CRC did not match
+// One decoded frame. `crc_ok == false` means the sync/version/length
+// framed cleanly but the CRC did not match
 #[derive(Debug, Clone, Serialize)]
 pub struct Frame {
     pub header: Header,
@@ -45,7 +45,7 @@ pub struct Frame {
     pub crc_ok: bool,
 }
 
-/// Events yielded while framing a byte stream.
+// Events yielded while framing a byte stream.
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum FrameEvent {
@@ -54,15 +54,15 @@ pub enum FrameEvent {
 }
 
 enum Parsed {
-    /// Not enough bytes yet - wait for more.
+    // Not enough bytes yet - wait for more.
     NeedMore,
-    /// Advance `skip` bytes and try again (no valid frame at offset 0).
+    // Advance `skip` bytes and try again (no valid frame at offset 0).
     Resync { skip: usize },
     Frame { consumed: usize, frame: Frame },
 }
 
-/// Offset of the next plausible sync start at position >= 1, or the whole
-/// length if none - so a resync always makes forward progress.
+// Offset of the next plausible sync start at position >= 1, or the whole
+// length if none - so a resync always makes forward progress.
 fn next_sync(buf: &[u8]) -> usize {
     buf.iter().skip(1).position(|&b| b == SYNC_0).map_or(buf.len(), |p| p + 1)
 }
@@ -103,11 +103,11 @@ fn parse_one(buf: &[u8]) -> Parsed {
     }
 }
 
-/// Zero-copy framer over an in-memory slice (post-flight file path).
+// Zero-copy framer over an in-memory slice (post-flight file path).
 pub struct Framer<'a> {
     buf: &'a [u8],
     pos: usize,
-    /// Total bytes skipped during resyncs so far.
+    // Total bytes skipped during resyncs so far.
     pub resync_bytes: usize,
 }
 
@@ -161,7 +161,7 @@ impl StreamDecoder {
         self.buf.extend_from_slice(data);
     }
 
-    /// Pull the next event, or `None` if more bytes are needed.
+    // Pull the next event, or `None` if more bytes are needed.
     pub fn pull(&mut self) -> Option<FrameEvent> {
         match parse_one(&self.buf) {
             Parsed::NeedMore => None,
@@ -176,7 +176,7 @@ impl StreamDecoder {
         }
     }
 
-    /// Bytes currently buffered but not yet framed.
+    // Bytes currently buffered but not yet framed.
     #[must_use]
     pub fn pending(&self) -> usize {
         self.buf.len()

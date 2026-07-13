@@ -1,6 +1,6 @@
 #pragma once
 
-#include "packet_header.hpp"
+#include <bolt/wire/header.hpp>
 
 #include <array>
 #include <cstddef>

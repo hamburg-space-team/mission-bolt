@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "schemagen: regenerate schema.json + ICD-007",
+      "type": "shell",
+      "command": "${workspaceFolder}/tools/schemagen/run-schemagen.sh",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "detail": "Compile schemagen with clang-p2996 and regenerate tools/generated/schema.json + docs/interfaces/ICD-007 from the WIRE(...)/PACKET(...) annotations."
+    },
+    {
+      "label": "schemagen: install clang-p2996",
+      "type": "shell",
+      "command": "${workspaceFolder}/../scripts/install-clang-p2996.sh",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "detail": "One-time: download the clang-p2996 (C++26 reflection) toolchain needed by schemagen."
+    }
+  ]
+}

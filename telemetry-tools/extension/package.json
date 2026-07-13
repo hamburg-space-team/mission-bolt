@@ -306,8 +306,9 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./ && tsc -p webview/tsconfig.json && vite build --mode development",
-    "typecheck": "tsc -p ./ && tsc -p webview/tsconfig.json",
+    "gen:commands": "node scripts/gen-commands.mjs",
+    "compile": "npm run gen:commands && tsc -p ./ && tsc -p webview/tsconfig.json && vite build --mode development",
+    "typecheck": "npm run gen:commands && tsc -p ./ && tsc -p webview/tsconfig.json",
     "build:webview": "vite build --mode development",
     "watch:host": "tsc -watch -p ./",
     "watch:webview": "vite build --watch --mode development",
@@ -325,6 +326,7 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "echarts": "^6.1.0",
     "tabulator-tables": "^6.5.2"
   }
 }

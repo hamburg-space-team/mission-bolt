@@ -1,0 +1,254 @@
+{
+  "types": [
+    {"name": "BtcEnv", "value": 16, "node": "BTC", "rate_hz": 25, "layout": "PayloadBtcEnv", "desc": "common env sensors"},
+    {"name": "BtcStatus", "value": 17, "node": "BTC", "rate_hz": 1, "layout": "PayloadBtcStatus", "desc": "system health"},
+    {"name": "BtcImu", "value": 18, "node": "BTC", "rate_hz": 200, "layout": "PayloadBtcImu", "desc": "IMU sample per data-ready"},
+    {"name": "Exp1Spectrum", "value": 32, "node": "EXP1", "rate_hz": 2, "layout": "PayloadExp1Spectrum", "desc": "18-channel spectrum (matrix)"},
+    {"name": "Exp1Env", "value": 34, "node": "EXP1", "rate_hz": 25, "layout": "PayloadExp1Env", "desc": "common env sensors"},
+    {"name": "Exp2Env", "value": 50, "node": "EXP2", "rate_hz": 25, "layout": "PayloadExp2Env", "desc": "common env sensors"},
+    {"name": "Exp3Env", "value": 66, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3Env", "desc": "common env sensors"},
+    {"name": "Exp1Status", "value": 35, "node": "EXP1", "rate_hz": 1, "layout": "PayloadExp1Status", "desc": "system health"},
+    {"name": "Exp2Status", "value": 49, "node": "EXP2", "rate_hz": 1, "layout": "PayloadExp2Status", "desc": "system health"},
+    {"name": "Exp2Ber", "value": 48, "node": "EXP2", "rate_hz": 25, "layout": "PayloadExp2Ber", "desc": "LiFi bit-error round"},
+    {"name": "Exp3StackA", "value": 64, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3StackA", "desc": "wired stack sample"},
+    {"name": "Exp3StackB", "value": 65, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3StackB", "desc": "wireless stack sample"},
+    {"name": "Exp3Status", "value": 67, "node": "EXP3", "rate_hz": 1, "layout": "PayloadExp3Status", "desc": "control-loop diagnostics"},
+    {"name": "Exp3Imu", "value": 68, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3Imu", "desc": "controller ICM sample"},
+    {"name": "GapMarker", "value": 240, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadGapMarker", "desc": "gap notification"},
+    {"name": "Fault", "value": 241, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadFault", "desc": "latched fault + trace"},
+    {"name": "Boot", "value": 254, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadBoot", "desc": "MCU startup"},
+    {"name": "CmdAck", "value": 242, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadCmdAck", "desc": "uplink command ack"},
+    {"name": "Timing", "value": 243, "node": "SYSTEM", "rate_hz": 4, "layout": "PayloadTiming", "desc": "per-scope WCET (1Hz x4)"}
+  ],
+  "payloads": [
+    {
+      "name": "PayloadBtcEnv",
+      "size": 11,
+      "fields": [
+        {"name":"valid_mask","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"valid bits: 0=ms5611, 1=tmp117"},
+        {"name":"temp_raw","ctype":"short","byte_offset":1,"count":1,"unit":"degC","scale":0.0078125,"offset":0,"gate":"valid_mask:1","desc":"TMP117 board temperature"},
+        {"name":"ms_pressure_raw","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D1 pressure ADC (compensate with D2 + PROM coeffs)"},
+        {"name":"ms_temperature_raw","ctype":"unsigned int","byte_offset":7,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D2 temperature ADC (drives dT/TEMP for pressure comp)"}
+      ]
+    },
+    {
+      "name": "PayloadBtcStatus",
+      "size": 10,
+      "fields": [
+        {"name":"uptime_s","ctype":"unsigned int","byte_offset":0,"count":1,"unit":"s","scale":1,"offset":0,"gate":"","desc":"uptime since MCU boot"},
+        {"name":"lo_rtc_s","ctype":"unsigned int","byte_offset":4,"count":1,"unit":"s","scale":1,"offset":0,"gate":"","desc":"RTC s-since-midnight at LO (0=none); abs_time = lo_rtc_s + tick*0.04"},
+        {"name":"sd_status","ctype":"unsigned char","byte_offset":8,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"SD: 0=mounted, 1=failed"},
+        {"name":"signal_mask","ctype":"unsigned char","byte_offset":9,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"REXUS: 0=LO latched, 1=SOE, 2=SODS"}
+      ]
+    },
+    {
+      "name": "PayloadBtcImu",
+      "size": 12,
+      "fields": [
+        {"name":"accel_x_raw","ctype":"short","byte_offset":0,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"","desc":"accel X"},
+        {"name":"accel_y_raw","ctype":"short","byte_offset":2,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"","desc":"accel Y"},
+        {"name":"accel_z_raw","ctype":"short","byte_offset":4,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"","desc":"accel Z"},
+        {"name":"gyro_x_raw","ctype":"short","byte_offset":6,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"","desc":"gyro X"},
+        {"name":"gyro_y_raw","ctype":"short","byte_offset":8,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"","desc":"gyro Y"},
+        {"name":"gyro_z_raw","ctype":"short","byte_offset":10,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"","desc":"gyro Z"}
+      ]
+    },
+    {
+      "name": "PayloadExp1Spectrum",
+      "size": 44,
+      "fields": [
+        {"name":"channels","ctype":"unsigned short[18]","byte_offset":0,"count":18,"unit":"count","scale":1,"offset":0,"gate":"measurement_valid","desc":"AS7265x 18-channel spectrum (410nm..NIR)"},
+        {"name":"start_timestamp_us","ctype":"unsigned int","byte_offset":36,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"measurement start, us since LO"},
+        {"name":"integration_cycles","ctype":"unsigned char","byte_offset":40,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"integration cycles (real time = 2*cycles*2.8ms)"},
+        {"name":"gain","ctype":"unsigned char","byte_offset":41,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"gain: 0=1x, 1=3.7x, 2=16x, 3=64x"},
+        {"name":"led_mask","ctype":"unsigned char","byte_offset":42,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"MATRIX row index -> LED/PWM/IT config (ICD-007)"},
+        {"name":"measurement_valid","ctype":"unsigned char","byte_offset":43,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = DATA_RDY asserted and readout ok"}
+      ]
+    },
+    {
+      "name": "PayloadExp1Env",
+      "size": 11,
+      "fields": [
+        {"name":"valid_mask","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"valid bits: 0=ms5611, 1=tmp117"},
+        {"name":"temp_raw","ctype":"short","byte_offset":1,"count":1,"unit":"degC","scale":0.0078125,"offset":0,"gate":"valid_mask:1","desc":"TMP117 board temperature"},
+        {"name":"ms_pressure_raw","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D1 pressure ADC (compensate with D2 + PROM coeffs)"},
+        {"name":"ms_temperature_raw","ctype":"unsigned int","byte_offset":7,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D2 temperature ADC (drives dT/TEMP for pressure comp)"}
+      ]
+    },
+    {
+      "name": "PayloadExp2Env",
+      "size": 11,
+      "fields": [
+        {"name":"valid_mask","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"valid bits: 0=ms5611, 1=tmp117"},
+        {"name":"temp_raw","ctype":"short","byte_offset":1,"count":1,"unit":"degC","scale":0.0078125,"offset":0,"gate":"valid_mask:1","desc":"TMP117 board temperature"},
+        {"name":"ms_pressure_raw","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D1 pressure ADC (compensate with D2 + PROM coeffs)"},
+        {"name":"ms_temperature_raw","ctype":"unsigned int","byte_offset":7,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D2 temperature ADC (drives dT/TEMP for pressure comp)"}
+      ]
+    },
+    {
+      "name": "PayloadExp3Env",
+      "size": 11,
+      "fields": [
+        {"name":"valid_mask","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"valid bits: 0=ms5611, 1=tmp117"},
+        {"name":"temp_raw","ctype":"short","byte_offset":1,"count":1,"unit":"degC","scale":0.0078125,"offset":0,"gate":"valid_mask:1","desc":"TMP117 board temperature"},
+        {"name":"ms_pressure_raw","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D1 pressure ADC (compensate with D2 + PROM coeffs)"},
+        {"name":"ms_temperature_raw","ctype":"unsigned int","byte_offset":7,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:0","desc":"MS5611 D2 temperature ADC (drives dT/TEMP for pressure comp)"}
+      ]
+    },
+    {
+      "name": "PayloadExp1Status",
+      "size": 8,
+      "fields": [
+        {"name":"uptime_s","ctype":"unsigned int","byte_offset":0,"count":1,"unit":"s","scale":1,"offset":0,"gate":"","desc":"uptime since MCU boot"},
+        {"name":"sd_status","ctype":"unsigned char","byte_offset":4,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"SD: 0=mounted, 1=failed"},
+        {"name":"led_write_fails","ctype":"unsigned char","byte_offset":5,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"LP5810 set_channels failures (saturating)"},
+        {"name":"spec_start_fails","ctype":"unsigned char","byte_offset":6,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"set_integration/start_measurement failures (saturating)"},
+        {"name":"data_ready_fails","ctype":"unsigned char","byte_offset":7,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"DATA_RDY not asserted at readout (saturating)"}
+      ]
+    },
+    {
+      "name": "PayloadExp2Status",
+      "size": 8,
+      "fields": [
+        {"name":"uptime_s","ctype":"unsigned int","byte_offset":0,"count":1,"unit":"s","scale":1,"offset":0,"gate":"","desc":"uptime since MCU boot"},
+        {"name":"sd_status","ctype":"unsigned char","byte_offset":4,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"SD: 0=mounted, 1=failed"},
+        {"name":"led_write_fails","ctype":"unsigned char","byte_offset":5,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"LP5810 set_channels failures (saturating)"},
+        {"name":"spec_start_fails","ctype":"unsigned char","byte_offset":6,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"set_integration/start_measurement failures (saturating)"},
+        {"name":"data_ready_fails","ctype":"unsigned char","byte_offset":7,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"DATA_RDY not asserted at readout (saturating)"}
+      ]
+    },
+    {
+      "name": "PayloadExp2Ber",
+      "size": 16,
+      "fields": [
+        {"name":"rate_index","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"LiFi RATE_TABLE index for this round"},
+        {"name":"timestamp_send_us","ctype":"unsigned int","byte_offset":1,"count":1,"unit":"us","scale":1,"offset":0,"gate":"measurement_valid","desc":"SEND command sent, us since LO"},
+        {"name":"timestamp_recv_us","ctype":"unsigned int","byte_offset":5,"count":1,"unit":"us","scale":1,"offset":0,"gate":"measurement_valid","desc":"response fully received, us since LO"},
+        {"name":"bits_sent","ctype":"unsigned short","byte_offset":9,"count":1,"unit":"count","scale":1,"offset":0,"gate":"measurement_valid","desc":"bits transmitted this round"},
+        {"name":"bit_errors","ctype":"unsigned short","byte_offset":11,"count":1,"unit":"count","scale":1,"offset":0,"gate":"measurement_valid","desc":"bit errors detected this round"},
+        {"name":"first_error_byte","ctype":"unsigned char","byte_offset":13,"count":1,"unit":"","scale":1,"offset":0,"gate":"measurement_valid","desc":"first errored byte (0xFF = none)"},
+        {"name":"last_error_byte","ctype":"unsigned char","byte_offset":14,"count":1,"unit":"","scale":1,"offset":0,"gate":"measurement_valid","desc":"last errored byte (0xFF = none)"},
+        {"name":"measurement_valid","ctype":"unsigned char","byte_offset":15,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = round valid; 0 = ignore other fields"}
+      ]
+    },
+    {
+      "name": "PayloadExp3StackA",
+      "size": 36,
+      "fields": [
+        {"name":"mag_x_raw","ctype":"int","byte_offset":0,"count":1,"unit":"G","scale":6.103515625e-05,"offset":0,"gate":"valid_mask:0","desc":"wired MMC5983MA field X"},
+        {"name":"mag_y_raw","ctype":"int","byte_offset":4,"count":1,"unit":"G","scale":6.103515625e-05,"offset":0,"gate":"valid_mask:0","desc":"wired MMC5983MA field Y"},
+        {"name":"mag_z_raw","ctype":"int","byte_offset":8,"count":1,"unit":"G","scale":6.103515625e-05,"offset":0,"gate":"valid_mask:0","desc":"wired MMC5983MA field Z"},
+        {"name":"accel_x_raw","ctype":"short","byte_offset":12,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"valid_mask:1","desc":"wired accel X"},
+        {"name":"accel_y_raw","ctype":"short","byte_offset":14,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"valid_mask:1","desc":"wired accel Y"},
+        {"name":"accel_z_raw","ctype":"short","byte_offset":16,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"valid_mask:1","desc":"wired accel Z"},
+        {"name":"gyro_x_raw","ctype":"short","byte_offset":18,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"valid_mask:1","desc":"wired gyro X"},
+        {"name":"gyro_y_raw","ctype":"short","byte_offset":20,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"valid_mask:1","desc":"wired gyro Y"},
+        {"name":"gyro_z_raw","ctype":"short","byte_offset":22,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"valid_mask:1","desc":"wired gyro Z"},
+        {"name":"temp_raw","ctype":"short","byte_offset":24,"count":1,"unit":"degC","scale":0.0078125,"offset":0,"gate":"valid_mask:2","desc":"wired-stack TMP117"},
+        {"name":"lifi_a_timestamp_us","ctype":"unsigned int","byte_offset":26,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"wired-stack sample latch, us since LO (LiFi domain)"},
+        {"name":"latency_a_us","ctype":"unsigned int","byte_offset":30,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"wired-stack wakeup-to-response latency"},
+        {"name":"burst_index","ctype":"unsigned char","byte_offset":34,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"sample position within the current burst"},
+        {"name":"valid_mask","ctype":"unsigned char","byte_offset":35,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"valid: 0=mag, 1=imu, 2=tmp, 3=cable-LiFi handshake"}
+      ]
+    },
+    {
+      "name": "PayloadExp3StackB",
+      "size": 38,
+      "fields": [
+        {"name":"mag_x_raw","ctype":"int","byte_offset":0,"count":1,"unit":"G","scale":6.103515625e-05,"offset":0,"gate":"valid_mask:0","desc":"wireless MMC5983MA field X"},
+        {"name":"mag_y_raw","ctype":"int","byte_offset":4,"count":1,"unit":"G","scale":6.103515625e-05,"offset":0,"gate":"valid_mask:0","desc":"wireless MMC5983MA field Y"},
+        {"name":"mag_z_raw","ctype":"int","byte_offset":8,"count":1,"unit":"G","scale":6.103515625e-05,"offset":0,"gate":"valid_mask:0","desc":"wireless MMC5983MA field Z"},
+        {"name":"accel_x_raw","ctype":"short","byte_offset":12,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"valid_mask:1","desc":"wireless accel X"},
+        {"name":"accel_y_raw","ctype":"short","byte_offset":14,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"valid_mask:1","desc":"wireless accel Y"},
+        {"name":"accel_z_raw","ctype":"short","byte_offset":16,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"valid_mask:1","desc":"wireless accel Z"},
+        {"name":"gyro_x_raw","ctype":"short","byte_offset":18,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"valid_mask:1","desc":"wireless gyro X"},
+        {"name":"gyro_y_raw","ctype":"short","byte_offset":20,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"valid_mask:1","desc":"wireless gyro Y"},
+        {"name":"gyro_z_raw","ctype":"short","byte_offset":22,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"valid_mask:1","desc":"wireless gyro Z"},
+        {"name":"temp_raw","ctype":"short","byte_offset":24,"count":1,"unit":"degC","scale":0.0078125,"offset":0,"gate":"valid_mask:2","desc":"wireless-stack TMP117"},
+        {"name":"cap_voltage_raw","ctype":"unsigned short","byte_offset":26,"count":1,"unit":"raw","scale":1,"offset":0,"gate":"valid_mask:3","desc":"wireless-stack storage-cap voltage (raw ADC)"},
+        {"name":"lifi_b_timestamp_us","ctype":"unsigned int","byte_offset":28,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"wireless-stack sample latch, us since LO (LiFi domain)"},
+        {"name":"latency_b_us","ctype":"unsigned int","byte_offset":32,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"wireless-stack wakeup-to-response latency"},
+        {"name":"burst_index","ctype":"unsigned char","byte_offset":36,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"sample position within the current burst"},
+        {"name":"valid_mask","ctype":"unsigned char","byte_offset":37,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"valid: 0=mag, 1=imu, 2=tmp, 3=cap"}
+      ]
+    },
+    {
+      "name": "PayloadExp3Status",
+      "size": 13,
+      "fields": [
+        {"name":"latency_a_estimated_us","ctype":"unsigned int","byte_offset":0,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"wired-stack rolling-average latency estimate"},
+        {"name":"latency_b_estimated_us","ctype":"unsigned int","byte_offset":4,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"wireless-stack rolling-average latency estimate"},
+        {"name":"wait_a_used_us","ctype":"unsigned int","byte_offset":8,"count":1,"unit":"us","scale":1,"offset":0,"gate":"","desc":"sync delay applied this cycle"},
+        {"name":"sd_status","ctype":"unsigned char","byte_offset":12,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"SD: 0=mounted, 1=failed"}
+      ]
+    },
+    {
+      "name": "PayloadExp3Imu",
+      "size": 12,
+      "fields": [
+        {"name":"accel_x_raw","ctype":"short","byte_offset":0,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"","desc":"accel X"},
+        {"name":"accel_y_raw","ctype":"short","byte_offset":2,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"","desc":"accel Y"},
+        {"name":"accel_z_raw","ctype":"short","byte_offset":4,"count":1,"unit":"g","scale":0.0009765625,"offset":0,"gate":"","desc":"accel Z"},
+        {"name":"gyro_x_raw","ctype":"short","byte_offset":6,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"","desc":"gyro X"},
+        {"name":"gyro_y_raw","ctype":"short","byte_offset":8,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"","desc":"gyro Y"},
+        {"name":"gyro_z_raw","ctype":"short","byte_offset":10,"count":1,"unit":"dps","scale":0.06103515625,"offset":0,"gate":"","desc":"gyro Z"}
+      ]
+    },
+    {
+      "name": "PayloadGapMarker",
+      "size": 5,
+      "fields": [
+        {"name":"first_missing_tick","ctype":"unsigned short","byte_offset":0,"count":1,"unit":"tick","scale":1,"offset":0,"gate":"","desc":"first missing tick number"},
+        {"name":"count","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"consecutive missing ticks"},
+        {"name":"reason","ctype":"GapReason","byte_offset":3,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"why the data was missing (GapReason)"},
+        {"name":"source_node","ctype":"NodeId","byte_offset":4,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin node (NodeId)"}
+      ]
+    },
+    {
+      "name": "PayloadFault",
+      "size": 13,
+      "fields": [
+        {"name":"fault_code","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"fault source = LED blink code (StatusLeds::Fault 1-10)"},
+        {"name":"error_code","ctype":"unsigned char","byte_offset":1,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"ErrorCode (TIMEOUT, BUS_ERROR)"},
+        {"name":"flags","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"bit 0 = trace truncated (chain deeper than 6)"},
+        {"name":"depth","ctype":"unsigned char","byte_offset":3,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"valid entries in steps[]"},
+        {"name":"line","ctype":"unsigned short","byte_offset":4,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin source line (only with the exact build)"},
+        {"name":"steps","ctype":"unsigned char[6]","byte_offset":6,"count":6,"unit":"","scale":1,"offset":0,"gate":"","desc":"Step trace [0]=origin outward (fault-trace-codes.md)"},
+        {"name":"source_node","ctype":"NodeId","byte_offset":12,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin node (NodeId)"}
+      ]
+    },
+    {
+      "name": "PayloadBoot",
+      "size": 4,
+      "fields": [
+        {"name":"reason","ctype":"BootReason","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"BootReason: power-on / watchdog / soft reset"},
+        {"name":"reboot_count","ctype":"unsigned short","byte_offset":1,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"total boots since first power-on (0=first)"},
+        {"name":"source_node","ctype":"NodeId","byte_offset":3,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin node (NodeId)"}
+      ]
+    },
+    {
+      "name": "PayloadCmdAck",
+      "size": 3,
+      "fields": [
+        {"name":"opcode","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"echoed uplink CommandOpcode"},
+        {"name":"seq","ctype":"unsigned char","byte_offset":1,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"echoed uplink sequence number"},
+        {"name":"status","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"CommandAckStatus (ACCEPTED, UNKNOWN_OPCODE)"}
+      ]
+    },
+    {
+      "name": "PayloadTiming",
+      "size": 13,
+      "fields": [
+        {"name":"source_node","ctype":"NodeId","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin node (NodeId)"},
+        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":1,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"worst-case per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+      ]
+    }
+  ],
+  "enums": [
+    {"name": "GapReason", "underlying": "u8", "values": [{"name": "NO_DATA", "value": 1, "desc": "no valid CAN/source data inside the expected window", "label": "", "danger": false}, {"name": "CAN_CRC_FAIL", "value": 2, "desc": "CAN frame received but failed CRC", "label": "", "danger": false}, {"name": "LIFI_TIMEOUT", "value": 3, "desc": "no sample packets from an EXP3 stack in the interval", "label": "", "danger": false}, {"name": "SENSOR_FAILED", "value": 4, "desc": "superseded by FAULT (ADR-012); wire-stable, no longer emitted", "label": "", "danger": false}]},
+    {"name": "NodeId", "underlying": "u8", "values": [{"name": "BTC", "value": 0, "desc": "master controller", "label": "", "danger": false}, {"name": "EXP1", "value": 1, "desc": "Space Disco spectrometer", "label": "", "danger": false}, {"name": "EXP2", "value": 2, "desc": "Bouncy Castle Li-Fi", "label": "", "danger": false}, {"name": "EXP3", "value": 3, "desc": "Floaty Boi stacks", "label": "", "danger": false}, {"name": "UNKNOWN", "value": 255, "desc": "unknown origin", "label": "", "danger": false}]},
+    {"name": "BootReason", "underlying": "u8", "values": [{"name": "COLD_START", "value": 1, "desc": "normal power-on", "label": "", "danger": false}, {"name": "WATCHDOG", "value": 2, "desc": "IWDG fired, main loop had hung", "label": "", "danger": false}, {"name": "SOFT_RESET", "value": 3, "desc": "intentional software reset", "label": "", "danger": false}]},
+    {"name": "CommandOpcode", "underlying": "u8", "values": [{"name": "RESET_TICK", "value": 1, "desc": "reset the 25 Hz tick counter to 0", "label": "Reset Tick", "danger": true}, {"name": "START_EXPERIMENT", "value": 2, "desc": "arm the experiment sequence", "label": "Start Experiment", "danger": false}, {"name": "ACTIVATE_CAMERA", "value": 3, "desc": "power the onboard camera", "label": "Activate Camera", "danger": false}, {"name": "FULL_SYSTEM_TEST", "value": 4, "desc": "run the built-in self test", "label": "Full System Test", "danger": true}]},
+    {"name": "CommandAckStatus", "underlying": "u8", "values": [{"name": "ACCEPTED", "value": 0, "desc": "known command received (handler is a no-op for now)", "label": "", "danger": false}, {"name": "UNKNOWN_OPCODE", "value": 1, "desc": "opcode not recognised - nothing done", "label": "", "danger": false}]}
+  ]
+}

@@ -2,10 +2,12 @@
 #include "can_protocol.hpp"
 #include "main.h"
 #include "packet_builder.hpp"
-#include "packet_header.hpp"
-#include "packet_payloads.hpp"
-#include "packet_types.hpp"
+#include <bolt/wire/header.hpp>
+#include <bolt/wire/payloads.hpp>
+#include <bolt/wire/types.hpp>
+#include <bolt/wire/uplink.hpp>
 #include "timing.hpp"
+#include "wcet.hpp"
 
 #include <array>
 
@@ -190,7 +192,10 @@ void BtcComputer::init_extra_sensors() {
 void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
     using namespace PacketProtocol;
 
-    auto sample = imu.read_sample();
+    auto sample = [this] {
+        BOLT_TIME(timings, READ);
+        return imu.read_sample();
+    }();
     if (!sample) {
         return; // runtime latch is reported once by poll_device_fault()
     }
@@ -205,6 +210,14 @@ void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_IMU, Tick{sync_count}, TimestampUs{timestamp_us}, &p,
                              static_cast<uint8_t>(sizeof(p)))) {
+        downlink.send(tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+    }
+}
+
+void BtcComputer::send_timing(uint32_t timestamp_us) {
+    if (auto len = pkt.build_timing(tx_buf.data(), PacketProtocol::Tick{sync_count},
+                                    PacketProtocol::TimestampUs{timestamp_us}, PacketProtocol::NodeId::BTC, timings)) {
         downlink.send(tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
@@ -241,15 +254,18 @@ void BtcComputer::send_env_packet(uint32_t tick_start_us) {
 
     PayloadBtcEnv env{};
 
-    if (auto result = baro.read()) {
-        env.ms_pressure = result->d1;
-        env.ms_temperature = result->d2;
-        env.valid_mask |= 0x01U;
-    }
+    {
+        BOLT_TIME(timings, READ);
+        if (auto result = baro.read()) {
+            env.ms_pressure_raw = result->d1;
+            env.ms_temperature_raw = result->d2;
+            env.valid_mask |= 0x01U;
+        }
 
-    if (auto temp = tmp.read()) {
-        env.temp_raw = *temp;
-        env.valid_mask |= 0x02U;
+        if (auto temp = tmp.read()) {
+            env.temp_raw = *temp;
+            env.valid_mask |= 0x02U;
+        }
     }
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::BTC_ENV, Tick{sync_count}, TimestampUs{tick_start_us}, &env,
@@ -290,6 +306,15 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
 void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     // Error-LED pattern is pure tick counting - run it every tick.
     leds.error_tick();
+
+    // WCET window: fold the previous tick's per-scope sums into the maxima,
+    // then ~1 Hz downlink the worst-case timings and start a fresh window.
+    timings.tick_end();
+    if ((sync_count % SAVE_INTERVAL) == 0U) {
+        send_timing(tick_start_us);
+        timings.reset();
+    }
+    BOLT_TIME(timings, TICK); // whole-tick scope, runs to end of on_tick
 
     poll_uplink(tick_start_us);
 
@@ -343,11 +368,15 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     leds.can_tick(sync_count);
     sync_tx.send(sync_count);
 
-    drain_exp_frames();
-    send_env_packet(tick_start_us);
-    send_status_packet(tick_start_us);
+    {
+        BOLT_TIME(timings, SEND);
+        drain_exp_frames();
+        send_env_packet(tick_start_us);
+        send_status_packet(tick_start_us);
+    }
 
     if ((sync_count % SAVE_INTERVAL) == 0U) {
+        BOLT_TIME(timings, STORE);
         BootState::save_tick(sync_count);
         (void)storage.flush();
     }

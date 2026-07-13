@@ -1,7 +1,8 @@
 #include "exp1_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
-#include "packet_payloads.hpp"
+#include <bolt/wire/payloads.hpp>
+#include "wcet.hpp"
 
 #include <array>
 
@@ -257,17 +258,28 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
             if (!rdy && data_ready_fails != 0xFFU) {
                 data_ready_fails++;
             }
-            const bool ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
+            bool ok = false;
+            {
+                BOLT_TIME(timings, READ);
+                ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
+            }
             prev_valid = prev_valid && rdy && ok;
         }
     } else if (block_tick == 1U) {
         // Rest of the readout (die 2), ship the pair - only THEN touch the
         // chip again for the next row.
         if (prev_ready) {
-            const bool ok = spec.read_channels_dies(&result, 2U, 1U).has_value();
+            bool ok = false;
+            {
+                BOLT_TIME(timings, READ);
+                ok = spec.read_channels_dies(&result, 2U, 1U).has_value();
+            }
             prev_valid = prev_valid && ok;
 
-            send_spectrum_pair(prev_step_idx, prev_valid, prev_start_tick, prev_start_us);
+            {
+                BOLT_TIME(timings, SEND);
+                send_spectrum(prev_step_idx, prev_valid, prev_start_tick, prev_start_us);
+            }
             prev_ready = false;
         }
 
@@ -275,10 +287,19 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         // (dark rows carry mask 0 on both), then integration time (no-op
         // unless the row changes it) and the one-shot start. Destroys the
         // RAW window - all reads for this row happen next block.
-        bool led_ok = lp5810_rgb.set_channels(step.rgb_mask, step.pwm).has_value();
-        led_ok = lp5810_uv_ir.set_channels(step.uvir_mask, step.pwm).has_value() && led_ok;
-        const bool it_ok = spec.set_integration(step.integration_cycles).has_value();
-        const bool start_ok = spec.start_measurement().has_value();
+        bool led_ok = false;
+        {
+            BOLT_TIME(timings, DRIVE);
+            led_ok = lp5810_rgb.set_channels(step.rgb_mask, step.pwm).has_value();
+            led_ok = lp5810_uv_ir.set_channels(step.uvir_mask, step.pwm).has_value() && led_ok;
+        }
+        bool it_ok = false;
+        bool start_ok = false;
+        {
+            BOLT_TIME(timings, CFG);
+            it_ok = spec.set_integration(step.integration_cycles).has_value();
+            start_ok = spec.start_measurement().has_value();
+        }
 
         // Transient diagnostics: count which link failed (EXP1_STATUS).
         if (!led_ok && led_write_fails != 0xFFU) {
@@ -303,39 +324,30 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
     }
 }
 
-void Exp1Computer::send_spectrum_pair(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us) {
+void Exp1Computer::send_spectrum(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us) {
     using namespace PacketProtocol;
 
-    PayloadExp1SpectrumA spec_a{};
-    PayloadExp1SpectrumB spec_b{};
+    PayloadExp1Spectrum spec{};
 
     // Only copy channel data when valid; invalid packets send zeros so the ground station
     // doesn't misinterpret stale values from the previous row.
     if (valid) {
         for (uint8_t i = 0U; i < SPECTRUM_CHANNELS; i++) {
-            spec_a.channels[i] = static_cast<uint32_t>(result.channels[i]);
-            spec_b.channels[i] = static_cast<uint32_t>(result.channels[SPECTRUM_CHANNELS + i]);
+            spec.channels[i] = result.channels[i]; // already 16-bit raw counts
         }
     }
 
-    spec_a.integration_cycles = MATRIX[matrix_idx].integration_cycles;
-    spec_a.gain = static_cast<uint8_t>(SPEC_GAIN);
+    spec.start_timestamp_us = start_us;
+    spec.integration_cycles = MATRIX[matrix_idx].integration_cycles;
+    spec.gain = static_cast<uint8_t>(SPEC_GAIN);
     // Matrix ROW INDEX, not a bitmask: identifies LED config, brightness and
     // integration setting via the MATRIX table (ICD-007 decodes with the
     // same table).
-    spec_a.led_mask = matrix_idx;
-    spec_a.measurement_valid = valid ? 1U : 0U;
-    spec_b.start_timestamp_us = start_us;
-    spec_b.measurement_valid = valid ? 1U : 0U;
+    spec.led_mask = matrix_idx;
+    spec.measurement_valid = valid ? 1U : 0U;
 
-    if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM_A, Tick{start_tick}, TimestampUs{start_us},
-                             &spec_a, static_cast<uint8_t>(sizeof(spec_a)))) {
-        can.send(exp_can_id(), tx_buf.data(), *len);
-        (void)storage.write(tx_buf.data(), *len);
-    }
-
-    if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM_B, Tick{start_tick}, TimestampUs{start_us},
-                             &spec_b, static_cast<uint8_t>(sizeof(spec_b)))) {
+    if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM, Tick{start_tick}, TimestampUs{start_us},
+                             &spec, static_cast<uint8_t>(sizeof(spec)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }

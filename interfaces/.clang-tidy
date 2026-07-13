@@ -1,0 +1,114 @@
+---
+Checks: >-
+  -*,
+
+  readability-identifier-naming, readability-braces-around-statements,
+  readability-const-return-type, readability-container-size-empty,
+  readability-delete-null-pointer, readability-else-after-return,
+  readability-function-cognitive-complexity, readability-misleading-indentation,
+  readability-non-const-parameter, readability-qualified-auto,
+  readability-redundant-preprocessor, readability-simplify-boolean-expr,
+  readability-uppercase-literal-suffix, -readability-magic-numbers,
+  -readability-identifier-length, -modernize-use-trailing-return-type,
+  -bugprone-easily-swappable-parameters,
+
+  -modernize-loop-convert, modernize-make-unique, -modernize-pass-by-value,
+  modernize-redundant-void-arg, modernize-use-auto, modernize-use-bool-literals,
+  modernize-use-default-member-init, -modernize-use-emplace,
+  modernize-use-equals-default, modernize-use-nodiscard, modernize-use-nullptr,
+  modernize-use-override, modernize-avoid-c-arrays,
+  -modernize-use-trailing-return-type,
+
+  performance-faster-string-find, performance-for-range-copy,
+  performance-implicit-conversion-in-loop, performance-inefficient-algorithm,
+  performance-move-const-arg, performance-move-constructor-init,
+  performance-no-automatic-move, performance-trivially-destructible,
+  performance-unnecessary-copy-initialization,
+  performance-unnecessary-value-param,
+
+  bugprone-assert-side-effect, bugprone-bool-pointer-implicit-conversion,
+  bugprone-copy-constructor-init,
+  bugprone-implicit-widening-of-multiplication-result,
+  bugprone-incorrect-roundings, bugprone-integer-division,
+  bugprone-misplaced-operator-in-strlen-in-alloc,
+  bugprone-misplaced-widening-cast, bugprone-narrowing-conversions,
+  bugprone-not-null-terminated-result, bugprone-redundant-branch-condition,
+  bugprone-signed-char-misuse, bugprone-sizeof-container,
+  bugprone-sizeof-expression, bugprone-string-integer-assignment,
+  bugprone-suspicious-memset-usage, bugprone-swapped-arguments,
+  bugprone-too-small-loop-variable, bugprone-undefined-memory-manipulation,
+  bugprone-unused-return-value,
+
+  clang-analyzer-core.*, clang-analyzer-cplusplus.*,
+  clang-analyzer-deadcode.DeadStores, clang-analyzer-security.*,
+
+  cppcoreguidelines-avoid-goto, cppcoreguidelines-interfaces-global-init,
+  cppcoreguidelines-narrowing-conversions,
+  cppcoreguidelines-pro-type-const-cast, -cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-pro-type-static-cast-downcast,
+  cppcoreguidelines-pro-type-union-access, cppcoreguidelines-pro-type-vararg,
+  cppcoreguidelines-slicing, -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  readability-implicit-bool-conversion, bugprone-exception-escape,
+
+  misc-no-recursion, misc-unused-parameters, misc-unused-using-decls,
+  misc-use-anonymous-namespace,
+
+  cert-dcl58-cpp, cert-err52-cpp, cert-err60-cpp, cert-flp30-c, cert-int09-c,
+  cert-msc50-cpp, cert-msc51-cpp, cert-oop57-cpp, hicpp-vararg
+
+HeaderFilterRegex: ".*(shared|btc|exp[0-9]-).*(\\.h|\\.hpp)$"
+
+CheckOptions:
+  - key: readability-identifier-naming.NamespaceCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: "^(TEST_CASE|SECTION|REQUIRE|CHECK)$"
+
+  - key: readability-identifier-naming.MethodCase
+    value: lower_case
+
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.LocalConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalConstexprVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.TemplateParameterIgnoredRegexp
+    value: "^(expr-type|trompeloeil_.*)$"
+
+  - key: readability-function-cognitive-complexity.Threshold
+    value: "15"
+    
+  - key: bugprone-unused-return-value.AllowCastToVoid
+    value: "true"

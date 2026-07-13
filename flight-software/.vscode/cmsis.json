@@ -1,7 +1,7 @@
 {
     "targetSet": {
         "bolt": {
-            "activeTargetType": "btc"
+            "activeTargetType": "exp1-space-disco"
         }
     }
 }

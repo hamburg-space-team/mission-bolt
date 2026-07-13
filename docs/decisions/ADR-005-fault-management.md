@@ -42,7 +42,7 @@ real fault is caught within 120 ms.
 - `SENSOR_FAILED` -- the source has marked a sensor as permanently
   disabled
 
-Defined in [`packet_types.hpp`](../../flight-software/shared/comms/packet_types.hpp).
+Defined in [`bolt/wire/types.hpp`](../../interfaces/include/bolt/wire/types.hpp).
 
 **AS7265X recovery.** Spectrometer gets one reset attempt before
 the three-strike rule kicks in: hold reset, wait three ticks

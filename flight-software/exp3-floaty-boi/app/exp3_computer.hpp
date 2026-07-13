@@ -3,7 +3,7 @@
 #include "can_protocol.hpp"
 #include "exp_computer.hpp"
 #include "icm42686.hpp"
-#include "packet_types.hpp"
+#include <bolt/wire/types.hpp>
 
 #include <cstdint>
 

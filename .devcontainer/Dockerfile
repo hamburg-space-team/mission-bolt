@@ -48,7 +48,21 @@ RUN curl -fsSL -o /tmp/ctools.tar.gz \
     && tar -xzf /tmp/ctools.tar.gz -C /opt/cmsis-toolbox --strip-components=1 \
     && rm /tmp/ctools.tar.gz
 
+# --- clang-p2996 (C++26 reflection P2996 + annotations P3394) ----------
+# HOST-ONLY, for interfaces/tools/schemagen (payload schema from the WIRE(...) annotations).
+# Prebuilt Compiler Explorer nightly of the Bloomberg fork - no LLVM source
+# build. ~3 GB unpacked; never used by the flight build. Pulls the newest nightly
+# so the URL stays valid as CE rotates old tarballs.
+RUN CE="https://s3.amazonaws.com/compiler-explorer" \
+    && KEY="$(curl -fsSL "${CE}/?list-type=2&prefix=opt/clang-bb-p2996-trunk-" \
+             | grep -oE 'opt/clang-bb-p2996-trunk-[0-9]+\.tar\.xz' | sort | tail -1)" \
+    && NAME="$(basename "${KEY}" .tar.xz)" \
+    && mkdir -p /opt/compiler-explorer \
+    && curl -fsSL "${CE}/${KEY}" | tar -xJ -C /opt/compiler-explorer \
+    && ln -sfn "/opt/compiler-explorer/${NAME}" /opt/compiler-explorer/clang-p2996
+
 ENV PATH="/opt/cmsis-toolbox/bin:/opt/arm-gnu-toolchain/bin:${PATH}"
+ENV CLANG_P2996_DIR="/opt/compiler-explorer/clang-p2996"
 
 ENV GCC_TOOLCHAIN_15_2_1=/opt/arm-gnu-toolchain/bin
 

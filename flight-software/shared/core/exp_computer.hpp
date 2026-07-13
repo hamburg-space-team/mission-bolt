@@ -2,8 +2,8 @@
 
 #include "can_transport.hpp"
 #include "node_computer.hpp"
-#include "packet_payloads.hpp"
-#include "packet_types.hpp"
+#include <bolt/wire/payloads.hpp>
+#include <bolt/wire/types.hpp>
 
 #include <cstdint>
 
@@ -54,6 +54,8 @@ class ExpComputer : public NodeComputer {
     // Packet builders - EXP3 overrides send_env_packet() for PayloadExp3Env
     virtual void send_env_packet(uint16_t can_tick, uint32_t timestamp_us);
     virtual void send_status_packet(uint16_t can_tick, uint32_t timestamp_us);
+    // Downlink this node's worst-case scope timings (source-tagged via source_node()).
+    void send_timing(uint16_t can_tick, uint32_t timestamp_us);
 
     /// Board-specific extras for the status payload (EXP1: transient
     /// spectrometer failure counters). Base leaves the fields at 0.
@@ -77,6 +79,9 @@ class ExpComputer : public NodeComputer {
     void on_init() override;
     void on_tick(uint32_t tick_start_us, uint16_t missed_periods) final;
     bool poll_sync(uint16_t& tick_out) noexcept;
+    // WCET window bookkeeping + periodic env/status/flush, split out of on_tick.
+    void roll_timing_window(uint16_t can_tick, uint32_t timestamp_us);
+    void send_periodic(uint16_t can_tick, uint32_t timestamp_us);
 
     volatile bool sync_pending = false;
     volatile uint16_t sync_tick = 0U;

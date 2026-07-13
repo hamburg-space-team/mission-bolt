@@ -34,3 +34,5 @@ bolt.cbuild-pack.yml
 
 .cache/
 */.cache/
+
+/.vscode/cmsis.json
