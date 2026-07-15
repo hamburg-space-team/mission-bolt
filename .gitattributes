@@ -1,3 +1,10 @@
+*.sh        text eol=lf
+*.mjs       text eol=lf
+*.bash      text eol=lf
+Dockerfile  text eol=lf
+*.py        text eol=lf
+
+
 # STM32CubeMX output: HAL/LL drivers, CMSIS, startup, generated Core/config
 **/generated/**            linguist-generated=true
 **/MX_Device/**            linguist-generated=true
