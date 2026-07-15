@@ -1,9 +1,10 @@
-// Generate src/protocol.gen.ts (UPLINK_COMMANDS) from the wire schema.
+// Generate src/protocol.gen.ts from the wire schema.
 //
-// Single source: interfaces/tools/generated/schema.json - the CommandOpcode enum
-// and its `.danger` annotation. So the command list, labels and the dangerous
-// flag live in one place (bolt/wire/uplink.hpp) and can never drift from the
-// firmware / the ground codec. Do not hand-edit src/protocol.gen.ts.
+// Single source: interfaces/tools/generated/schema.json. Emits:
+//   - UPLINK_COMMANDS   from the CommandOpcode enum (+ its .label/.danger)
+//   - PACKET_WIRE_BYTES on-wire size per packet type (payload + header + CRC)
+// So the command list, labels, danger flag and packet sizes live in one place
+// (bolt/wire/*) and can never drift. Do not hand-edit src/protocol.gen.ts.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -28,12 +29,35 @@ const rows = cmd.values
   })
   .join("\n");
 
-const ts = `// @generated from interfaces/tools/generated/schema.json (CommandOpcode) - do not edit.
+// On-wire bytes per packet type = payload size + 12 B header + 2 B CRC, keyed by
+// the snake_case name used in the live/postflight packet counts (matches
+// bolt-codec's PayloadType::name()).
+const OVERHEAD = 12 + 2;
+const snake = (p) => {
+  let out = "";
+  for (let i = 0; i < p.length; i++) {
+    const c = p[i];
+    if (c >= "A" && c <= "Z" && i !== 0) out += "_";
+    out += c.toLowerCase();
+  }
+  return out;
+};
+const sizeByLayout = Object.fromEntries((schema.payloads ?? []).map((p) => [p.name, p.size]));
+const sizeRows = (schema.types ?? [])
+  .map((t) => `  ${JSON.stringify(snake(t.name))}: ${(sizeByLayout[t.layout] ?? 0) + OVERHEAD},`)
+  .join("\n");
+
+const ts = `// @generated from interfaces/tools/generated/schema.json - do not edit.
 // Regenerate with: npm run gen:commands  (or tools/schemagen/run-schemagen.sh upstream).
 export const UPLINK_COMMANDS = [
 ${rows}
 ] as const;
+
+// On-wire bytes per packet type (payload + 12 B header + 2 B CRC), by count name.
+export const PACKET_WIRE_BYTES: Record<string, number> = {
+${sizeRows}
+};
 `;
 
 writeFileSync(outPath, ts);
-console.log(`wrote ${outPath} (${cmd.values.length} commands)`);
+console.log(`wrote ${outPath} (${cmd.values.length} commands, ${(schema.types ?? []).length} packet sizes)`);

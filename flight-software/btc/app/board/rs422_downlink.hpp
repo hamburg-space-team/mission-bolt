@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Driver_USART.h"
-#include "main.h" // IWYU pragma: keep (__disable_irq)
+#include "main.h" // IWYU pragma: keep (__disable_irq) - board layer, HAL is expected here
 
 #include <array>
 #include <cstdint>
@@ -12,14 +12,13 @@
 /// @ingroup apps
 class Rs422Downlink {
   private:
-    /// Arm a one-byte receive into rx_byte. Re-armed after every completed
-    /// byte from the RECEIVE_COMPLETE event so RX runs continuously.
+    /// Arm a one-byte receive into rx_byte
     void arm_receive() noexcept {
         (void)this->usart.Receive(&this->rx_byte, 1U);
     }
 
     /// Producer side (RX-complete interrupt): push one byte, drop if the ring
-    /// is full so the ISR never blocks.
+    /// is full so the ISR never blocks
     void rx_push(uint8_t b) noexcept {
         const auto next = static_cast<uint16_t>((this->rx_head + 1U) % RX_RING_SIZE);
         if (next != this->rx_tail) {
@@ -137,9 +136,8 @@ class Rs422Downlink {
         return true;
     }
 
-    /// Enqueue one packet for transmission and return immediately (never
-    /// blocks). Drops the WHOLE packet if the ring cannot hold it and
-    /// counts the drop; a later successful enqueue resets the streak.
+    /// Enqueue one packet for transmission and return immediately. Drops the WHOLE packet
+    /// if the ring cannot hold it and counts the drop
     void send(const uint8_t* data, uint8_t len) noexcept {
         if (free_bytes() < len) {
             if (this->consecutive_drops < MAX_CONSECUTIVE_DROPS) {
@@ -157,10 +155,6 @@ class Rs422Downlink {
         kick();
     }
 
-    /// Latched true once MAX_CONSECUTIVE_DROPS packets in a row were
-    /// dropped - the ring never drains, so the line is dead or permanently
-    /// overloaded. Polled once per tick by BtcComputer to raise
-    /// StatusLeds::Fault::UART.
     [[nodiscard]] bool is_failed() const noexcept {
         return this->consecutive_drops >= MAX_CONSECUTIVE_DROPS;
     }

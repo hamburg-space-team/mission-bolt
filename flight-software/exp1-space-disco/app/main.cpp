@@ -11,15 +11,17 @@ extern IWDG_HandleTypeDef hiwdg;
 extern SD_HandleTypeDef hsd1;
 
 namespace {
+    // Kick the IWDG every 3 ms (or more) to avoid a reset.
     static void kick_wdg() {
         static uint32_t last_kick_ms;
         const uint32_t now = HAL_GetTick();
-        if (now == last_kick_ms) {
+        if ((now - last_kick_ms) < 3U) {
             return;
         }
         last_kick_ms = now;
         HAL_IWDG_Refresh(&hiwdg);
     }
+
     static uint32_t get_tick_us() {
         return Timing::us_now();
     }
@@ -27,6 +29,7 @@ namespace {
     static void led_can_write(bool on) {
         HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
     }
+
     static void led_err_write(bool on) {
         HAL_GPIO_WritePin(LED_ERR_GPIO_Port, LED_ERR_Pin, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
     }

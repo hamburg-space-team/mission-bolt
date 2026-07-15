@@ -11,7 +11,14 @@ extern IWDG_HandleTypeDef hiwdg;
 extern SD_HandleTypeDef hsd1;
 
 namespace {
+    // Kick the IWDG every 3 ms (or more) to avoid a reset.
     static void kick_wdg() {
+        static uint32_t last_kick_ms;
+        const uint32_t now = HAL_GetTick();
+        if ((now - last_kick_ms) < 3U) {
+            return;
+        }
+        last_kick_ms = now;
         HAL_IWDG_Refresh(&hiwdg);
     }
 

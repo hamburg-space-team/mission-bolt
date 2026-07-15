@@ -2,6 +2,7 @@
 
 #include "boot_state.hpp"
 #include "cmsis_i2c_bus.hpp"
+#include "errors.hpp"
 #include "flight_computer.hpp"
 #include "ms5611.hpp"
 #include "status_leds.hpp"
@@ -42,43 +43,33 @@ class NodeComputer : public FlightComputer {
         leds.set_fault(code);
     }
 
-    /// One-shot poll for a runtime device latch: reports the device's
-    /// death trace (DeviceBase::last_error()) the first time
-    /// is_failed() reads true. Call once per tick per device.
-    void poll_device_fault(DeviceBase& dev, StatusLeds::Fault code, bool& reported) {
-        if (!reported && dev.is_failed()) {
-            reported = true;
+    /// One-shot poll for a runtime device latch
+    void poll_device_fault(DeviceBase& dev, StatusLeds::Fault code) {
+        if (dev.is_failed()) {
             report_fault(code, dev.last_error());
         }
     }
 
-    /// Drain ring-buffered SD writes during the idle phase, respecting
-    /// the per-op safety margin from ADR-004 (MIN_TIME_FOR_WRITE_MS).
+    void retry_failed_devices();
+
+    virtual void retry_extra_devices() {
+    }
+
+    /// Drain ring-buffered SD writes during the idle phase
     void on_drain(uint32_t deadline_ms) override;
 
     static constexpr uint16_t TX_BUF_SIZE = 64U;
-
-    /// Cadence (in ticks) at which storage.flush() is called on the
-    /// steady-state schedule.
-    static constexpr uint8_t FLUSH_INTERVAL = 25U;
-
-    /// The drain phase will not start a new lfs_file_write() if fewer milliseconds
-    /// remain in the tick.
     static constexpr uint32_t MIN_TIME_FOR_WRITE_MS = 5U;
 
     CmsisI2CBus& i2c; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     MS5611 baro;
     TMP117 tmp;
 
-    bool baro_fault_reported = false;
-    bool tmp_fault_reported = false;
-
     Store& storage; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     StatusLeds leds;
     BootState::State boot;
+
     std::array<uint8_t, TX_BUF_SIZE> tx_buf{};
 
-    // Per-scope worst-case durations (WCET); each node downlinks its maxima as
-    // PayloadTiming at 1 Hz and resets. Filled via BOLT_TIME scopes.
     Wcet::Timing timings{};
 };

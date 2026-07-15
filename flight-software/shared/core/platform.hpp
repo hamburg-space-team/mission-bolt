@@ -4,10 +4,7 @@
 
 /// @defgroup core Core framework
 
-/// Board-supplied function pointers consumed by FlightComputer and
-/// subclasses. One Platform per board, instantiated in app/main.cpp.
-/// Keeping HAL access behind these pointers lets the host test build
-/// link against the same shared code without the STM32 HAL.
+/// Board-supplied function pointers consumed by FlightComputer and subclasses.
 ///
 /// @ingroup core
 struct Platform {

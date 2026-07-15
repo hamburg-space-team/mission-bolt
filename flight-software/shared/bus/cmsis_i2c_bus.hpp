@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Driver_I2C.h"
+#include "device_base.hpp"
 #include "errors.hpp"
 
 #include <cstddef>
@@ -8,10 +9,10 @@
 
 /// @defgroup bus Hardware buses
 
-/// Wraps ARM_DRIVER_I2C with a register-oriented API.
+/// Wraps ARM_DRIVER_I2C with a register-oriented API
 ///
 /// @ingroup bus
-class CmsisI2CBus {
+class CmsisI2CBus : public DeviceBase {
   public:
     using tick_fn = uint32_t (*)();
 
@@ -20,9 +21,7 @@ class CmsisI2CBus {
 
     [[nodiscard]] Result<void> init();
 
-    /// Full peripheral reset: powers the CMSIS driver off (HAL_I2C_DeInit,
-    /// which releases SCL/SDA and clears any latched BERR / arbitration-lost /
-    /// lock-up), then re-runs init().
+    /// Full peripheral reset
     [[nodiscard]] Result<void> reset();
 
     [[nodiscard]] Result<void> write(uint8_t addr, const uint8_t* data, std::size_t len);
@@ -45,9 +44,6 @@ class CmsisI2CBus {
     ARM_DRIVER_I2C* drv = nullptr;
     tick_fn get_tick = nullptr;
 
-    /// SignalEvent callback registered with the CMSIS driver. The callback
-    /// type carries no user context, so the latched event is necessarily
-    /// shared static state
     static void signal_event(uint32_t event);
     static volatile uint32_t last_event;
 

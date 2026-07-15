@@ -38,9 +38,7 @@ class Exp1Computer final : public ExpComputer {
     [[nodiscard]] PacketProtocol::PayloadType exp_status_type() const noexcept override {
         return PacketProtocol::PayloadType::EXP1_STATUS;
     }
-    /// Transient failure counters into the status packet: which link of
-    /// a matrix row's chain fails when rows go out with valid = 0.
-    void fill_status(PacketProtocol::PayloadExpStatus& status) noexcept override;
+    void send_status_packet(uint16_t can_tick, uint32_t timestamp_us) override;
 
   private:
     // Hardware addresses
@@ -69,7 +67,13 @@ class Exp1Computer final : public ExpComputer {
     void sensor_init() noexcept;
     void try_spec_recovery();
     void wait_spec_boot() noexcept;
-    void report_led_fault_once() noexcept;
+    void report_experiment_faults() noexcept;
+
+    /// Retry the two LED drivers on the shared DeviceBase cooldown, like the
+    /// common sensors. The spectrometer keeps its own reset-based recovery
+    /// (try_spec_recovery) - it needs the SPEC_RESET pin + a firmware reload.
+    void retry_extra_devices() override;
+    void retry_led(LP5810& led, uint8_t addr, StatusLeds::Fault code);
 
     enum class RecoveryStep : uint8_t { IDLE, ASSERTING, WAITING };
 
@@ -84,7 +88,6 @@ class Exp1Computer final : public ExpComputer {
     bool cycle_active = false;
     // One-shot guard: a runtime LP5810 latch is reported (error LED + gap
     // packet) exactly once; reset on re-init so a fresh latch reports again.
-    bool led_fault_reported = false;
     uint8_t spec_recovery_attempts = 0U;
     RecoveryStep recovery_step = RecoveryStep::IDLE;
     uint8_t recovery_ticks = 0U;
@@ -104,7 +107,7 @@ class Exp1Computer final : public ExpComputer {
     uint32_t prev_start_us = 0U;
 
     // Transient failure counters (saturating, since boot) - shipped in
-    // every EXP1_STATUS via fill_status().
+    // every EXP1_STATUS via send_status_packet().
     uint8_t led_write_fails = 0U;
     uint8_t spec_start_fails = 0U;
     uint8_t data_ready_fails = 0U;

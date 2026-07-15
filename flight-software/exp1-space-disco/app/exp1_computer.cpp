@@ -1,8 +1,8 @@
 #include "exp1_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
-#include <bolt/wire/payloads.hpp>
 #include "wcet.hpp"
+#include <bolt/wire/payloads.hpp>
 
 #include <array>
 
@@ -137,7 +137,6 @@ void Exp1Computer::sensor_init() noexcept {
     block_tick = 0U;
     cur_started = false;
     prev_ready = false;
-    led_fault_reported = false;
 }
 
 void Exp1Computer::on_experiment_init() noexcept {
@@ -203,30 +202,48 @@ void Exp1Computer::try_spec_recovery() {
     }
 }
 
-void Exp1Computer::fill_status(PacketProtocol::PayloadExpStatus& status) noexcept {
+void Exp1Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
+    using namespace PacketProtocol;
+    PayloadExpStatus status{};
+    status.uptime_s = platform.tick_ms() / 1000U;
+    status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
     status.led_write_fails = led_write_fails;
     status.spec_start_fails = spec_start_fails;
     status.data_ready_fails = data_ready_fails;
+
+    if (auto len = pkt.build(tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &status,
+                             static_cast<uint8_t>(sizeof(status)))) {
+        can.send(exp_can_id(), tx_buf.data(), *len);
+        (void)storage.write(tx_buf.data(), *len);
+    }
 }
 
-void Exp1Computer::report_led_fault_once() noexcept {
-    if (led_fault_reported) {
+void Exp1Computer::report_experiment_faults() noexcept {
+    poll_device_fault(spec, StatusLeds::Fault::SPEC);
+}
+
+void Exp1Computer::retry_led(LP5810& led, uint8_t addr, StatusLeds::Fault code) {
+    if (!led.retry_due()) {
         return;
     }
+    platform.kick_wdg();
 
-    if (lp5810_rgb.is_failed()) {
-        led_fault_reported = true;
-        report_fault(StatusLeds::Fault::LED_RGB, lp5810_rgb.last_error());
+    LP5810 fresh;
+    if (fresh.init(&i2c, addr, LP5810_DOT_CURRENT, platform.delay_ms, LP5810_HIGH_CURRENT)) {
+        led = fresh;
+    } else {
+        led.arm_retry();
+        report_fault(code, led.last_error());
     }
+}
 
-    if (lp5810_uv_ir.is_failed()) {
-        led_fault_reported = true;
-        report_fault(StatusLeds::Fault::LED_UVIR, lp5810_uv_ir.last_error());
-    }
+void Exp1Computer::retry_extra_devices() {
+    retry_led(lp5810_rgb, LP5810C_ADDR, StatusLeds::Fault::LED_RGB);
+    retry_led(lp5810_uv_ir, LP5810D_ADDR, StatusLeds::Fault::LED_UVIR);
 }
 
 void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) {
-    report_led_fault_once();
+    report_experiment_faults();
     if (!cycle_active) {
         return;
     }
@@ -238,11 +255,6 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
     const MeasStep& step = MATRIX[step_idx];
 
     if (block_tick == 0U) {
-        // The measurement started last block has completed (the block length
-        // guarantees it) - promote it and read dies 0+1 while the chip is
-        // idle. The RAW registers are LIVE: they reset the moment the next
-        // measurement starts, so the whole readout happens BEFORE the next
-        // start (tick 1).
         prev_ready = cur_started;
         prev_valid = cur_valid;
         prev_step_idx = cur_step_idx;
@@ -250,10 +262,6 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         prev_start_us = cur_start_us;
 
         if (prev_ready) {
-            // DATA_RDY (hardware INT pin, SPEC_INT) must be asserted before
-            // touching the RAW registers: the block length guarantees the
-            // timing, but a mid-run chip reboot would otherwise deliver a
-            // phantom readout with measurement_valid = 1.
             const bool rdy = spec.data_ready();
             if (!rdy && data_ready_fails != 0xFFU) {
                 data_ready_fails++;
@@ -266,8 +274,6 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
             prev_valid = prev_valid && rdy && ok;
         }
     } else if (block_tick == 1U) {
-        // Rest of the readout (die 2), ship the pair - only THEN touch the
-        // chip again for the next row.
         if (prev_ready) {
             bool ok = false;
             {
@@ -283,10 +289,6 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
             prev_ready = false;
         }
 
-        // LEDs for the new row: PWM brightness + enable mask on both chips
-        // (dark rows carry mask 0 on both), then integration time (no-op
-        // unless the row changes it) and the one-shot start. Destroys the
-        // RAW window - all reads for this row happen next block.
         bool led_ok = false;
         {
             BOLT_TIME(timings, DRIVE);
@@ -340,14 +342,11 @@ void Exp1Computer::send_spectrum(uint8_t matrix_idx, bool valid, uint16_t start_
     spec.start_timestamp_us = start_us;
     spec.integration_cycles = MATRIX[matrix_idx].integration_cycles;
     spec.gain = static_cast<uint8_t>(SPEC_GAIN);
-    // Matrix ROW INDEX, not a bitmask: identifies LED config, brightness and
-    // integration setting via the MATRIX table (ICD-007 decodes with the
-    // same table).
     spec.led_mask = matrix_idx;
     spec.measurement_valid = valid ? 1U : 0U;
 
-    if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM, Tick{start_tick}, TimestampUs{start_us},
-                             &spec, static_cast<uint8_t>(sizeof(spec)))) {
+    if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP1_SPECTRUM, Tick{start_tick}, TimestampUs{start_us}, &spec,
+                             static_cast<uint8_t>(sizeof(spec)))) {
         can.send(exp_can_id(), tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
