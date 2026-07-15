@@ -18,7 +18,7 @@
     {"name": "Fault", "value": 241, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadFault", "desc": "latched fault + trace"},
     {"name": "Boot", "value": 254, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadBoot", "desc": "MCU startup"},
     {"name": "CmdAck", "value": 242, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadCmdAck", "desc": "uplink command ack"},
-    {"name": "Timing", "value": 243, "node": "SYSTEM", "rate_hz": 4, "layout": "PayloadTiming", "desc": "per-scope WCET (1Hz x4)"}
+    {"name": "Timing", "value": 243, "node": "SYSTEM", "rate_hz": 100, "layout": "PayloadTiming", "desc": "per-scope tick timing (25Hz x4)"}
   ],
   "payloads": [
     {
@@ -240,7 +240,7 @@
       "size": 13,
       "fields": [
         {"name":"source_node","ctype":"NodeId","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin node (NodeId)"},
-        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":1,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"worst-case per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":1,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
       ]
     }
   ],

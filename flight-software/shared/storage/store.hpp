@@ -1,5 +1,6 @@
 #pragma once
 
+#include "device_base.hpp"
 #include "errors.hpp"
 
 #include <cstdint>
@@ -19,8 +20,14 @@
 /// Non-copyable, non-movable: the instance lives at a fixed address for
 /// the lifetime of the program.
 ///
+/// Inherits DeviceBase so a storage backend is handled uniformly with the
+/// sensors: latched via disable() on an init() failure, retried on the 30 s
+/// cooldown, recovered in place via init() + clear_latch() (a Store owns a HAL
+/// handle plus buffers and is held by reference, so it cannot be swapped for a
+/// fresh instance the way a sensor driver is).
+///
 /// @ingroup storage
-class Store {
+class Store : public DeviceBase {
   public:
     Store() = default;
     virtual ~Store() = default;

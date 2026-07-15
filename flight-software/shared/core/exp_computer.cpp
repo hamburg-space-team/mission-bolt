@@ -1,8 +1,8 @@
 #include "exp_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
-#include <bolt/wire/payloads.hpp>
 #include "platform.hpp"
+#include <bolt/wire/payloads.hpp>
 
 extern CAN_HandleTypeDef hcan1;
 
@@ -39,20 +39,16 @@ void ExpComputer::on_init() {
 
     HAL_CAN_Start(&hcan1);
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
-    // TX-complete interrupts refill BxcanTransport's frame ring - the tick
-    // body never waits for a mailbox.
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_TX_MAILBOX_EMPTY);
 
     init_storage();
     init_sensors();
     on_experiment_init();
 
-    if (auto len = this->pkt.build_boot(this->tx_buf.data(), this->boot.reason, this->boot.reboot_count,
-                                        source_node())) {
+    if (auto len =
+            this->pkt.build_boot(this->tx_buf.data(), this->boot.reason, this->boot.reboot_count, source_node())) {
         this->can.send(exp_can_id(), this->tx_buf.data(), *len);
         (void)this->storage.write(this->tx_buf.data(), *len);
-        // Critical event: BOOT packet must hit durable storage before
-        // any subsequent reset can lose it.
         (void)this->storage.flush();
     }
 
@@ -65,25 +61,18 @@ void ExpComputer::on_init() {
 }
 
 void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
-    // Error-LED pattern is pure tick counting - run it every tick, including
-    // the early-return path below while waiting for SYNC.
     this->leds.error_tick();
 
-    // CAN-TX health: the transport latches after 10 consecutively dropped
-    if (!this->can_fault_reported && this->can.is_failed()) {
-        this->can_fault_reported = true;
+    if (this->can.is_failed()) {
         report_fault(StatusLeds::Fault::CAN_BUS, make_error(ErrorCode::TIMEOUT, Step::CAN_TX_RING));
     }
 
-    // Runtime latches of the common sensors: ship the death trace once.
-    poll_device_fault(this->baro, StatusLeds::Fault::BARO, this->baro_fault_reported);
-    poll_device_fault(this->tmp, StatusLeds::Fault::TMP, this->tmp_fault_reported);
+    retry_failed_devices();
 
     const uint32_t now_ms = this->platform.tick_ms();
     uint16_t can_tick = 0U;
 
     if (poll_sync(can_tick)) {
-        // SYNC received -> CAN healthy. Drive on the master's tick.
         this->last_sync_ms = now_ms;
         this->leds.can_tick(can_tick);
 
@@ -91,59 +80,44 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
             this->autonomous = false;
         } else if (this->last_can_tick != NO_LAST_TICK) {
             const auto diff = static_cast<uint16_t>(can_tick - this->last_can_tick);
+
             if (diff > 1U && diff <= MAX_REPORTABLE_GAP) {
                 const auto first = static_cast<uint16_t>(this->last_can_tick + 1U);
                 send_gap(first, static_cast<uint8_t>(diff - 1U), PacketProtocol::GapReason::NO_DATA, tick_start_us);
             }
-            // diff == 0 (duplicate SYNC) is ignored as well.
         }
+
     } else {
-        // No SYNC this iteration. A single dropped frame is normal, so wait
-        // up to AUTONOMOUS_TIMEOUT_MS before giving up on CAN.
         if (!this->autonomous && (now_ms - this->last_sync_ms) < AUTONOMOUS_TIMEOUT_MS) {
             return;
         }
-        // CAN silent past the timeout -> run autonomously on a self-generated
-        // tick that continues the sequence, and slow-blink the CAN LED.
+
         this->autonomous = true;
         can_tick = static_cast<uint16_t>(this->last_can_tick + 1U);
         this->leds.can_lost();
     }
+
     this->last_can_tick = can_tick;
 
     // Internal sequencing tick
     this->local_tick++;
 
-    roll_timing_window(can_tick, tick_start_us);
-    BOLT_TIME(this->timings, TICK); // whole-tick scope, runs to end of on_tick
+    send_timing_packet(can_tick, tick_start_us);
+    BOLT_TIME(this->timings, TICK);
 
     on_experiment_tick(can_tick, tick_start_us);
-    send_periodic(can_tick, tick_start_us);
-}
 
-// Fold the finished tick's per-scope sums into the window maxima, then ~1 Hz
-// downlink the worst-case timings and start a fresh window.
-void ExpComputer::roll_timing_window(uint16_t can_tick, uint32_t timestamp_us) {
-    this->timings.tick_end();
+    BOLT_TIME(this->timings, SEND);
+    send_env_packet(can_tick, tick_start_us);
     if ((this->local_tick % STATUS_INTERVAL) == 0U) {
-        send_timing(can_tick, timestamp_us);
-        this->timings.reset();
+        send_status_packet(can_tick, tick_start_us);
     }
 }
 
-// Env every tick, status + flush on their intervals; timed as SEND / STORE.
-void ExpComputer::send_periodic(uint16_t can_tick, uint32_t timestamp_us) {
-    {
-        BOLT_TIME(this->timings, SEND);
-        send_env_packet(can_tick, timestamp_us);
-        if ((this->local_tick % STATUS_INTERVAL) == 0U) {
-            send_status_packet(can_tick, timestamp_us);
-        }
-    }
-    if ((this->local_tick % FLUSH_INTERVAL) == 0U) {
-        BOLT_TIME(this->timings, STORE);
-        (void)this->storage.flush();
-    }
+void ExpComputer::send_timing_packet(uint16_t can_tick, uint32_t timestamp_us) {
+    this->timings.tick_end();
+    send_timing(can_tick, timestamp_us);
+    this->timings.reset();
 }
 
 void ExpComputer::send_timing(uint16_t can_tick, uint32_t timestamp_us) {
@@ -177,27 +151,11 @@ void ExpComputer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
     }
 }
 
-// Interval gating happens in on_tick() on the gap-free local_tick; can_tick
-// here is stamp-only.
-void ExpComputer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) {
-    using namespace PacketProtocol;
-    PayloadExpStatus status{};
-    status.uptime_s = this->platform.tick_ms() / 1000U;
-    status.sd_status = static_cast<uint8_t>(this->storage.is_mounted() ? 0x01U : 0x00U);
-    fill_status(status);
-
-    if (auto len = this->pkt.build(this->tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us},
-                                   &status, static_cast<uint8_t>(sizeof(status)))) {
-        this->can.send(exp_can_id(), this->tx_buf.data(), *len);
-        (void)this->storage.write(this->tx_buf.data(), *len);
-    }
-}
-
 void ExpComputer::report_fault(StatusLeds::Fault code, const Error& err) {
     this->leds.set_fault(code);
-    // Header: timestamp = when the error occurred (from the Error
-    // itself), tick = CAN tick at report time (0 before the first SYNC).
+
     const uint16_t tick = (this->last_can_tick != NO_LAST_TICK) ? this->last_can_tick : 0U;
+
     if (auto len = this->pkt.build_fault(this->tx_buf.data(), PacketProtocol::Tick{tick}, static_cast<uint8_t>(code),
                                          err, source_node())) {
         this->can.send(exp_can_id(), this->tx_buf.data(), *len);

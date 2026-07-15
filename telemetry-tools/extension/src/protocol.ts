@@ -83,4 +83,4 @@ export interface PortInfo {
 // `.danger` annotation) by scripts/gen-commands.mjs. Single source of truth is
 // bolt/wire/uplink.hpp, so labels and the dangerous flag never drift from the
 // firmware / bolt-codec.
-export { UPLINK_COMMANDS } from "./protocol.gen";
+export { UPLINK_COMMANDS, PACKET_WIRE_BYTES } from "./protocol.gen";

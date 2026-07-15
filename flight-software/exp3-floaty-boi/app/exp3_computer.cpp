@@ -1,8 +1,8 @@
 #include "exp3_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
-#include <bolt/wire/payloads.hpp>
 #include "wcet.hpp"
+#include <bolt/wire/payloads.hpp>
 
 extern CAN_HandleTypeDef hcan1;
 
@@ -54,15 +54,26 @@ void Exp3Computer::send_env_packet(uint16_t can_tick, uint32_t timestamp_us) {
 
 void Exp3Computer::init_extra_sensors() {
     if (auto r = imu.init(&i2c); !r) {
-        imu_fault_reported = true; // reported here, not by the tick poll
-        report_fault(StatusLeds::Fault::IMU, r.error());
+        imu.disable(r.error());
+        leds.set_fault(StatusLeds::Fault::IMU);
+    }
+}
+
+void Exp3Computer::retry_extra_devices() {
+    if (imu.retry_due()) {
+        platform.kick_wdg(); // WHO_AM_I retries can be a run of I2C timeouts on a sick bus
+        ICM42686 fresh;
+        if (fresh.init(&i2c)) {
+            imu = fresh;
+        } else {
+            imu.arm_retry();
+            report_fault(StatusLeds::Fault::IMU, imu.last_error());
+        }
     }
 }
 
 void Exp3Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) {
     using namespace PacketProtocol;
-
-    poll_device_fault(imu, StatusLeds::Fault::IMU, imu_fault_reported);
 
     // EXP3 controller IMU -> its own EXP3_IMU packet (mirrors BTC_IMU).
     auto sample = [this] {

@@ -7,7 +7,7 @@
 | Document ID | ICD-007 |
 | Protocol version | 1 |
 | Status | Generated |
-| Generated at | 2026-07-13T19:33:40Z |
+| Generated at | 2026-07-15T15:52:00Z |
 | Source | `bolt/wire/payloads.hpp` + `bolt/wire/types.hpp` |
 
 ## Purpose
@@ -68,9 +68,9 @@ CRC-16/CCITT-FALSE (polynomial `0x1021`, init `0xFFFF`) over every byte after th
 | Fault | 0xF1 | SYSTEM | 0 | 13 | 27 | 0.00 | latched fault + trace |
 | Boot | 0xFE | SYSTEM | 0 | 4 | 18 | 0.00 | MCU startup |
 | CmdAck | 0xF2 | SYSTEM | 0 | 3 | 17 | 0.00 | uplink command ack |
-| Timing | 0xF3 | SYSTEM | 4 | 13 | 27 | 0.86 | per-scope WCET (1Hz x4) |
+| Timing | 0xF3 | SYSTEM | 100 | 13 | 27 | 21.60 | per-scope tick timing (25Hz x4) |
 
-**Total: 95.8 kbit/s of 38 kbit/s downlink (249%).** Rates nominal; event-driven types (rate 0) excluded.
+**Total: 116.5 kbit/s of 38 kbit/s downlink (303%).** Rates nominal; event-driven types (rate 0) excluded.
 
 ## Payloads
 
@@ -308,12 +308,12 @@ Emitter **SYSTEM**, event-driven. uplink command ack.
 
 ### Timing - `0xF3` (13 B)
 
-Emitter **SYSTEM**, 4 Hz. per-scope WCET (1Hz x4).
+Emitter **SYSTEM**, 100 Hz. per-scope tick timing (25Hz x4).
 
 | Field | Type | Off | Size | Unit | Scale | Gate | Description |
 |---|---|--:|--:|---|--:|---|---|
 | source_node | u8 | 0 | 1 |  | 1 |  | origin node (NodeId) |
-| max_us | u16[6] | 1 | 12 | us | 1 |  | worst-case per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
+| max_us | u16[6] | 1 | 12 | us | 1 |  | this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
 
 ## Enumerations
 

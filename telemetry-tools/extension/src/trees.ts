@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 import { SessionManager } from "./session";
-import { UPLINK_COMMANDS } from "./protocol";
+import { UPLINK_COMMANDS, PACKET_WIRE_BYTES } from "./protocol";
 import { errorName, faultName, faultNode, gapNode } from "./codes";
 
 class Node extends vscode.TreeItem {
@@ -120,11 +120,26 @@ export class PacketsTree extends BaseTree {
       n.iconPath = new vscode.ThemeIcon("circle-outline");
       return [n];
     }
+    // Elapsed window for the throughput estimate: live stats carry elapsed_ms,
+    // a post-flight manifest carries the LO..end timestamp span.
+    const man = this.session.manifest;
+    const elapsedSec = this.session.stats?.elapsed_ms
+      ? this.session.stats.elapsed_ms / 1000
+      : man && man.t_end_us > man.t_start_us
+        ? (man.t_end_us - man.t_start_us) / 1e6
+        : 0;
     return entries.map(([name, n]) => {
       const node = new Node(name);
-      node.description = String(n);
+      // Estimated bandwidth: count x on-wire bytes over the elapsed window.
+      const wire = PACKET_WIRE_BYTES[name];
+      const kbps = elapsedSec > 0 && wire ? (n * wire * 8) / (elapsedSec * 1000) : null;
+      const rate = kbps == null ? "" : `  ·  ${kbps < 10 ? kbps.toFixed(1) : Math.round(kbps)} kbit/s`;
+      node.description = `${n}${rate}`;
       node.iconPath = new vscode.ThemeIcon("symbol-numeric");
-      node.tooltip = "Show all packets of this type, all fields, formatted";
+      node.tooltip =
+        kbps == null
+          ? "Show all packets of this type, all fields, formatted"
+          : `${n} packets · ~${kbps.toFixed(2)} kbit/s (${wire} B/pkt over ${elapsedSec.toFixed(1)} s)\nShow all packets of this type, all fields, formatted`;
       node.command = { command: "bolt.showPackets", title: "Show packets", arguments: [name] };
       return node;
     });

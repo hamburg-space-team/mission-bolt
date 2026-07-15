@@ -8,6 +8,9 @@ project:
   packs:
     - pack: Keil::STM32L4xx_DFP@3.1.0
 
+  add-path:
+    - ./app
+
   components:
     - component: Device:CubeMX
     - component: ARM::CMSIS:CORE
@@ -27,4 +30,8 @@ project:
     - group: Application
       files:
         - file: app/main.cpp
-        - file: app/btc_computer.cpp
+        - file: app/btc/btc_computer.cpp
+        - file: app/btc/telemetry_emitter.cpp
+        - file: app/btc/imu_supervisor.cpp
+        - file: app/board/hal_btc_board.cpp
+        - file: app/board/btc_isr.cpp

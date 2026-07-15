@@ -7,8 +7,6 @@
 extern CRC_HandleTypeDef hcrc;
 
 namespace {
-    // Set by init(): true = peripheral reconfigured and self-test passed.
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     bool hw_verified = false;
 
     uint16_t compute_hw(const uint8_t* data, std::size_t len) noexcept {

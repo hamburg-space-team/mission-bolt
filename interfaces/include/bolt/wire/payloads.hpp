@@ -455,12 +455,12 @@ namespace PacketProtocol {
     /// source_node. Slots map to Wcet::Point (see shared/utils/wcet.hpp).
     ///
     /// @ingroup comms
-    struct __attribute__((packed)) PACKET(.type = PayloadType::TIMING, .node = "SYSTEM", .rate_hz = 4,
-                                          .desc = "per-scope WCET (1Hz x4)") PayloadTiming {
+    struct __attribute__((packed)) PACKET(.type = PayloadType::TIMING, .node = "SYSTEM", .rate_hz = 100,
+                                          .desc = "per-scope tick timing (25Hz x4)") PayloadTiming {
         WIRE(.desc = "origin node (NodeId)")
         NodeId source_node;
 
-        WIRE(.unit = "us", .desc = "worst-case per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE")
+        WIRE(.unit = "us", .desc = "this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE")
         uint16_t max_us[6]; // NOLINT(modernize-avoid-c-arrays)
     };
     PACKET_TYPE_CHECK(PayloadTiming);

@@ -11,17 +11,14 @@
 /// @ingroup timing
 namespace Timing {
 
-    /// Enable the DWT cycle counter and reset it to zero. Call once at
-    /// boot before any us_now() call - FlightComputer::run() does this.
+    /// Enable the DWT cycle counter
     inline void init_dwt() {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
         DWT->CYCCNT = 0U;
         DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
     }
 
-    /// Microseconds since init_dwt(). Wraps after ~71s at 216 MHz (BTC
-    /// F756) or ~37s at 80 MHz (EXP L476). Use for deltas only, never
-    /// absolute time.
+    /// Microseconds since init_dwt()
     inline uint32_t us_now() {
         return DWT->CYCCNT / (SystemCoreClock / 1000000U);
     }

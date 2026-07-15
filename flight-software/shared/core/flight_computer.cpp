@@ -3,8 +3,6 @@
 #include "timing.hpp"
 
 FlightComputer::FlightComputer(const Platform& platform) noexcept : platform(platform) {
-    // Every Error born after this point carries the microsecond
-    // timestamp of its occurrence (ADR-012).
     ErrorClock::now_us = platform.tick_us;
     this->pkt.init();
 }
@@ -29,9 +27,7 @@ FlightComputer::FlightComputer(const Platform& platform) noexcept : platform(pla
         const uint32_t tick_start_us = this->platform.tick_us();
         on_tick(tick_start_us, missed);
 
-        // Idle phase: drain pending IO (SdStore ring buffer etc.)
-        // until the per-op safety margin would be crossed. Subclass
-        // decides how much of the remaining slack to consume.
+        // Idle phase: drain pending IO
         on_drain(next_ms);
 
         this->platform.kick_wdg();

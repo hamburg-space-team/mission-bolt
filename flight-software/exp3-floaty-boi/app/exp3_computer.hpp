@@ -34,9 +34,8 @@ class Exp3Computer final : public ExpComputer {
     void send_env_packet(uint16_t can_tick, uint32_t timestamp_us) override;
     void send_status_packet(uint16_t can_tick, uint32_t timestamp_us) override;
     void init_extra_sensors() override;
+    void retry_extra_devices() override;
 
   private:
     ICM42686 imu{};
-
-    bool imu_fault_reported = false;
 };

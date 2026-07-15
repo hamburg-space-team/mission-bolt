@@ -149,21 +149,19 @@ Result<uint8_t> AS7265X::hw_read_reg(uint8_t reg) {
 }
 
 Result<void> AS7265X::wait_status(uint8_t mask, uint8_t want) {
-    const uint32_t deadline = (this->tick != nullptr) ? (this->tick() + TIMEOUT_MS) : 0U;
+    const bool have_clock = (this->tick != nullptr);
+    const uint32_t deadline = have_clock ? (this->tick() + TIMEOUT_MS) : 0U;
 
-    for (uint32_t i = 0U; i < BUSY_ITER; i++) {
-        auto status = hw_read_reg(REG_STATUS);
+    for (uint32_t i = 0U; have_clock || i < BUSY_ITER; i++) {
+        const auto status = hw_read_reg(REG_STATUS);
         if (!status) {
             return mark(status.error(), Step::SPEC_WAIT_STATUS);
         }
         if ((*status & mask) == want) {
             return {};
         }
-        if (this->tick != nullptr && this->tick() >= deadline) {
-            return fail(ErrorCode::TIMEOUT, Step::SPEC_WAIT_STATUS, __LINE__);
-        }
-        if (this->delay_ms != nullptr) {
-            this->delay_ms(POLLING_DELAY_MS);
+        if (have_clock && this->tick() >= deadline) {
+            break;
         }
     }
     return fail(ErrorCode::TIMEOUT, Step::SPEC_WAIT_STATUS, __LINE__);
@@ -205,12 +203,6 @@ Result<void> AS7265X::probe(CmsisI2CBus* bus_in, tick_fn tick_in, delay_fn delay
 }
 
 Result<uint8_t> AS7265X::read_virtual(uint8_t vreg) {
-    // AMS virtual-register protocol: a previous read that TIMED OUT after
-    // writing its address leaves the (late) answer latched in the READ
-    // mailbox with RX_VALID set. It must be flushed before requesting a new
-    // address, or every following read returns the stale byte and the
-    // mailbox state machine stays desynchronised (SparkFun's reference
-    // driver does the same flush).
     if (auto status = hw_read_reg(REG_STATUS); status && ((*status & STATUS_RX_VALID) != 0U)) {
         (void)hw_read_reg(REG_READ);
     }

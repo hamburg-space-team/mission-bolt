@@ -43,12 +43,15 @@ Result<void> SdStore::init() {
     hsd_typed->Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
     hsd_typed->Init.ClockDiv = 0U;
     if (HAL_SD_Init(hsd_typed) != HAL_OK) {
-        return fail(ErrorCode::IO_ERROR, Step::SD_INIT, __LINE__);
+        // No card / SDMMC won't come up: this is "not initialised", not a runtime
+        // IO fault - DISABLED so the ground fault reads as an init/absent SD (the
+        // ring-overflow write path keeps IO_ERROR).
+        return fail(ErrorCode::DISABLED, Step::SD_INIT, __LINE__);
     }
 
     HAL_SD_CardInfoTypeDef info{};
     if (HAL_SD_GetCardInfo(hsd_typed, &info) != HAL_OK) {
-        return fail(ErrorCode::IO_ERROR, Step::SD_INIT, __LINE__);
+        return fail(ErrorCode::DISABLED, Step::SD_INIT, __LINE__);
     }
 
     this->cfg.context = hsd_typed;
