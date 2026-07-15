@@ -9,14 +9,9 @@
 
     "privileged": true,
     "mounts": [
-        "source=/dev/bus/usb,target=/dev/bus/usb,type=bind",
-        "source=mission-bolt-cmsis-packs,target=/opt/cmsis-packs,type=volume",
-        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/home/vscode/.claude,type=bind"
+        // "source=/dev/bus/usb,target=/dev/bus/usb,type=bind"
+        "source=mission-bolt-cmsis-packs,target=/opt/cmsis-packs,type=volume"
     ],
-
-    "containerEnv": {
-        "HOST_PROJECT_DIR": "${localWorkspaceFolder}"
-    },
 
     "postCreateCommand": "bash .devcontainer/post-create.sh",
 
