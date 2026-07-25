@@ -14,7 +14,7 @@ class HalBtcBoard final : public BtcBoard {
   public:
     HalBtcBoard(CAN_HandleTypeDef& hcan, RTC_HandleTypeDef& hrtc) noexcept;
 
-    void send_sync(uint16_t tick) noexcept override;
+    void send_sync(uint16_t tick, BootState::Mode mode, uint8_t test_target) noexcept override;
     void broadcast_storage_start() noexcept override;
     void start_can(std::span<const uint32_t> rx_ids) noexcept override;
 

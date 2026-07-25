@@ -9,8 +9,8 @@ Why this toolchain: [ADR-006](../decisions/ADR-006-cmsis-toolbox.md).
 
 | Tool | Version |
 |---|---|
-| `arm-none-eabi-gcc` | 13.3.1 |
-| CMSIS-Toolbox | 2.12.0 |
+| `arm-none-eabi-gcc` | `ARM_GNU_VERSION` in [.devcontainer/Dockerfile](../../.devcontainer/Dockerfile) |
+| CMSIS-Toolbox | `CMSIS_TOOLBOX_VERSION` in [.devcontainer/Dockerfile](../../.devcontainer/Dockerfile) |
 | Python | 3.10+ |
 | OpenOCD | 0.12.0 (for flashing; see [debugging guide](debugging-with-openocd.md)) |
 

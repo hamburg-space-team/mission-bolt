@@ -67,7 +67,17 @@ pub enum Payload {
     GapMarker(GapMarker),
     Fault(Fault),
     CmdAck(CmdAck),
-    Timing(Timing),
+    // One TIMING type per node (the header names the origin, so the payload is
+    // durations only) - same shape as the per-node ENV/STATUS types
+    BtcTiming(BtcTiming),
+    Exp1Timing(Exp1Timing),
+    Exp2Timing(Exp2Timing),
+    Exp3Timing(Exp3Timing),
+    // One self-test result type per node, same per-node convention as TIMING
+    BtcTest(BtcTest),
+    Exp1Test(Exp1Test),
+    Exp2Test(Exp2Test),
+    Exp3Test(Exp3Test),
     Boot(Boot),
 }
 
@@ -112,7 +122,14 @@ pub fn decode_payload(ty_byte: u8, b: &[u8]) -> Result<Payload, DecodeError> {
         T::GapMarker => Payload::GapMarker(GapMarker::decode(b)),
         T::Fault => Payload::Fault(Fault::decode(b)),
         T::CmdAck => Payload::CmdAck(CmdAck::decode(b)),
-        T::Timing => Payload::Timing(Timing::decode(b)),
+        T::BtcTiming => Payload::BtcTiming(BtcTiming::decode(b)),
+        T::Exp1Timing => Payload::Exp1Timing(Exp1Timing::decode(b)),
+        T::Exp2Timing => Payload::Exp2Timing(Exp2Timing::decode(b)),
+        T::Exp3Timing => Payload::Exp3Timing(Exp3Timing::decode(b)),
+        T::BtcTest => Payload::BtcTest(BtcTest::decode(b)),
+        T::Exp1Test => Payload::Exp1Test(Exp1Test::decode(b)),
+        T::Exp2Test => Payload::Exp2Test(Exp2Test::decode(b)),
+        T::Exp3Test => Payload::Exp3Test(Exp3Test::decode(b)),
         T::Boot => Payload::Boot(Boot::decode(b)),
     })
 }
@@ -125,8 +142,8 @@ mod tests {
     #[test]
     fn every_type_has_a_schema_size() {
         for ty in [
-            0x10u8, 0x11, 0x12, 0x20, 0x22, 0x23, 0x30, 0x31, 0x32, 0x40, 0x41, 0x42, 0x43, 0x44, 0xF0,
-            0xF1, 0xF2, 0xF3, 0xFE,
+            0x10u8, 0x11, 0x12, 0x13, 0x14, 0x20, 0x22, 0x23, 0x24, 0x25, 0x30, 0x31, 0x32, 0x33, 0x34,
+            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0xF0, 0xF1, 0xF2, 0xFE,
         ] {
             let t = PayloadType::from_u8(ty).unwrap();
             assert!(expected_size(t).is_some(), "no schema size for {}", t.schema_name());

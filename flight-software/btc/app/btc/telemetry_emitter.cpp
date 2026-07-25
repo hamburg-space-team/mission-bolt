@@ -38,8 +38,8 @@ void TelemetryEmitter::emit_fault(PacketProtocol::Tick tick, uint8_t fault_code,
 }
 
 void TelemetryEmitter::emit_timing(PacketProtocol::Tick tick, PacketProtocol::TimestampUs ts_us,
-                                   PacketProtocol::NodeId node, const Wcet::Timing& timings) noexcept {
-    publish(this->pkt.build_timing(this->tx_buf, tick, ts_us, node, timings));
+                                   PacketProtocol::PayloadType type, const Wcet::Timing& timings) noexcept {
+    publish(this->pkt.build_timing(this->tx_buf, type, tick, ts_us, timings));
 }
 
 void TelemetryEmitter::emit(PacketProtocol::PayloadType type, PacketProtocol::Tick tick,

@@ -9,6 +9,7 @@ namespace {
         uint32_t magic;
         uint16_t tick;
         uint16_t reboot_count;
+        uint8_t mode; // BootState::Mode
     };
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -37,12 +38,19 @@ namespace BootState {
             state.tick_valid = true;
             state.reboot_count = static_cast<uint16_t>(persist.reboot_count + 1U);
             persist.reboot_count = state.reboot_count;
+            // Resume the mission mode: a reset in flight must not drop the
+            // experiments back into TEST. Anything but a valid FLIGHT marker
+            // falls back to TEST rather than trusting a stray byte
+            state.mode = (persist.mode == static_cast<uint8_t>(Mode::FLIGHT)) ? Mode::FLIGHT : Mode::TEST;
         } else {
             state.tick_valid = false;
             state.reboot_count = 0U;
+            // Cold start = powered up on the pad/bench: always TEST
+            state.mode = Mode::TEST;
             persist.magic = 0U;
             persist.tick = 0U;
             persist.reboot_count = 0U;
+            persist.mode = static_cast<uint8_t>(Mode::TEST);
         }
 
         return state;
@@ -51,6 +59,11 @@ namespace BootState {
     void save_tick(uint16_t tick) {
         persist.magic = MAGIC_WORD;
         persist.tick = tick;
+    }
+
+    void save_mode(Mode mode) {
+        persist.magic = MAGIC_WORD;
+        persist.mode = static_cast<uint8_t>(mode);
     }
 
 } // namespace BootState

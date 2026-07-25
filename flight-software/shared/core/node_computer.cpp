@@ -103,3 +103,50 @@ void NodeComputer::on_drain(uint32_t deadline_ms) {
         }
     }
 }
+
+// --- Common self-test steps ------------------------------------------------
+// SKIPPED when the device is latched failed: the test observes, it does not
+// re-poke hardware the recovery machinery owns
+
+std::optional<PacketProtocol::TestResult> NodeComputer::step_tmp_whoami(NodeComputer& node, bool /*first*/,
+                                                                        uint32_t& data) noexcept {
+    if (node.tmp.is_failed()) {
+        return PacketProtocol::TestResult::SKIPPED;
+    }
+    const auto id = node.tmp.read_device_id();
+    if (!id) {
+        return PacketProtocol::TestResult::FAIL;
+    }
+    data = *id; // full register, ground masks with DEV_ID_MASK
+    return ((*id & TMP117::DEV_ID_MASK) == TMP117::DEV_ID_EXPECTED) ? PacketProtocol::TestResult::PASS
+                                                                    : PacketProtocol::TestResult::FAIL;
+}
+
+std::optional<PacketProtocol::TestResult> NodeComputer::step_tmp_read(NodeComputer& node, bool /*first*/,
+                                                                      uint32_t& data) noexcept {
+    if (node.tmp.is_failed()) {
+        return PacketProtocol::TestResult::SKIPPED;
+    }
+    // real flight read path; whether the value is sensible is ground's call
+    const auto raw = node.tmp.read();
+    if (!raw) {
+        return PacketProtocol::TestResult::FAIL;
+    }
+    data = static_cast<uint16_t>(*raw);
+    return PacketProtocol::TestResult::PASS;
+}
+
+std::optional<PacketProtocol::TestResult> NodeComputer::step_baro_prom(NodeComputer& node, bool /*first*/,
+                                                                       uint32_t& data) noexcept {
+    if (node.baro.is_failed()) {
+        return PacketProtocol::TestResult::SKIPPED;
+    }
+    // NOT a baro.read() - a second read per tick harvests the env packet's
+    // unfinished pipelined conversion. PROM+CRC is the chip's identity check
+    const auto c1 = node.baro.verify_prom();
+    if (!c1) {
+        return PacketProtocol::TestResult::FAIL;
+    }
+    data = *c1; // C1 pressure sensitivity, a per-device fingerprint
+    return PacketProtocol::TestResult::PASS;
+}

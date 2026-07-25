@@ -56,6 +56,11 @@
           "icon": "$(pulse)"
         },
         {
+          "id": "bolt.rxsm",
+          "name": "RXSM Sim",
+          "icon": "$(circuit-board)"
+        },
+        {
           "id": "bolt.packets",
           "name": "Packets",
           "icon": "$(package)"
@@ -140,19 +145,19 @@
       },
       {
         "command": "bolt.send.resetTick",
-        "title": "Bolt: Send ▸ Reset Tick"
+        "title": "Bolt: Send \u25b8 Reset Tick"
       },
       {
         "command": "bolt.send.startExperiment",
-        "title": "Bolt: Send ▸ Start Experiment"
+        "title": "Bolt: Send \u25b8 Start Experiment"
       },
       {
         "command": "bolt.send.activateCamera",
-        "title": "Bolt: Send ▸ Activate Camera"
+        "title": "Bolt: Send \u25b8 Activate Camera"
       },
       {
         "command": "bolt.send.fullSystemTest",
-        "title": "Bolt: Send ▸ Full System Test"
+        "title": "Bolt: Send \u25b8 Full System Test"
       },
       {
         "command": "bolt.inspectFault",
@@ -164,13 +169,28 @@
       },
       {
         "command": "bolt.filterFeed",
-        "title": "Bolt: Filter Live Feed by Packet…",
+        "title": "Bolt: Filter Live Feed by Packet\u2026",
         "icon": "$(filter)"
       },
       {
         "command": "bolt.refreshInspector",
         "title": "Bolt: Refresh Inspector",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "bolt.rxsm.connect",
+        "title": "Bolt: Connect RXSM Debug Port",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "bolt.rxsm.disconnect",
+        "title": "Bolt: Disconnect RXSM Debug Port",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "bolt.rxsm.pickPort",
+        "title": "Bolt: Select RXSM Debug Port\u2026",
+        "icon": "$(plug)"
       }
     ],
     "menus": {
@@ -268,13 +288,18 @@
           "type": "boolean",
           "default": true,
           "description": "After a live session, decode its recorded .raw into HDF5 + manifest automatically."
+        },
+        "bolt.rxsmDebugPort": {
+          "type": "string",
+          "default": "",
+          "description": "Serial device for the RXSM simulator's ASCII debug port (its D-SUB 9, 115200 8N1). This is NOT the 38.4 kBd RS-422 flight link."
         }
       }
     },
     "walkthroughs": [
       {
         "id": "bolt.start",
-        "title": "Bolt: Connect · Decode · Review",
+        "title": "Bolt: Connect \u00b7 Decode \u00b7 Review",
         "description": "Get telemetry flowing in three steps.",
         "steps": [
           {
@@ -312,18 +337,20 @@
     "build:webview": "vite build --mode development",
     "watch:host": "tsc -watch -p ./",
     "watch:webview": "vite build --watch --mode development",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile",
+    "package": "npm run compile && node --require ./scripts/file-global.cjs node_modules/@vscode/vsce/vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@types/vscode": "^1.90.0",
-    "@vitejs/plugin-react": "^6.0.3",
+    "@vitejs/plugin-react": "4.3.4",
+    "@vscode/vsce": "^2.32.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.4",
-    "vite": "^8.1.4"
+    "vite": "5.4.21"
   },
   "dependencies": {
     "echarts": "^6.1.0",

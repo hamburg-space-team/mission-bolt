@@ -141,15 +141,17 @@ namespace PacketProtocol {
 
         /// Shortcut for a PayloadTiming frame - the per-scope worst-case
         /// durations for WCET analysis. Caller resets the table after sending.
-        [[nodiscard]] Result<uint8_t> build_timing(uint8_t* buf, Tick tick, TimestampUs ts_us, NodeId source_node,
+        /// `type` is the emitting node's own *_TIMING type (BTC_TIMING,
+        /// EXP1_TIMING, ...): the type byte carries the origin, so the payload
+        /// holds nothing but the durations
+        [[nodiscard]] Result<uint8_t> build_timing(uint8_t* buf, PayloadType type, Tick tick, TimestampUs ts_us,
                                                    const ::Wcet::Timing& t) noexcept {
             static_assert(::Wcet::POINT_COUNT == 6U, "PayloadTiming.max_us size must match Wcet::POINT_COUNT");
             PayloadTiming pt{};
-            pt.source_node = source_node;
             for (uint8_t i = 0U; i < ::Wcet::POINT_COUNT; i++) {
                 pt.max_us[i] = t.max_us[i];
             }
-            return build(buf, PayloadType::TIMING, tick, ts_us, &pt, sizeof(pt));
+            return build(buf, type, tick, ts_us, &pt, sizeof(pt));
         }
 
         /// Shortcut for a PayloadBoot frame. tick and timestamp default

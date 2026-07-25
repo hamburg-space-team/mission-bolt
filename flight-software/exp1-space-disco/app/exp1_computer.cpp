@@ -92,7 +92,11 @@ extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     }
     if (hdr.StdId == CanProtocol::SYNC_ID && hdr.DLC >= CanProtocol::SYNC_DLC && instance_g != nullptr) {
         const auto tick = static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8U);
-        instance_g->notify_sync(tick);
+        // data[2] = mission mode, data[3] = self-test target; the DLC check
+        // above guarantees both are present
+        const auto mode = (data[2] == static_cast<uint8_t>(BootState::Mode::FLIGHT)) ? BootState::Mode::FLIGHT
+                                                                                     : BootState::Mode::TEST;
+        instance_g->notify_sync(tick, mode, data[3]);
     }
 }
 
@@ -242,6 +246,20 @@ void Exp1Computer::retry_extra_devices() {
     retry_led(lp5810_uv_ir, LP5810D_ADDR, StatusLeds::Fault::LED_UVIR);
 }
 
+void Exp1Computer::on_experiment_reset() noexcept {
+    // LEDs off, matrix back to row 0 with an empty pipeline; an in-flight
+    // integration finishes into nowhere and the next start overwrites it
+    (void)lp5810_rgb.disable_all();
+    (void)lp5810_uv_ir.disable_all();
+    step_idx = 0U;
+    block_tick = 0U;
+    cur_started = false;
+    cur_valid = false;
+    prev_ready = false;
+    prev_valid = false;
+    // recovery state stays - device health is orthogonal to experiment state
+}
+
 void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) {
     report_experiment_faults();
     if (!cycle_active) {
@@ -350,4 +368,153 @@ void Exp1Computer::send_spectrum(uint8_t matrix_idx, bool valid, uint16_t start_
         can.send(exp_can_id(), tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
+}
+
+// --- Self-test --------------------------------------------------------------
+
+void Exp1Computer::on_self_test_abort() noexcept {
+    // the interrupted step may have left LEDs on - park them
+    (void)lp5810_rgb.disable_all();
+    (void)lp5810_uv_ir.disable_all();
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_measure(bool first, uint8_t rgb_mask,
+                                                                          uint8_t uvir_mask, uint32_t& sum_out) {
+    if (first) {
+        spec_test_phase = SpecTestPhase::CONFIGURE;
+    }
+    if (spec_test_phase == SpecTestPhase::CONFIGURE) {
+        return spec_test_configure(rgb_mask, uvir_mask);
+    }
+    return spec_test_collect(sum_out);
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_configure(uint8_t rgb_mask, uint8_t uvir_mask) {
+    using PacketProtocol::TestResult;
+
+    // only meaningful if we control the light - latched driver or
+    // spectrometer voids the premise
+    if (spec.is_failed() || lp5810_rgb.is_failed() || lp5810_uv_ir.is_failed()) {
+        return TestResult::SKIPPED;
+    }
+    const bool rgb_ok = (rgb_mask != 0U) ? lp5810_rgb.set_channels(rgb_mask, SELF_TEST_PWM).has_value()
+                                         : lp5810_rgb.disable_all().has_value();
+    const bool uvir_ok = (uvir_mask != 0U) ? lp5810_uv_ir.set_channels(uvir_mask, SELF_TEST_PWM).has_value()
+                                           : lp5810_uv_ir.disable_all().has_value();
+    if (!rgb_ok || !uvir_ok) {
+        return TestResult::FAIL;
+    }
+    if (!spec.set_integration(AS7265X_INT_25_CYCLES) || !spec.start_measurement()) {
+        return TestResult::FAIL;
+    }
+    spec_test_phase = SpecTestPhase::WAIT;
+    return std::nullopt;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_collect(uint32_t& sum_out) {
+    using PacketProtocol::TestResult;
+
+    // integration runs; the Runner's step cap bounds a lost DATA_RDY
+    if (!spec.data_ready()) {
+        return std::nullopt;
+    }
+    // all 18 channels in one go - unlike the flight matrix the test
+    // tick has the budget for it
+    if (!spec.read_channels(&result)) {
+        return TestResult::FAIL;
+    }
+    uint32_t sum = 0U;
+    for (const uint16_t ch : result.channels) {
+        sum += ch;
+    }
+    sum_out = sum;
+    return TestResult::PASS;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb(NodeComputer& node, bool /*first*/,
+                                                                     uint32_t& data) noexcept {
+    using PacketProtocol::TestResult;
+    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    if (self.lp5810_rgb.is_failed()) {
+        return TestResult::SKIPPED;
+    }
+    // electrical check only - whether light comes out is the lit steps' call
+    const bool ok = self.lp5810_rgb.set_channels(RGB_CHANNELS, SELF_TEST_PWM).has_value() &&
+                    self.lp5810_rgb.disable_all().has_value();
+    data = RGB_CHANNELS;
+    return ok ? TestResult::PASS : TestResult::FAIL;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir(NodeComputer& node, bool /*first*/,
+                                                                      uint32_t& data) noexcept {
+    using PacketProtocol::TestResult;
+    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    if (self.lp5810_uv_ir.is_failed()) {
+        return TestResult::SKIPPED;
+    }
+    const bool ok = self.lp5810_uv_ir.set_channels(SELF_TEST_UVIR_CHANNELS, SELF_TEST_PWM).has_value() &&
+                    self.lp5810_uv_ir.disable_all().has_value();
+    data = SELF_TEST_UVIR_CHANNELS;
+    return ok ? TestResult::PASS : TestResult::FAIL;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_dark(NodeComputer& node, bool first,
+                                                                       uint32_t& data) noexcept {
+    using PacketProtocol::TestResult;
+    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    uint32_t sum = 0U;
+    const auto verdict = self.spec_test_measure(first, 0U, 0U, sum);
+    if (verdict == TestResult::PASS) {
+        // reference point for the lit steps
+        self.spec_test_dark_sum = sum;
+        data = sum;
+    }
+    return verdict;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_rgb(NodeComputer& node, bool first,
+                                                                          uint32_t& data) noexcept {
+    using PacketProtocol::TestResult;
+    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    const auto verdict = self.spec_test_measure(first, RGB_CHANNELS, 0U, data);
+    if (!verdict) {
+        return std::nullopt;
+    }
+    (void)self.lp5810_rgb.disable_all();
+    if (*verdict != TestResult::PASS) {
+        return verdict;
+    }
+    // lit must read brighter than dark, or the optical path is dead
+    return (data > self.spec_test_dark_sum) ? TestResult::PASS : TestResult::FAIL;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_uvir(NodeComputer& node, bool first,
+                                                                           uint32_t& data) noexcept {
+    using PacketProtocol::TestResult;
+    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    const auto verdict = self.spec_test_measure(first, 0U, SELF_TEST_UVIR_CHANNELS, data);
+    if (!verdict) {
+        return std::nullopt;
+    }
+    // last step: leave the payload dark, whatever the verdict
+    (void)self.lp5810_rgb.disable_all();
+    (void)self.lp5810_uv_ir.disable_all();
+    if (*verdict != TestResult::PASS) {
+        return verdict;
+    }
+    return (data > self.spec_test_dark_sum) ? TestResult::PASS : TestResult::FAIL;
+}
+
+std::span<const SelfTest::Step> Exp1Computer::self_test_steps() const noexcept {
+    static constexpr std::array<SelfTest::Step, 8U> steps = {{
+        {&NodeComputer::step_tmp_whoami},    // 0: TMP117 device ID
+        {&NodeComputer::step_tmp_read},      // 1: TMP117 raw temperature
+        {&NodeComputer::step_baro_prom},     // 2: MS5611 PROM CRC + C1
+        {&Exp1Computer::step_led_rgb},       // 3: LP5810C write path (RGB)
+        {&Exp1Computer::step_led_uvir},      // 4: LP5810D write path (white/IR/UV)
+        {&Exp1Computer::step_spec_dark},     // 5: spectrum, all LEDs off (reference)
+        {&Exp1Computer::step_spec_lit_rgb},  // 6: spectrum, RGB lit vs. dark
+        {&Exp1Computer::step_spec_lit_uvir}, // 7: spectrum, white/IR/UV lit vs. dark
+    }};
+    return steps;
 }

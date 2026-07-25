@@ -37,5 +37,5 @@ class DeviceBase {
     Error last_err{};
     bool failed = false;
     uint8_t fail_count = 0U;
-    uint32_t failed_at_us = 0U; // us-clock time it latched; start of the retry cooldown
+    uint32_t failed_at_cyc = 0U; // raw cycles at latch; start of the retry cooldown
 };

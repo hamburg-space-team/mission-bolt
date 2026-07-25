@@ -7,7 +7,7 @@
 | Document ID | ICD-007 |
 | Protocol version | 1 |
 | Status | Generated |
-| Generated at | 2026-07-15T15:52:00Z |
+| Generated at | 2026-07-25T22:59:19Z |
 | Source | `bolt/wire/payloads.hpp` + `bolt/wire/types.hpp` |
 
 ## Purpose
@@ -46,31 +46,36 @@ All multi-byte fields are little-endian. Sync bytes are `0xB0 0x17`; protocol ve
 
 CRC-16/CCITT-FALSE (polynomial `0x1021`, init `0xFFFF`) over every byte after the two sync bytes - the header from `version` onward plus the payload - stored **big-endian** in the trailing 2 B (the only big-endian field in the frame).
 
-## Wire types & bandwidth budget
+## Wire types
 
-| Type | Byte | Node | Rate Hz | Payload B | Wire B | kbit/s | Description |
-|---|--:|---|--:|--:|--:|--:|---|
-| BtcEnv | 0x10 | BTC | 25 | 11 | 25 | 5.00 | common env sensors |
-| BtcStatus | 0x11 | BTC | 1 | 10 | 24 | 0.19 | system health |
-| BtcImu | 0x12 | BTC | 200 | 12 | 26 | 41.60 | IMU sample per data-ready |
-| Exp1Spectrum | 0x20 | EXP1 | 2 | 44 | 58 | 0.93 | 18-channel spectrum (matrix) |
-| Exp1Env | 0x22 | EXP1 | 25 | 11 | 25 | 5.00 | common env sensors |
-| Exp2Env | 0x32 | EXP2 | 25 | 11 | 25 | 5.00 | common env sensors |
-| Exp3Env | 0x42 | EXP3 | 25 | 11 | 25 | 5.00 | common env sensors |
-| Exp1Status | 0x23 | EXP1 | 1 | 8 | 22 | 0.18 | system health |
-| Exp2Status | 0x31 | EXP2 | 1 | 8 | 22 | 0.18 | system health |
-| Exp2Ber | 0x30 | EXP2 | 25 | 16 | 30 | 6.00 | LiFi bit-error round |
-| Exp3StackA | 0x40 | EXP3 | 25 | 36 | 50 | 10.00 | wired stack sample |
-| Exp3StackB | 0x41 | EXP3 | 25 | 38 | 52 | 10.40 | wireless stack sample |
-| Exp3Status | 0x43 | EXP3 | 1 | 13 | 27 | 0.22 | control-loop diagnostics |
-| Exp3Imu | 0x44 | EXP3 | 25 | 12 | 26 | 5.20 | controller ICM sample |
-| GapMarker | 0xF0 | SYSTEM | 0 | 5 | 19 | 0.00 | gap notification |
-| Fault | 0xF1 | SYSTEM | 0 | 13 | 27 | 0.00 | latched fault + trace |
-| Boot | 0xFE | SYSTEM | 0 | 4 | 18 | 0.00 | MCU startup |
-| CmdAck | 0xF2 | SYSTEM | 0 | 3 | 17 | 0.00 | uplink command ack |
-| Timing | 0xF3 | SYSTEM | 100 | 13 | 27 | 21.60 | per-scope tick timing (25Hz x4) |
-
-**Total: 116.5 kbit/s of 38 kbit/s downlink (303%).** Rates nominal; event-driven types (rate 0) excluded.
+| Type | Byte | Node | Rate Hz | Payload B | Wire B | Description |
+|---|--:|---|--:|--:|--:|---|
+| BtcEnv | 0x10 | BTC | 25 | 11 | 25 | common env sensors |
+| BtcStatus | 0x11 | BTC | 1 | 10 | 24 | system health |
+| BtcImu | 0x12 | BTC | 200 | 12 | 26 | IMU sample per data-ready |
+| Exp1Spectrum | 0x20 | EXP1 | 2 | 44 | 58 | 18-channel spectrum (matrix) |
+| Exp1Env | 0x22 | EXP1 | 25 | 11 | 25 | common env sensors |
+| Exp2Env | 0x32 | EXP2 | 25 | 11 | 25 | common env sensors |
+| Exp3Env | 0x42 | EXP3 | 25 | 11 | 25 | common env sensors |
+| Exp1Status | 0x23 | EXP1 | 1 | 8 | 22 | system health |
+| Exp2Status | 0x31 | EXP2 | 1 | 8 | 22 | system health |
+| Exp2Ber | 0x30 | EXP2 | 25 | 16 | 30 | LiFi bit-error round |
+| Exp3StackA | 0x40 | EXP3 | 25 | 36 | 50 | wired stack sample |
+| Exp3StackB | 0x41 | EXP3 | 25 | 38 | 52 | wireless stack sample |
+| Exp3Status | 0x43 | EXP3 | 1 | 13 | 27 | control-loop diagnostics |
+| Exp3Imu | 0x44 | EXP3 | 25 | 12 | 26 | controller ICM sample |
+| GapMarker | 0xF0 | SYSTEM | 0 | 5 | 19 | gap notification |
+| Fault | 0xF1 | SYSTEM | 0 | 13 | 27 | latched fault + trace |
+| Boot | 0xFE | SYSTEM | 0 | 4 | 18 | MCU startup |
+| CmdAck | 0xF2 | BTC | 0 | 3 | 17 | uplink command ack |
+| BtcTiming | 0x13 | BTC | 25 | 12 | 26 | per-scope tick timing |
+| Exp1Timing | 0x24 | EXP1 | 25 | 12 | 26 | per-scope tick timing |
+| Exp2Timing | 0x33 | EXP2 | 25 | 12 | 26 | per-scope tick timing |
+| Exp3Timing | 0x45 | EXP3 | 25 | 12 | 26 | per-scope tick timing |
+| BtcTest | 0x14 | BTC | 0 | 7 | 21 | self-test step result |
+| Exp1Test | 0x25 | EXP1 | 0 | 7 | 21 | self-test step result |
+| Exp2Test | 0x34 | EXP2 | 0 | 7 | 21 | self-test step result |
+| Exp3Test | 0x46 | EXP3 | 0 | 7 | 21 | self-test step result |
 
 ## Payloads
 
@@ -298,7 +303,7 @@ Emitter **SYSTEM**, event-driven. MCU startup.
 
 ### CmdAck - `0xF2` (3 B)
 
-Emitter **SYSTEM**, event-driven. uplink command ack.
+Emitter **BTC**, event-driven. uplink command ack.
 
 | Field | Type | Off | Size | Unit | Scale | Gate | Description |
 |---|---|--:|--:|---|--:|---|---|
@@ -306,14 +311,81 @@ Emitter **SYSTEM**, event-driven. uplink command ack.
 | seq | u8 | 1 | 1 |  | 1 |  | echoed uplink sequence number |
 | status | u8 | 2 | 1 |  | 1 |  | CommandAckStatus (ACCEPTED, UNKNOWN_OPCODE) |
 
-### Timing - `0xF3` (13 B)
+### BtcTiming - `0x13` (12 B)
 
-Emitter **SYSTEM**, 100 Hz. per-scope tick timing (25Hz x4).
+Emitter **BTC**, 25 Hz. per-scope tick timing.
 
 | Field | Type | Off | Size | Unit | Scale | Gate | Description |
 |---|---|--:|--:|---|--:|---|---|
-| source_node | u8 | 0 | 1 |  | 1 |  | origin node (NodeId) |
-| max_us | u16[6] | 1 | 12 | us | 1 |  | this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
+| max_us | u16[6] | 0 | 12 | us | 1 |  | this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
+
+### Exp1Timing - `0x24` (12 B)
+
+Emitter **EXP1**, 25 Hz. per-scope tick timing.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| max_us | u16[6] | 0 | 12 | us | 1 |  | this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
+
+### Exp2Timing - `0x33` (12 B)
+
+Emitter **EXP2**, 25 Hz. per-scope tick timing.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| max_us | u16[6] | 0 | 12 | us | 1 |  | this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
+
+### Exp3Timing - `0x45` (12 B)
+
+Emitter **EXP3**, 25 Hz. per-scope tick timing.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| max_us | u16[6] | 0 | 12 | us | 1 |  | this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE |
+
+### BtcTest - `0x14` (7 B)
+
+Emitter **BTC**, event-driven. self-test step result.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| test_id | u8 | 0 | 1 |  | 1 |  | which step of this node's self-test ran |
+| result | u8 | 1 | 1 |  | 1 |  | TestResult: PASS / FAIL / SKIPPED |
+| last | u8 | 2 | 1 |  | 1 |  | 1 = last step of this node's run (the sequencer's go-ahead) |
+| data | u32 | 3 | 4 |  | 1 |  | raw diagnostic value of the step (meaning depends on test_id); the ground judges it |
+
+### Exp1Test - `0x25` (7 B)
+
+Emitter **EXP1**, event-driven. self-test step result.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| test_id | u8 | 0 | 1 |  | 1 |  | which step of this node's self-test ran |
+| result | u8 | 1 | 1 |  | 1 |  | TestResult: PASS / FAIL / SKIPPED |
+| last | u8 | 2 | 1 |  | 1 |  | 1 = last step of this node's run (the sequencer's go-ahead) |
+| data | u32 | 3 | 4 |  | 1 |  | raw diagnostic value of the step (meaning depends on test_id); the ground judges it |
+
+### Exp2Test - `0x34` (7 B)
+
+Emitter **EXP2**, event-driven. self-test step result.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| test_id | u8 | 0 | 1 |  | 1 |  | which step of this node's self-test ran |
+| result | u8 | 1 | 1 |  | 1 |  | TestResult: PASS / FAIL / SKIPPED |
+| last | u8 | 2 | 1 |  | 1 |  | 1 = last step of this node's run (the sequencer's go-ahead) |
+| data | u32 | 3 | 4 |  | 1 |  | raw diagnostic value of the step (meaning depends on test_id); the ground judges it |
+
+### Exp3Test - `0x46` (7 B)
+
+Emitter **EXP3**, event-driven. self-test step result.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| test_id | u8 | 0 | 1 |  | 1 |  | which step of this node's self-test ran |
+| result | u8 | 1 | 1 |  | 1 |  | TestResult: PASS / FAIL / SKIPPED |
+| last | u8 | 2 | 1 |  | 1 |  | 1 = last step of this node's run (the sequencer's go-ahead) |
+| data | u32 | 3 | 4 |  | 1 |  | raw diagnostic value of the step (meaning depends on test_id); the ground judges it |
 
 ## Enumerations
 
@@ -346,6 +418,14 @@ Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckSta
 | 0x02 | WATCHDOG | IWDG fired, main loop had hung |
 | 0x03 | SOFT_RESET | intentional software reset |
 
+### TestResult (u8)
+
+| Value | Name | Description |
+|--:|---|---|
+| 0x00 | PASS | step ran and met its criteria |
+| 0x01 | FAIL | step ran and failed |
+| 0x02 | SKIPPED | step not applicable or its hardware is latched failed |
+
 ### CommandOpcode (u8)
 
 | Value | Name | Description |
@@ -353,11 +433,12 @@ Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckSta
 | 0x01 | RESET_TICK ⚠️ | reset the 25 Hz tick counter to 0 |
 | 0x02 | START_EXPERIMENT | arm the experiment sequence |
 | 0x03 | ACTIVATE_CAMERA | power the onboard camera |
-| 0x04 | FULL_SYSTEM_TEST ⚠️ | run the built-in self test |
+| 0x04 | STOP_EXPERIMENT ⚠️ | stop the experiment sequence. Falls back to test sequence |
+| 0x05 | FULL_SYSTEM_TEST ⚠️ | run the built-in self test |
 
 ### CommandAckStatus (u8)
 
 | Value | Name | Description |
 |--:|---|---|
-| 0x00 | ACCEPTED | known command received (handler is a no-op for now) |
+| 0x00 | ACCEPTED | known command received and executed (RESET_TICK/ACTIVATE_CAMERA: receipt only) |
 | 0x01 | UNKNOWN_OPCODE | opcode not recognised - nothing done |

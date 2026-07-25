@@ -107,14 +107,9 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadExp1Spectrum);
 
-    /// EXP_ENV - shared between EXP1 (0x22) and EXP2 (0x32). Environmental
-    /// context sampled alongside the controller's primary science.
-    ///
-    /// @ingroup comms
-    /// EXP_ENV - the same env layout emitted by EXP1/EXP2/EXP3 under their own
-    /// type bytes (0x22/0x32/0x42). Three separate structs so each carries its
-    /// own PACKET; the static_asserts below guard against layout drift between
-    /// them. Same sensors as PayloadBtcEnv.
+    /// *_ENV - the env layout emitted by EXP1/EXP2/EXP3 under their own type
+    /// bytes (0x22/0x32/0x42). Three structs so each carries its own PACKET;
+    /// static_asserts below guard against layout drift. Sensors as PayloadBtcEnv
     ///
     /// @ingroup comms
     struct __attribute__((packed)) PACKET(.type = PayloadType::EXP1_ENV, .node = "EXP1", .rate_hz = 25,
@@ -436,10 +431,11 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadBoot);
 
-    /// CMD_ACK - acknowledges a received uplink command.
+    /// CMD_ACK - acknowledges a received uplink command. Node BTC, not
+    /// SYSTEM: the uplink terminates at the BTC, so no source_node needed
     ///
     /// @ingroup comms
-    struct __attribute__((packed)) PACKET(.type = PayloadType::CMD_ACK, .node = "SYSTEM", .rate_hz = 0,
+    struct __attribute__((packed)) PACKET(.type = PayloadType::CMD_ACK, .node = "BTC", .rate_hz = 0,
                                           .desc = "uplink command ack") PayloadCmdAck {
         WIRE(.desc = "echoed uplink CommandOpcode")
         uint8_t opcode;
@@ -450,19 +446,106 @@ namespace PacketProtocol {
     };
     PACKET_TYPE_CHECK(PayloadCmdAck);
 
-    /// TIMING - per-scope worst-case durations since the last send, for WCET
-    /// / tick-budget analysis. Shared system type (0xF3); the emitter stamps
-    /// source_node. Slots map to Wcet::Point (see shared/utils/wcet.hpp).
+    /// *_TIMING - per-scope worst-case durations since the last send (WCET /
+    /// tick budget); slots map to Wcet::Point. One type per node like
+    /// ENV/STATUS, so the type byte names the origin and no source_node is needed
     ///
     /// @ingroup comms
-    struct __attribute__((packed)) PACKET(.type = PayloadType::TIMING, .node = "SYSTEM", .rate_hz = 100,
-                                          .desc = "per-scope tick timing (25Hz x4)") PayloadTiming {
-        WIRE(.desc = "origin node (NodeId)")
-        NodeId source_node;
-
+    struct __attribute__((packed)) PACKET(.type = PayloadType::BTC_TIMING, .node = "BTC", .rate_hz = 25,
+                                          .desc = "per-scope tick timing") PayloadBtcTiming {
         WIRE(.unit = "us", .desc = "this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE")
         uint16_t max_us[6]; // NOLINT(modernize-avoid-c-arrays)
     };
-    PACKET_TYPE_CHECK(PayloadTiming);
+    PACKET_TYPE_CHECK(PayloadBtcTiming);
+
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP1_TIMING, .node = "EXP1", .rate_hz = 25,
+                                          .desc = "per-scope tick timing") PayloadExp1Timing {
+        WIRE(.unit = "us", .desc = "this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE")
+        uint16_t max_us[6]; // NOLINT(modernize-avoid-c-arrays)
+    };
+    PACKET_TYPE_CHECK(PayloadExp1Timing);
+
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP2_TIMING, .node = "EXP2", .rate_hz = 25,
+                                          .desc = "per-scope tick timing") PayloadExp2Timing {
+        WIRE(.unit = "us", .desc = "this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE")
+        uint16_t max_us[6]; // NOLINT(modernize-avoid-c-arrays)
+    };
+    PACKET_TYPE_CHECK(PayloadExp2Timing);
+
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP3_TIMING, .node = "EXP3", .rate_hz = 25,
+                                          .desc = "per-scope tick timing") PayloadExp3Timing {
+        WIRE(.unit = "us", .desc = "this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE")
+        uint16_t max_us[6]; // NOLINT(modernize-avoid-c-arrays)
+    };
+    PACKET_TYPE_CHECK(PayloadExp3Timing);
+
+    /// Layout shared by every *_TIMING type; the caller picks the per-node type
+    using PayloadTiming = PayloadBtcTiming;
+
+    /// *_TEST - one self-test step result (FULL_SYSTEM_TEST, TEST mode only).
+    /// One type per node like ENV/STATUS/TIMING. `last` also drives the BTC's
+    /// sequencer: it advances to the next node when it sees last=1 pass by
+    ///
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::BTC_TEST, .node = "BTC", .rate_hz = 0,
+                                          .desc = "self-test step result") PayloadBtcTest {
+        WIRE(.desc = "which step of this node's self-test ran")
+        uint8_t test_id;
+        WIRE(.desc = "TestResult: PASS / FAIL / SKIPPED")
+        TestResult result;
+        WIRE(.desc = "1 = last step of this node's run (the sequencer's go-ahead)")
+        uint8_t last;
+        WIRE(.desc = "raw diagnostic value of the step (meaning depends on test_id); the ground judges it")
+        uint32_t data;
+    };
+    PACKET_TYPE_CHECK(PayloadBtcTest);
+
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP1_TEST, .node = "EXP1", .rate_hz = 0,
+                                          .desc = "self-test step result") PayloadExp1Test {
+        WIRE(.desc = "which step of this node's self-test ran")
+        uint8_t test_id;
+        WIRE(.desc = "TestResult: PASS / FAIL / SKIPPED")
+        TestResult result;
+        WIRE(.desc = "1 = last step of this node's run (the sequencer's go-ahead)")
+        uint8_t last;
+        WIRE(.desc = "raw diagnostic value of the step (meaning depends on test_id); the ground judges it")
+        uint32_t data;
+    };
+    PACKET_TYPE_CHECK(PayloadExp1Test);
+
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP2_TEST, .node = "EXP2", .rate_hz = 0,
+                                          .desc = "self-test step result") PayloadExp2Test {
+        WIRE(.desc = "which step of this node's self-test ran")
+        uint8_t test_id;
+        WIRE(.desc = "TestResult: PASS / FAIL / SKIPPED")
+        TestResult result;
+        WIRE(.desc = "1 = last step of this node's run (the sequencer's go-ahead)")
+        uint8_t last;
+        WIRE(.desc = "raw diagnostic value of the step (meaning depends on test_id); the ground judges it")
+        uint32_t data;
+    };
+    PACKET_TYPE_CHECK(PayloadExp2Test);
+
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP3_TEST, .node = "EXP3", .rate_hz = 0,
+                                          .desc = "self-test step result") PayloadExp3Test {
+        WIRE(.desc = "which step of this node's self-test ran")
+        uint8_t test_id;
+        WIRE(.desc = "TestResult: PASS / FAIL / SKIPPED")
+        TestResult result;
+        WIRE(.desc = "1 = last step of this node's run (the sequencer's go-ahead)")
+        uint8_t last;
+        WIRE(.desc = "raw diagnostic value of the step (meaning depends on test_id); the ground judges it")
+        uint32_t data;
+    };
+    PACKET_TYPE_CHECK(PayloadExp3Test);
+
+    /// Layout shared by every *_TEST type; the caller picks the per-node type
+    using PayloadTest = PayloadBtcTest;
 
 } // namespace PacketProtocol

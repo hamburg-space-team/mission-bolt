@@ -10,7 +10,8 @@ pub enum CommandType {
     ResetTick = 0x01,
     StartExperiment = 0x02,
     ActivateCamera = 0x03,
-    FullSystemTest = 0x04,
+    StopExperiment = 0x04,
+    FullSystemTest = 0x05,
 }
 
 // A command to send
@@ -19,6 +20,7 @@ pub enum Command {
     ResetTick,
     StartExperiment,
     ActivateCamera,
+    StopExperiment,
     FullSystemTest,
     Raw { opcode: u8, payload: HVec<u8, MAX_PAYLOAD> },
 }
@@ -30,6 +32,7 @@ impl Command {
             Command::ResetTick => CommandType::ResetTick as u8,
             Command::StartExperiment => CommandType::StartExperiment as u8,
             Command::ActivateCamera => CommandType::ActivateCamera as u8,
+            Command::StopExperiment => CommandType::StopExperiment as u8,
             Command::FullSystemTest => CommandType::FullSystemTest as u8,
             Command::Raw { opcode, .. } => *opcode,
         }
@@ -50,6 +53,7 @@ impl Command {
             "reset_tick" => Command::ResetTick,
             "start_experiment" => Command::StartExperiment,
             "activate_camera" => Command::ActivateCamera,
+            "stop_experiment" => Command::StopExperiment,
             "full_system_test" => Command::FullSystemTest,
             _ => return None,
         })
@@ -117,6 +121,7 @@ mod tests {
     fn dangerous_commands_flagged() {
         assert!(Command::ResetTick.is_dangerous());
         assert!(Command::FullSystemTest.is_dangerous());
+        assert!(Command::StopExperiment.is_dangerous());
         assert!(!Command::ActivateCamera.is_dangerous());
     }
 }

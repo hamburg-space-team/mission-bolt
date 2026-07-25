@@ -1,4 +1,4 @@
-import { r as reactExports, u as useMessages, j as jsxRuntimeExports, c as createRoot } from "./chunk-DHH7KV4w.js";
+import { r as reactExports, u as useMessages, j as jsxRuntimeExports, c as createRoot } from "./chunk-BMq7aTlC.js";
 import { f as fmtValue } from "./chunk-CG4_lz18.js";
 const SOURCES = ["btc", "exp1", "exp2", "exp3"];
 function Tile({ n, label, bad }) {
@@ -44,8 +44,8 @@ function Overview() {
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { children: manifest?.mission ?? (live ? "Live" : "Overview") }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Signal, { on: lo, label: "LO" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Signal, { on: soe, label: "SOE" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Signal, { on: sods, label: "SODS" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Signal, { on: sods, label: "SODS" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Signal, { on: soe, label: "SOE" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tiles", style: { marginTop: 8 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Tile, { n: total.toLocaleString(), label: "frames" }),

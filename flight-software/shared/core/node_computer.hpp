@@ -5,6 +5,7 @@
 #include "errors.hpp"
 #include "flight_computer.hpp"
 #include "ms5611.hpp"
+#include "self_test.hpp"
 #include "status_leds.hpp"
 #include "store.hpp"
 #include "tmp117.hpp"
@@ -12,6 +13,8 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
+#include <span>
 
 /// Intermediate base for all BOLT nodes (BTC + EXPs). Owns the sensors
 /// present on every board: MS5611 (F-80, D-350) and TMP117 (F-70,
@@ -54,6 +57,15 @@ class NodeComputer : public FlightComputer {
 
     virtual void retry_extra_devices() {
     }
+
+    // Self-test step bodies for the sensors every node carries; each node
+    // lists them first, so test_id 0..2 means the same on every node
+    static std::optional<PacketProtocol::TestResult> step_tmp_whoami(NodeComputer& node, bool first,
+                                                                     uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_tmp_read(NodeComputer& node, bool first,
+                                                                   uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_baro_prom(NodeComputer& node, bool first,
+                                                                    uint32_t& data) noexcept;
 
     /// Drain ring-buffered SD writes during the idle phase
     void on_drain(uint32_t deadline_ms) override;

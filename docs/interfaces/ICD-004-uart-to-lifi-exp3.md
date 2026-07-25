@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Document ID | ICD-004 |
-| Version | 0.1 |
+| Version | 0.2 |
 | Status | Draft |
 | Date | 2026-05-25 |
 | Owner | Software Lead |
@@ -15,6 +15,7 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-05-25 | Max | Initial draft from CDR section 4.5 |
+| 0.2 | 2026-07-25 | Max | Update based on CDR |
 
 ## Purpose
 
@@ -82,66 +83,85 @@ marker is unambiguous on the wire.
 TODO: finalise frame layout against the actual stack firmware. The
 layout above is the planning target.
 
-## Sample Cycle
+## Power and Data Path Independence
 
-Driven by the LED charging cycle. TODO: cycle period and burst
-length are tunable parameters, will be tightened during integration
-tests.
+The charging LED (AL8862QSP-13 driver, 7x Cree XPEBBL 485 nm in series,
+667 mA nominal) is **constant on** for the whole science timeline and holds
+the Wireless Stack supercapacitor at its nominal voltage. LiFi-A and
+LiFi-B carry data only and have no influence on the power side.
 
-```
-+--- LED charging --+- LED off, sample burst -+--- LED charging ---+
-|     ~1-3 s        |       ~100 ms            |     ~1-3 s          |
-```
+Both stacks are therefore symmetric data sources: whether a stack is
+powered by cable or by light, the communication pattern seen by the EXP3
+controller is the same.
 
-During charge: both transceivers idle, wireless stack in shutdown.
-When EXP3 turns the LEDs off:
+> **Superseded.** Earlier revisions of this document described a
+> time-multiplexed cycle in which the LEDs were switched off so the
+> Wireless Stack could wake "on loss of light" and empty its capacitor
+> into a ~100 ms burst, with `START`/`STOP` over the cable. That design
+> is gone. Charging is continuous, the paths are independent, and the
+> stacks are driven by sync rather than by burst commands.
 
-1. Wireless stack wakes up on loss of light, samples from its
-   capacitor, emits frames over LiFi B until energy is gone.
-2. EXP3 sends `START` over the cable, Wired Stack emits the same
-   sample stream on cable + LiFi A.
-3. EXP3 sends `STOP` to end the burst.
+## Stack Lifecycle
 
-### Cable Control Bytes
+Each stack passes through three states (SED Fig. 4.40):
 
-| Byte | Direction | Meaning |
-|---|---|---|
-| `!` (0x21) | EXP3 -> Wired | START burst |
-| `.` (0x2E) | EXP3 -> Wired | STOP burst |
-| BEL (0x07) | Wired -> EXP3 | ALIVE heartbeat (1 Hz when idle) |
+| State | Behaviour |
+|---|---|
+| `BOOT` | Init peripherals and sensors, run self-test, go to `WAITING FOR SYNC` |
+| `WAITING FOR SYNC` | **No sample transmission.** Listen on the LiFi UART for the sync pattern. Stay here indefinitely. |
+| `SAMPLING` | Reset internal timer to zero, sample at the configured rate, send each sample with timestamp, sequence number and CRC. Update the sync record on each new sync. |
 
-Sample frames are delimited by `<`/`>` so control bytes don't
-collide.
+Neither stack starts sampling on its own. The first sync pulse moves both
+to `SAMPLING` at the same moment, and that instant is the reference time
+for the science timeline.
 
-### Cross-Check
+## Synchronisation
 
-Each Wired Stack sample appears on both transports. EXP3 compares
-them and records the result as `valid_mask` bit 3
-(`cable_check_ok`) in `PayloadExp3StackA`. This is the science
-contribution of the cable path - per-sample ground truth for the
-LiFi link.
+EXP3 sends sync pulses over **both LiFi paths simultaneously** -- over
+LiFi rather than the cable, so both stacks see the same transmission
+latency. Residual offset is constant and corrected post-flight.
 
-## Timing
+| Event | Timing |
+|---|---|
+| First sync | at LO; establishes t = 0 |
+| Periodic sync | every 10 s (250 ticks at 25 Hz), for clock-drift compensation |
+| Sample rate | working assumption ~50 Hz per stack; finalised during integration |
 
-| Parameter | Target | Notes |
-|---|---|---|
-| LED-off -> first wireless sample | <= 50 ms | TODO confirm |
-| START -> first wired sample | <= 10 ms | TODO confirm |
-| Per-frame transmit time | ~5 ms @ 921k | rough |
-| Max burst | ~100 ms | bounded by supercap |
-| Cycle period | 1.0-3.1 s | runtime tunable via status payload |
+Each stack records the local arrival timestamp of every sync and includes
+it in the next sample packet, so post-flight analysis can measure actual
+drift and build a unified time reference.
+
+## Sample Packet
+
+Self-contained, so single-packet corruption stays single-packet:
+
+- stack-internal timestamp at the moment of sampling
+- sequence number, incrementing per sample
+- most recent sync sequence number, and the stack timestamp when it arrived
+- sensor readings: TMP117, ICM-42688-P, MMC5983MA
+- CRC over the whole packet
+
+CRC failure drops the packet; the gap appears as a missing sequence
+number.
+
+## Cable UART
+
+The Molex cable to the Wired Stack carries power and a UART used **for
+integration testing**. It gives ground an observation path to the Wired
+Stack that does not depend on LiFi-A, which is what makes "LiFi-A failed"
+distinguishable from "Wired Stack failed" on the bench.
+
+The Wireless Stack has no equivalent. It is reachable only over LiFi-B,
+so its diagnosis rests entirely on that link plus whether it draws
+charging power at all.
 
 ## Error Handling
 
-CRC fail -> frame dropped, next valid frame continues the burst.
-`last_burst_sample_count` reports how many made it through.
+CRC fail -> packet dropped, visible as a missing sequence number.
 
-Wireless stack silent >= 50 ms after LED-off -> `GAP_MARKER` with
-`LIFI_TIMEOUT`. Cycle continues.
-
-Wired stack silent >= 10 ms after START -> `GAP_MARKER` for this
-cycle. Three consecutive misses -> stack flagged failed. Wireless
-burst still attempted.
+A stack that stops producing samples is reported with a `GAP_MARKER`.
+Thresholds and the failed-stack criterion are to be confirmed during
+integration testing.
 
 ## Constants
 

@@ -17,8 +17,15 @@
     {"name": "GapMarker", "value": 240, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadGapMarker", "desc": "gap notification"},
     {"name": "Fault", "value": 241, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadFault", "desc": "latched fault + trace"},
     {"name": "Boot", "value": 254, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadBoot", "desc": "MCU startup"},
-    {"name": "CmdAck", "value": 242, "node": "SYSTEM", "rate_hz": 0, "layout": "PayloadCmdAck", "desc": "uplink command ack"},
-    {"name": "Timing", "value": 243, "node": "SYSTEM", "rate_hz": 100, "layout": "PayloadTiming", "desc": "per-scope tick timing (25Hz x4)"}
+    {"name": "CmdAck", "value": 242, "node": "BTC", "rate_hz": 0, "layout": "PayloadCmdAck", "desc": "uplink command ack"},
+    {"name": "BtcTiming", "value": 19, "node": "BTC", "rate_hz": 25, "layout": "PayloadBtcTiming", "desc": "per-scope tick timing"},
+    {"name": "Exp1Timing", "value": 36, "node": "EXP1", "rate_hz": 25, "layout": "PayloadExp1Timing", "desc": "per-scope tick timing"},
+    {"name": "Exp2Timing", "value": 51, "node": "EXP2", "rate_hz": 25, "layout": "PayloadExp2Timing", "desc": "per-scope tick timing"},
+    {"name": "Exp3Timing", "value": 69, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3Timing", "desc": "per-scope tick timing"},
+    {"name": "BtcTest", "value": 20, "node": "BTC", "rate_hz": 0, "layout": "PayloadBtcTest", "desc": "self-test step result"},
+    {"name": "Exp1Test", "value": 37, "node": "EXP1", "rate_hz": 0, "layout": "PayloadExp1Test", "desc": "self-test step result"},
+    {"name": "Exp2Test", "value": 52, "node": "EXP2", "rate_hz": 0, "layout": "PayloadExp2Test", "desc": "self-test step result"},
+    {"name": "Exp3Test", "value": 70, "node": "EXP3", "rate_hz": 0, "layout": "PayloadExp3Test", "desc": "self-test step result"}
   ],
   "payloads": [
     {
@@ -236,11 +243,71 @@
       ]
     },
     {
-      "name": "PayloadTiming",
-      "size": 13,
+      "name": "PayloadBtcTiming",
+      "size": 12,
       "fields": [
-        {"name":"source_node","ctype":"NodeId","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"origin node (NodeId)"},
-        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":1,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":0,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+      ]
+    },
+    {
+      "name": "PayloadExp1Timing",
+      "size": 12,
+      "fields": [
+        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":0,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+      ]
+    },
+    {
+      "name": "PayloadExp2Timing",
+      "size": 12,
+      "fields": [
+        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":0,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+      ]
+    },
+    {
+      "name": "PayloadExp3Timing",
+      "size": 12,
+      "fields": [
+        {"name":"max_us","ctype":"unsigned short[6]","byte_offset":0,"count":6,"unit":"us","scale":1,"offset":0,"gate":"","desc":"this tick's duration per Wcet::Point: TICK,READ,CFG,DRIVE,SEND,STORE"}
+      ]
+    },
+    {
+      "name": "PayloadBtcTest",
+      "size": 7,
+      "fields": [
+        {"name":"test_id","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"which step of this node's self-test ran"},
+        {"name":"result","ctype":"TestResult","byte_offset":1,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"TestResult: PASS / FAIL / SKIPPED"},
+        {"name":"last","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = last step of this node's run (the sequencer's go-ahead)"},
+        {"name":"data","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"raw diagnostic value of the step (meaning depends on test_id); the ground judges it"}
+      ]
+    },
+    {
+      "name": "PayloadExp1Test",
+      "size": 7,
+      "fields": [
+        {"name":"test_id","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"which step of this node's self-test ran"},
+        {"name":"result","ctype":"TestResult","byte_offset":1,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"TestResult: PASS / FAIL / SKIPPED"},
+        {"name":"last","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = last step of this node's run (the sequencer's go-ahead)"},
+        {"name":"data","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"raw diagnostic value of the step (meaning depends on test_id); the ground judges it"}
+      ]
+    },
+    {
+      "name": "PayloadExp2Test",
+      "size": 7,
+      "fields": [
+        {"name":"test_id","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"which step of this node's self-test ran"},
+        {"name":"result","ctype":"TestResult","byte_offset":1,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"TestResult: PASS / FAIL / SKIPPED"},
+        {"name":"last","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = last step of this node's run (the sequencer's go-ahead)"},
+        {"name":"data","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"raw diagnostic value of the step (meaning depends on test_id); the ground judges it"}
+      ]
+    },
+    {
+      "name": "PayloadExp3Test",
+      "size": 7,
+      "fields": [
+        {"name":"test_id","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"which step of this node's self-test ran"},
+        {"name":"result","ctype":"TestResult","byte_offset":1,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"TestResult: PASS / FAIL / SKIPPED"},
+        {"name":"last","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = last step of this node's run (the sequencer's go-ahead)"},
+        {"name":"data","ctype":"unsigned int","byte_offset":3,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"raw diagnostic value of the step (meaning depends on test_id); the ground judges it"}
       ]
     }
   ],
@@ -248,7 +315,8 @@
     {"name": "GapReason", "underlying": "u8", "values": [{"name": "NO_DATA", "value": 1, "desc": "no valid CAN/source data inside the expected window", "label": "", "danger": false}, {"name": "CAN_CRC_FAIL", "value": 2, "desc": "CAN frame received but failed CRC", "label": "", "danger": false}, {"name": "LIFI_TIMEOUT", "value": 3, "desc": "no sample packets from an EXP3 stack in the interval", "label": "", "danger": false}, {"name": "SENSOR_FAILED", "value": 4, "desc": "superseded by FAULT (ADR-012); wire-stable, no longer emitted", "label": "", "danger": false}]},
     {"name": "NodeId", "underlying": "u8", "values": [{"name": "BTC", "value": 0, "desc": "master controller", "label": "", "danger": false}, {"name": "EXP1", "value": 1, "desc": "Space Disco spectrometer", "label": "", "danger": false}, {"name": "EXP2", "value": 2, "desc": "Bouncy Castle Li-Fi", "label": "", "danger": false}, {"name": "EXP3", "value": 3, "desc": "Floaty Boi stacks", "label": "", "danger": false}, {"name": "UNKNOWN", "value": 255, "desc": "unknown origin", "label": "", "danger": false}]},
     {"name": "BootReason", "underlying": "u8", "values": [{"name": "COLD_START", "value": 1, "desc": "normal power-on", "label": "", "danger": false}, {"name": "WATCHDOG", "value": 2, "desc": "IWDG fired, main loop had hung", "label": "", "danger": false}, {"name": "SOFT_RESET", "value": 3, "desc": "intentional software reset", "label": "", "danger": false}]},
-    {"name": "CommandOpcode", "underlying": "u8", "values": [{"name": "RESET_TICK", "value": 1, "desc": "reset the 25 Hz tick counter to 0", "label": "Reset Tick", "danger": true}, {"name": "START_EXPERIMENT", "value": 2, "desc": "arm the experiment sequence", "label": "Start Experiment", "danger": false}, {"name": "ACTIVATE_CAMERA", "value": 3, "desc": "power the onboard camera", "label": "Activate Camera", "danger": false}, {"name": "FULL_SYSTEM_TEST", "value": 4, "desc": "run the built-in self test", "label": "Full System Test", "danger": true}]},
-    {"name": "CommandAckStatus", "underlying": "u8", "values": [{"name": "ACCEPTED", "value": 0, "desc": "known command received (handler is a no-op for now)", "label": "", "danger": false}, {"name": "UNKNOWN_OPCODE", "value": 1, "desc": "opcode not recognised - nothing done", "label": "", "danger": false}]}
+    {"name": "TestResult", "underlying": "u8", "values": [{"name": "PASS", "value": 0, "desc": "step ran and met its criteria", "label": "", "danger": false}, {"name": "FAIL", "value": 1, "desc": "step ran and failed", "label": "", "danger": false}, {"name": "SKIPPED", "value": 2, "desc": "step not applicable or its hardware is latched failed", "label": "", "danger": false}]},
+    {"name": "CommandOpcode", "underlying": "u8", "values": [{"name": "RESET_TICK", "value": 1, "desc": "reset the 25 Hz tick counter to 0", "label": "Reset Tick", "danger": true}, {"name": "START_EXPERIMENT", "value": 2, "desc": "arm the experiment sequence", "label": "Start Experiment", "danger": false}, {"name": "ACTIVATE_CAMERA", "value": 3, "desc": "power the onboard camera", "label": "Activate Camera", "danger": false}, {"name": "STOP_EXPERIMENT", "value": 4, "desc": "stop the experiment sequence. Falls back to test sequence", "label": "Stop Experiment", "danger": true}, {"name": "FULL_SYSTEM_TEST", "value": 5, "desc": "run the built-in self test", "label": "Full System Test", "danger": true}]},
+    {"name": "CommandAckStatus", "underlying": "u8", "values": [{"name": "ACCEPTED", "value": 0, "desc": "known command received and executed (RESET_TICK/ACTIVATE_CAMERA: receipt only)", "label": "", "danger": false}, {"name": "UNKNOWN_OPCODE", "value": 1, "desc": "opcode not recognised - nothing done", "label": "", "danger": false}]}
   ]
 }

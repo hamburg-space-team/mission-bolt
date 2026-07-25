@@ -28,6 +28,9 @@ class Exp1Computer final : public ExpComputer {
   protected:
     void on_experiment_init() noexcept override;
     void on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) override;
+    void on_experiment_reset() noexcept override;
+    void on_self_test_abort() noexcept override;
+    [[nodiscard]] std::span<const SelfTest::Step> self_test_steps() const noexcept override;
 
     [[nodiscard]] uint32_t exp_can_id() const noexcept override {
         return CanProtocol::EXP1_DATA_ID;
@@ -37,6 +40,12 @@ class Exp1Computer final : public ExpComputer {
     }
     [[nodiscard]] PacketProtocol::PayloadType exp_status_type() const noexcept override {
         return PacketProtocol::PayloadType::EXP1_STATUS;
+    }
+    [[nodiscard]] PacketProtocol::PayloadType exp_timing_type() const noexcept override {
+        return PacketProtocol::PayloadType::EXP1_TIMING;
+    }
+    [[nodiscard]] PacketProtocol::PayloadType exp_test_type() const noexcept override {
+        return PacketProtocol::PayloadType::EXP1_TEST;
     }
     void send_status_packet(uint16_t can_tick, uint32_t timestamp_us) override;
 
@@ -61,6 +70,11 @@ class Exp1Computer final : public ExpComputer {
     static constexpr uint32_t SPEC_BOOT_TIMEOUT_MS = 1500U;
     static constexpr uint32_t SPEC_BOOT_POLL_MS = 25U;
 
+    // Self-test config: 50 % PWM stays off the 16-bit ceiling at GAIN_37X;
+    // integration = init default (40 cycles ~ 224 ms ~ 6 ticks)
+    static constexpr uint8_t SELF_TEST_PWM = 0x80U;
+    static constexpr uint8_t SELF_TEST_UVIR_CHANNELS = WHITE_CHANNEL | IR_CHANNEL | UV_CHANNEL;
+
     /// Ship the AS7265XResult in `result` as one atomic EXP1_SPECTRUM packet.
     /// matrix_idx = MATRIX row of the measurement (goes out as led_mask).
     void send_spectrum(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us);
@@ -76,6 +90,9 @@ class Exp1Computer final : public ExpComputer {
     void retry_led(LP5810& led, uint8_t addr, StatusLeds::Fault code);
 
     enum class RecoveryStep : uint8_t { IDLE, ASSERTING, WAITING };
+
+    /// Phase of one multi-tick self-test measurement, reset via `first`
+    enum class SpecTestPhase : uint8_t { CONFIGURE, WAIT };
 
     AS7265X spec{};
     LP5810 lp5810_rgb{};
@@ -106,6 +123,10 @@ class Exp1Computer final : public ExpComputer {
     uint16_t prev_start_tick = 0U;
     uint32_t prev_start_us = 0U;
 
+    // Self-test state: phase + the all-LEDs-off reference sum
+    SpecTestPhase spec_test_phase = SpecTestPhase::CONFIGURE;
+    uint32_t spec_test_dark_sum = 0U;
+
     // Transient failure counters (saturating, since boot) - shipped in
     // every EXP1_STATUS via send_status_packet().
     uint8_t led_write_fails = 0U;
@@ -113,4 +134,22 @@ class Exp1Computer final : public ExpComputer {
     uint8_t data_ready_fails = 0U;
 
     AS7265XResult result{};
+
+    /// One measurement under a fixed LED pattern, spread over ticks;
+    /// nullopt while in progress, on PASS `sum_out` = 18-channel sum
+    std::optional<PacketProtocol::TestResult> spec_test_measure(bool first, uint8_t rgb_mask, uint8_t uvir_mask,
+                                                                uint32_t& sum_out);
+    std::optional<PacketProtocol::TestResult> spec_test_configure(uint8_t rgb_mask, uint8_t uvir_mask);
+    std::optional<PacketProtocol::TestResult> spec_test_collect(uint32_t& sum_out);
+
+    static std::optional<PacketProtocol::TestResult> step_led_rgb(NodeComputer& node, bool first,
+                                                                  uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_led_uvir(NodeComputer& node, bool first,
+                                                                   uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_spec_dark(NodeComputer& node, bool first,
+                                                                    uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_spec_lit_rgb(NodeComputer& node, bool first,
+                                                                       uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_spec_lit_uvir(NodeComputer& node, bool first,
+                                                                        uint32_t& data) noexcept;
 };

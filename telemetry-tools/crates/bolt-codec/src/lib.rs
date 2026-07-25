@@ -11,7 +11,7 @@ pub use command::{encode, Command, CommandType};
 pub use crc::crc16;
 pub use error::DecodeError;
 pub use mission::{default_mission, find as find_mission, registry, Calibration, MissionSpec};
-pub use model::{normalize, Sample, Sd, Signal};
+pub use model::{frame_source, normalize, Sample, Sd, Signal};
 pub use payloads::{decode_payload, Payload, PayloadType};
 pub use schema::{FieldSchema, PayloadSchema};
 pub use wire::{

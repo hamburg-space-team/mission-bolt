@@ -19,12 +19,15 @@ Build system has to:
 
 ## Decision
 
-**CMSIS-Toolbox 2.12.0** with `cbuild`. Per-target `*.cproject.yml`
+**CMSIS-Toolbox** with `cbuild`. Per-target `*.cproject.yml`
 files composed by `bolt.csolution.yml` and a shared
 `shared.clayer.yml`.
 
-Toolchain: **arm-none-eabi-gcc 13.3.1**.
-Host tests: **CMake 3.22 + Catch2 v3.7.1**.
+Toolchain: **arm-none-eabi-gcc** (Arm GNU toolchain). Both versions are
+pinned once, in `.devcontainer/Dockerfile` (`ARM_GNU_VERSION`,
+`CMSIS_TOOLBOX_VERSION`) - this ADR records the tool choice, not the number.
+Host tests: **CMake 3.22 + Catch2 v3.7.1** (pinned in
+`flight-software/CMakeLists.txt` / `tests/CMakeLists.txt`).
 HAL: **STM32CubeMX** generator, output under `<target>/generated/`.
 
 CMSIS packs pinned:

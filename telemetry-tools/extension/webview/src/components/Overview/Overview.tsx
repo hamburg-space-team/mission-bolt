@@ -48,7 +48,9 @@ export function Overview() {
     <>
       <h1>{manifest?.mission ?? (live ? "Live" : "Overview")}</h1>
       <div className="row">
-        <Signal on={lo} label="LO" /><Signal on={soe} label="SOE" /><Signal on={sods} label="SODS" />
+        {/* LO, SODS, SOE - the order the REXUS control interface is specified
+            in (RXSM manual 3.2), not signal_mask's bit order (1=SOE, 2=SODS). */}
+        <Signal on={lo} label="LO" /><Signal on={sods} label="SODS" /><Signal on={soe} label="SOE" />
       </div>
       <div className="tiles" style={{ marginTop: 8 }}>
         <Tile n={total.toLocaleString()} label="frames" />

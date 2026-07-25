@@ -27,6 +27,13 @@ class Exp2Computer final : public ExpComputer {
     [[nodiscard]] PacketProtocol::PayloadType exp_status_type() const noexcept override {
         return PacketProtocol::PayloadType::EXP2_STATUS;
     }
+    [[nodiscard]] PacketProtocol::PayloadType exp_timing_type() const noexcept override {
+        return PacketProtocol::PayloadType::EXP2_TIMING;
+    }
+    [[nodiscard]] PacketProtocol::PayloadType exp_test_type() const noexcept override {
+        return PacketProtocol::PayloadType::EXP2_TEST;
+    }
 
     void send_status_packet(uint16_t can_tick, uint32_t timestamp_us) override;
+    [[nodiscard]] std::span<const SelfTest::Step> self_test_steps() const noexcept override;
 };

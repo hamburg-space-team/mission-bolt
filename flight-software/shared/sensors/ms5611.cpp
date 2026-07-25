@@ -18,7 +18,7 @@ Result<void> MS5611::init(CmsisI2CBus* bus, uint8_t addr, MS5611Osr osr, delay_f
         return r;
     }
 
-    if (!prom_crc_ok()) {
+    if (!prom_crc_ok(this->coeff)) {
         return fail(ErrorCode::PROTOCOL_ERROR, Step::BARO_PROM_CRC, __LINE__);
     }
 
@@ -96,6 +96,25 @@ Result<void> MS5611::read_prom() {
     return {};
 }
 
+Result<uint16_t> MS5611::verify_prom() {
+    std::array<uint16_t, COEFF_COUNT> prom{};
+    for (uint8_t i = 0U; i < COEFF_COUNT; i++) {
+        const auto reg = static_cast<uint8_t>(PROM_BASE_ADDR + (i * 2U));
+
+        std::array<uint8_t, 2> buf{};
+        if (auto r = this->bus->write_read(this->addr, &reg, 1U, buf.data(), buf.size()); !r) {
+            return mark(r.error(), Step::BARO_PROM_READ);
+        }
+
+        prom[i] = static_cast<uint16_t>((static_cast<uint16_t>(buf[0]) << 8U) | static_cast<uint16_t>(buf[1]));
+    }
+
+    if (!prom_crc_ok(prom)) {
+        return fail(ErrorCode::PROTOCOL_ERROR, Step::BARO_PROM_CRC, __LINE__);
+    }
+    return prom[1]; // C1, pressure sensitivity
+}
+
 Result<void> MS5611::start_conversion(uint8_t cmd) {
     return this->bus->write(this->addr, &cmd, 1U);
 }
@@ -141,8 +160,8 @@ Result<uint32_t> MS5611::read_adc_result() {
            static_cast<uint32_t>(buf[2]);
 }
 
-bool MS5611::prom_crc_ok() const {
-    std::array<uint16_t, COEFF_COUNT> prom = this->coeff;
+bool MS5611::prom_crc_ok(const std::array<uint16_t, COEFF_COUNT>& prom_in) {
+    std::array<uint16_t, COEFF_COUNT> prom = prom_in;
 
     const auto crc_read = static_cast<uint8_t>(prom[IDX_CRC] & CRC_MASK);
 

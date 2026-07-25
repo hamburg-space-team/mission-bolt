@@ -4,6 +4,8 @@
 
 FlightComputer::FlightComputer(const Platform& platform) noexcept : platform(platform) {
     ErrorClock::now_us = platform.tick_us;
+    ErrorClock::now_cycles = Timing::cycles_now;
+    ErrorClock::cycles_per_us = SystemCoreClock / 1000000U;
     this->pkt.init();
 }
 

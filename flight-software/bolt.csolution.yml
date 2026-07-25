@@ -5,6 +5,8 @@ solution:
     - for-compiler: GCC
       CPP:
         - -std=gnu++23
+        - -fno-exceptions
+        - -fno-rtti
 
   packs:
     - pack: ARM::CMSIS@6.3.0
@@ -67,4 +69,4 @@ solution:
       for-context: +exp3-floaty-boi
     - project: test-nucleo-h753zi/test.cproject.yml
       for-context: +test-nucleo-h753zi
-  created-for: CMSIS-Toolbox@2.12.0
+  created-for: CMSIS-Toolbox@2.14.1

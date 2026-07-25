@@ -23,13 +23,17 @@ class TMP117 : public DeviceBase {
     /// DeviceBase.
     [[nodiscard]] Result<int16_t> read();
 
+    /// Raw device-ID register (self-test WHOAMI). Diagnostic only - does
+    /// not count toward the failure latch
+    [[nodiscard]] Result<uint16_t> read_device_id();
+
+    static constexpr uint16_t DEV_ID_MASK = 0x0FFFU;
+    static constexpr uint16_t DEV_ID_EXPECTED = 0x0117U;
+
   private:
     static constexpr uint8_t REG_TEMP = 0x00U;
     static constexpr uint8_t REG_CONFIG = 0x01U;
     static constexpr uint8_t REG_DEV_ID = 0x0FU;
-
-    static constexpr uint16_t DEV_ID_MASK = 0x0FFFU;
-    static constexpr uint16_t DEV_ID_EXPECTED = 0x0117U;
 
     static constexpr uint16_t CONFIG_CONTINUOUS = 0x0000U;
 

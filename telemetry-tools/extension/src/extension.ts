@@ -3,6 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { SessionManager } from "./session";
+import { RxsmMonitor } from "./rxsm";
+import { RxsmTree } from "./rxsm_tree";
 import { SessionTree, StatsTree, PacketsTree, UplinkTree, ExportTree } from "./trees";
 import { OverviewProvider, PacketRecord } from "./overview";
 import { PanelFeedProvider } from "./panel";
@@ -13,7 +15,9 @@ import { errorName, faultName, faultNode } from "./codes";
 export function activate(ctx: vscode.ExtensionContext): void {
   const log = vscode.window.createOutputChannel("Bolt", { log: true });
   const session = new SessionManager(log);
-  ctx.subscriptions.push(log, session);
+  // Ground equipment, own serial port + process: independent of the session
+  const rxsm = new RxsmMonitor(log, session);
+  ctx.subscriptions.push(log, session, rxsm);
 
   // --- sidebar views ---
   const feed = new PanelFeedProvider(ctx, session);
@@ -22,6 +26,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(
     vscode.window.registerTreeDataProvider("bolt.session", new SessionTree(session)),
     vscode.window.registerTreeDataProvider("bolt.health", new StatsTree(session)),
+    vscode.window.registerTreeDataProvider("bolt.rxsm", new RxsmTree(rxsm)),
     vscode.window.registerTreeDataProvider("bolt.packets", new PacketsTree(session)),
     vscode.window.registerTreeDataProvider("bolt.uplink", new UplinkTree(session)),
     vscode.window.registerTreeDataProvider("bolt.export", new ExportTree(session)),
@@ -73,11 +78,23 @@ export function activate(ctx: vscode.ExtensionContext): void {
   reg("bolt.connect", async () => {
     const port = await pickSerialPort(session);
     if (!port) return;
+    // Mirror of RxsmMonitor.connect: one adapter, one owner. Whoever is asked
+    // for the port takes it, and the other side lets go
+    if (rxsm.state.connected && rxsm.state.port === port) {
+      log.info(`session: taking ${port} - stopping the rxsm debug reader`);
+      rxsm.disconnect();
+    }
     await session.connect(port);
     overview.openLive();
   });
 
   reg("bolt.disconnect", () => session.disconnect());
+
+  // RXSM simulator debug port (ground equipment, separate cable + baud)
+  reg("bolt.rxsm.connect", () => rxsm.connect());
+  // Always asks, so a wrong remembered port is never a dead end
+  reg("bolt.rxsm.pickPort", () => rxsm.connect(undefined, true));
+  reg("bolt.rxsm.disconnect", () => rxsm.disconnect());
 
   reg("bolt.openCapture", async () => {
     session.ensureTmp();

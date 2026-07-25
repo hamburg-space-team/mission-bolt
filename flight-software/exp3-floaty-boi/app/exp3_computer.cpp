@@ -1,4 +1,5 @@
 #include "exp3_computer.hpp"
+#include "imu_self_test.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
 #include "wcet.hpp"
@@ -20,7 +21,11 @@ extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
     }
     if (hdr.StdId == CanProtocol::SYNC_ID && hdr.DLC >= CanProtocol::SYNC_DLC && instance_g != nullptr) {
         const auto tick = static_cast<uint16_t>(data[0]) | (static_cast<uint16_t>(data[1]) << 8U);
-        instance_g->notify_sync(tick);
+        // data[2] = mission mode, data[3] = self-test target; the DLC check
+        // above guarantees both are present
+        const auto mode = (data[2] == static_cast<uint8_t>(BootState::Mode::FLIGHT)) ? BootState::Mode::FLIGHT
+                                                                                    : BootState::Mode::TEST;
+        instance_g->notify_sync(tick, mode, data[3]);
     }
 }
 
@@ -110,4 +115,25 @@ void Exp3Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
         can.send(exp_can_id(), tx_buf.data(), *len);
         (void)storage.write(tx_buf.data(), *len);
     }
+}
+
+std::optional<PacketProtocol::TestResult> Exp3Computer::step_imu_whoami(NodeComputer& node, bool /*first*/,
+                                                                        uint32_t& data) noexcept {
+    return ImuSelfTest::whoami(static_cast<Exp3Computer&>(node).imu, data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+}
+
+std::optional<PacketProtocol::TestResult> Exp3Computer::step_imu_read(NodeComputer& node, bool /*first*/,
+                                                                      uint32_t& data) noexcept {
+    return ImuSelfTest::read(static_cast<Exp3Computer&>(node).imu, data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+}
+
+std::span<const SelfTest::Step> Exp3Computer::self_test_steps() const noexcept {
+    static constexpr std::array<SelfTest::Step, 5U> STEPS = {{
+        {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
+        {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
+        {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
+        {&Exp3Computer::step_imu_whoami}, // 3: ICM-42686 WHO_AM_I
+        {&Exp3Computer::step_imu_read},   // 4: ICM-42686 accel/gyro Z
+    }};
+    return STEPS;
 }

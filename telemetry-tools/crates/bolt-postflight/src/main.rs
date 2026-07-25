@@ -4,7 +4,7 @@ mod manifest;
 use std::io::Write;
 
 use anyhow::{Context, Result};
-use bolt_codec::{decode_payload, normalize, FrameEvent, Framer, MissionSpec, PayloadType};
+use bolt_codec::{decode_payload, frame_source, normalize, FrameEvent, Framer, MissionSpec, PayloadType};
 use clap::Parser;
 
 use hdf5_writer::HdfCollector;
@@ -121,8 +121,9 @@ fn main() -> Result<()> {
                 };
                 let sample = normalize(&payload, spec);
                 let name = PayloadType::from_u8(f.header.ty).map_or("unknown", PayloadType::name);
-                let source =
-                    PayloadType::from_u8(f.header.ty).map_or("system", PayloadType::source);
+                // Not PayloadType::source(): the generic types carry their real
+                // origin in the payload (see frame_source)
+                let source = frame_source(f.header.ty, &sample);
                 mb.add_frame(
                     f.header.ty,
                     f.header.tick,

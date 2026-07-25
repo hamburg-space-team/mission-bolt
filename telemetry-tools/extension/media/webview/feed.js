@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, u as useMessages, p as post, c as createRoot } from "./chunk-DHH7KV4w.js";
+import { r as reactExports, j as jsxRuntimeExports, u as useMessages, p as post, c as createRoot } from "./chunk-BMq7aTlC.js";
 import { f as fmtValue } from "./chunk-CG4_lz18.js";
 const num = (v) => v === "" ? null : Number(v);
 function FilterBar(p) {
@@ -151,21 +151,47 @@ function faultNode(code) {
 function gapNode(reason) {
   return GAP_NODE_HINT[reason] ?? "?";
 }
+const emptyRange = { tMin: null, tMax: null, kMin: null, kMax: null };
+function nodeOf(r) {
+  const node = r.sample?.node;
+  if (node && node !== "unknown") return node;
+  return r.source;
+}
+function matches(r, filter, range) {
+  if (range.tMin != null && r.timestamp_us < range.tMin) return false;
+  if (range.tMax != null && r.timestamp_us > range.tMax) return false;
+  if (range.kMin != null && r.tick < range.kMin) return false;
+  if (range.kMax != null && r.tick > range.kMax) return false;
+  if (!filter) return true;
+  if (filter === "__fault") return r.name === "fault";
+  if (filter === "__crc") return !r.crc_ok;
+  if (filter === "__gap") return r.name === "gap_marker";
+  if (filter === "__suspect") return r.suspect;
+  if (filter.startsWith("__src:")) return nodeOf(r) === filter.slice(6);
+  return r.name === filter;
+}
 function rowNode(r) {
   const s = r.sample;
-  const node = s.node;
-  if (r.name === "fault") {
-    if (node && node !== "unknown") return node;
-    return `${faultNode(Number(s.fault_code))} (inferred)`;
-  }
-  if (r.name === "gap_marker") {
-    if (node && node !== "unknown") return node;
-    return gapNode(String(s.reason ?? ""));
-  }
-  return r.source;
+  const node = nodeOf(r);
+  if (node !== "system") return node;
+  if (r.name === "fault") return `${faultNode(Number(s.fault_code))} (inferred)`;
+  if (r.name === "gap_marker") return gapNode(String(s.reason ?? ""));
+  return node;
 }
 function summary(r) {
   const s = r.sample;
+  switch (String(s.kind)) {
+    case "timing": {
+      const tick = Number(s.tick_us);
+      const over = tick > 4e4 ? " ⚠ OVER 40 ms" : "";
+      return `tick ${(tick / 1e3).toFixed(1)} ms${over} · read ${s.read_us} · cfg ${s.cfg_us} · drive ${s.drive_us} · send ${s.send_us} · store ${s.store_us} µs`;
+    }
+    case "test": {
+      const done = s.last ? " · run complete" : "";
+      const data = Number(s.data);
+      return `self-test step ${s.test_id}: ${s.result_name} · data 0x${data.toString(16).toUpperCase()}${done}`;
+    }
+  }
   switch (r.name) {
     case "fault":
       return `${faultName(Number(s.fault_code))} · ${errorName(Number(s.error_code))} · line ${s.line}`;
@@ -173,11 +199,6 @@ function summary(r) {
       return `gap tick ${s.first_missing_tick} ×${s.count} · ${s.reason}`;
     case "cmd_ack":
       return `${s.command} (seq ${s.seq}) · ${s.result}`;
-    case "timing": {
-      const tick = Number(s.tick_us);
-      const over = tick > 4e4 ? " ⚠ OVER 40 ms" : "";
-      return `tick ${(tick / 1e3).toFixed(1)} ms${over} · read ${s.read_us} · cfg ${s.cfg_us} · drive ${s.drive_us} · send ${s.send_us} · store ${s.store_us} µs`;
-    }
     default: {
       const keys = Object.keys(s).filter((k) => k !== "kind");
       return keys.slice(0, 4).map((k) => `${k}=${fmtValue(s[k])}`).join("  ");
@@ -208,11 +229,10 @@ function FeedTable({ rows, onShowType }) {
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "valid" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "summary" })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: rows.map((r, i) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: rows.map((r) => {
       const bad = !r.crc_ok || r.suspect;
-      const key = `${r.timestamp_us}-${r.seq ?? i}`;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(reactExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: bad ? "bad" : "", onClick: () => setOpen(open === i ? null : i), style: { cursor: "pointer" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: bad ? "bad" : "", onClick: () => setOpen(open === r.uid ? null : r.uid), style: { cursor: "pointer" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.seq ?? "" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.tick }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.timestamp_us }),
@@ -225,27 +245,15 @@ function FeedTable({ rows, onShowType }) {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: r.suspect ? "⚠" : "✓" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { children: summary(r) })
         ] }),
-        open === i && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, style: { whiteSpace: "pre-wrap", fontSize: 11, background: "var(--vscode-editorWidget-background)" }, children: r.name === "fault" ? faultTrace(r) : JSON.stringify(r.sample, null, 2) }) })
-      ] }, key);
+        open === r.uid && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, style: { whiteSpace: "pre-wrap", fontSize: 11, background: "var(--vscode-editorWidget-background)" }, children: r.name === "fault" ? faultTrace(r) : JSON.stringify(r.sample, null, 2) }) })
+      ] }, r.uid);
     }) })
   ] });
 }
-const emptyRange = { tMin: null, tMax: null, kMin: null, kMax: null };
-function matches(r, filter, range) {
-  if (range.tMin != null && r.timestamp_us < range.tMin) return false;
-  if (range.tMax != null && r.timestamp_us > range.tMax) return false;
-  if (range.kMin != null && r.tick < range.kMin) return false;
-  if (range.kMax != null && r.tick > range.kMax) return false;
-  if (!filter) return true;
-  if (filter === "__fault") return r.name === "fault";
-  if (filter === "__crc") return !r.crc_ok;
-  if (filter === "__gap") return r.name === "gap_marker";
-  if (filter === "__suspect") return r.suspect;
-  if (filter.startsWith("__src:")) return r.source === filter.slice(6);
-  return r.name === filter;
-}
 const PAGE = 100;
 const CAP = 1e5;
+const FLUSH_MS = 100;
+const BACKLOG_MS = 250;
 function Feed() {
   const [rows, setRows] = reactExports.useState([]);
   const [counts, setCounts] = reactExports.useState({});
@@ -254,46 +262,79 @@ function Feed() {
   const [paused, setPaused] = reactExports.useState(false);
   const [page, setPage] = reactExports.useState(0);
   const [live, setLive] = reactExports.useState(true);
+  const [backlog, setBacklog] = reactExports.useState(0);
+  const pending = reactExports.useRef([]);
+  const nextUid = reactExports.useRef(0);
+  const following = !paused && page === 0;
   useMessages((m) => {
     switch (m.type) {
       case "frame":
-        setLive(true);
-        setRows((prev) => {
-          const next = prev.length >= CAP ? prev.slice(prev.length - CAP + 1) : prev.slice();
-          next.push(m.frame);
-          return next;
-        });
-        if (!paused) setPage(0);
+        pending.current.push({ ...m.frame, uid: nextUid.current++ });
+        if (pending.current.length > CAP) {
+          pending.current.splice(0, pending.current.length - CAP);
+        }
         break;
       case "counts":
         setCounts(m.counts);
         break;
       case "load":
+        pending.current = [];
         setLive(false);
-        setRows(m.records.slice().reverse());
+        setRows(m.records.slice().reverse().map((r) => ({ ...r, uid: nextUid.current++ })));
         setPage(0);
         break;
       case "reset":
+        pending.current = [];
         setRows([]);
         setPage(0);
         break;
     }
   });
+  reactExports.useEffect(() => {
+    if (!following) return;
+    const id = setInterval(() => {
+      if (pending.current.length === 0) return;
+      const batch = pending.current;
+      pending.current = [];
+      setLive(true);
+      setRows((prev) => {
+        const next = prev.concat(batch);
+        return next.length > CAP ? next.slice(next.length - CAP) : next;
+      });
+    }, FLUSH_MS);
+    return () => clearInterval(id);
+  }, [following]);
+  reactExports.useEffect(() => {
+    if (following) {
+      setBacklog(0);
+      return;
+    }
+    const id = setInterval(() => setBacklog(pending.current.length), BACKLOG_MS);
+    return () => clearInterval(id);
+  }, [following]);
   const filtered = reactExports.useMemo(() => rows.filter((r) => matches(r, filter, range)), [rows, filter, range]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const clamped = Math.min(page, pages - 1);
-  const view = [];
-  for (let i = 0; i < PAGE; i++) {
-    const idx = filtered.length - 1 - clamped * PAGE - i;
-    if (idx < 0) break;
-    view.push(filtered[idx]);
-  }
+  const view = reactExports.useMemo(() => {
+    const out = [];
+    for (let i = 0; i < PAGE; i++) {
+      const idx = filtered.length - 1 - clamped * PAGE - i;
+      if (idx < 0) break;
+      out.push(filtered[idx]);
+    }
+    return out;
+  }, [filtered, clamped]);
   const types = reactExports.useMemo(() => {
     const set = new Set(Object.keys(counts));
-    for (const r of rows) set.add(r.name);
+    for (const r of rows) if (r.name) set.add(r.name);
     return [...set].sort();
   }, [counts, rows]);
-  const info = `p ${clamped + 1}/${pages} · ${filtered.length.toLocaleString()}${live ? " live" : ""}`;
+  const state = following ? live ? " · live" : "" : backlog > 0 ? ` · frozen +${backlog.toLocaleString()}` : " · frozen";
+  const info = `p ${clamped + 1}/${pages} · ${filtered.length.toLocaleString()}${state}`;
+  const resume = () => {
+    setPaused(false);
+    setPage(0);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       FilterBar,
@@ -309,11 +350,9 @@ function Feed() {
           setPage(0);
         },
         paused,
-        onPause: () => {
-          setPaused((p) => !p);
-          setPage(0);
-        },
+        onPause: () => paused ? resume() : setPaused(true),
         onReset: () => {
+          pending.current = [];
           setRows([]);
           setPage(0);
         },
@@ -327,5 +366,40 @@ function Feed() {
     /* @__PURE__ */ jsxRuntimeExports.jsx(FeedTable, { rows: view, onShowType: (name) => post({ type: "showType", name }) })
   ] });
 }
-createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsxRuntimeExports.jsx(Feed, {}));
+const errStyle = { whiteSpace: "pre-wrap", color: "var(--vscode-errorForeground)", fontSize: 11 };
+class ErrorBoundary extends reactExports.Component {
+  constructor() {
+    super(...arguments);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error("[bolt/feed] render failed:", error, info.componentStack);
+  }
+  render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { style: errStyle, children: `${error.name}: ${error.message}
+
+${error.stack ?? ""}` });
+  }
+}
+const root = document.getElementById("root");
+const showFatal = (label, e) => {
+  console.error(`[bolt/feed] ${label}:`, e);
+  const detail = e instanceof Error ? `${e.name}: ${e.message}
+
+${e.stack ?? ""}` : String(e);
+  root.insertAdjacentHTML("afterbegin", `<pre style="white-space:pre-wrap;color:var(--vscode-errorForeground);font-size:11px"></pre>`);
+  root.firstChild.textContent = `${label}
+
+${detail}`;
+};
+window.addEventListener("error", (e) => showFatal("uncaught error", e.error ?? e.message));
+window.addEventListener("unhandledrejection", (e) => showFatal("unhandled rejection", e.reason));
+createRoot(root).render(
+  /* @__PURE__ */ jsxRuntimeExports.jsx(ErrorBoundary, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Feed, {}) })
+);
 //# sourceMappingURL=feed.js.map
