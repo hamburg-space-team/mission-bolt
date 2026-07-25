@@ -1,5 +1,7 @@
 #pragma once
 
+#include "boot_state.hpp"
+
 #include <cstdint>
 #include <span>
 
@@ -14,8 +16,10 @@ class BtcBoard {
     BtcBoard(BtcBoard&&) = delete;
     BtcBoard& operator=(BtcBoard&&) = delete;
 
-    /// Broadcast one 25 Hz SYNC frame carrying the bus-wide tick
-    virtual void send_sync(uint16_t tick) noexcept = 0;
+    /// Broadcast one 25 Hz SYNC frame: bus-wide tick, mission mode and
+    /// self-test target (NodeId or CanProtocol::SELF_TEST_NONE). SYNC is the
+    /// only frame the EXPs can receive
+    virtual void send_sync(uint16_t tick, BootState::Mode mode, uint8_t test_target) noexcept = 0;
 
     /// Broadcast the STORAGE_START frame
     virtual void broadcast_storage_start() noexcept = 0;

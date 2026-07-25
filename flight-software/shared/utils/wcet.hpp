@@ -47,22 +47,24 @@ namespace Wcet {
     class Scope {
       public:
         Scope(Timing& table, Point point) noexcept
-            : table(table), point(point), start(ErrorClock::now_us != nullptr ? ErrorClock::now_us() : 0U) {
+            : table(table), point(point), start(ErrorClock::now_cycles != nullptr ? ErrorClock::now_cycles() : 0U) {
         }
         Scope(const Scope&) = delete;
         Scope& operator=(const Scope&) = delete;
         Scope(Scope&&) = delete;
         Scope& operator=(Scope&&) = delete;
         ~Scope() noexcept {
-            if (ErrorClock::now_us != nullptr) {
-                this->table.record(this->point, ErrorClock::now_us() - this->start);
+            // cycle domain, converted last: us_now() differences are wrong
+            // across the counter wrap (every 53.7 s)
+            if (ErrorClock::now_cycles != nullptr) {
+                this->table.record(this->point, ErrorClock::us_between(this->start, ErrorClock::now_cycles()));
             }
         }
 
       private:
         Timing& table; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
         Point point;
-        uint32_t start;
+        uint32_t start; // raw cycles, not us
     };
 
 } // namespace Wcet

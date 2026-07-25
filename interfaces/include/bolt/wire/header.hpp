@@ -12,6 +12,7 @@ namespace PacketProtocol {
     constexpr uint16_t CRC_SIZE = 2U;
     constexpr uint16_t MAX_PAYLOAD = MAX_PACKET_SIZE - HEADER_SIZE - CRC_SIZE;
     constexpr uint8_t SPECTRUM_CHANNELS = 18U;
+    static constexpr uint8_t HEADER_TYPE_OFFSET = 3U;
     static constexpr uint8_t HEADER_LENGTH_OFFSET = 5U;
 
     /// Downlink packet header
@@ -24,7 +25,7 @@ namespace PacketProtocol {
         uint8_t sequence;      ///< per-type counter, wraps at 255
         uint8_t length;        ///< payload length in bytes
         uint16_t tick;         ///< 25 Hz tick since LO
-        uint32_t timestamp_us; ///< microseconds since LO
+        uint32_t timestamp_us; ///< us stamp; wraps every 2^32 cycles (~53.7 s at 80 MHz) - tick is the timeline
     };
 
     static_assert(sizeof(PacketHeader) == HEADER_SIZE, "PacketHeader size mismatch");

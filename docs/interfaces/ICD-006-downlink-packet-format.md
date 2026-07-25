@@ -95,7 +95,10 @@ caught by the CRC at the end of the candidate.
   drops inside a stream.
 - `tick`: 25 Hz counter. T- before LO, T+ after.
 - `timestamp_us`: tick-start us from each controller's DWT cycle
-  counter.
+  counter. **Wraps every 2^32 CPU cycles (~53.7 s at 80 MHz)** and goes
+  backwards at the wrap - this is expected. `tick` is the authoritative
+  timeline; the stamp is for tracing nearby events only, and differences
+  across a wrap are meaningless.
 
 System packets sent before LO (`BOOT`, early `GAP_MARKER`) use
 `tick = 0`, `timestamp_us = 0`.

@@ -21,6 +21,14 @@ class ImuSupervisor {
         return imu.read_sample();
     }
 
+    // diagnostic surface for ImuSelfTest, same shape as the raw driver
+    [[nodiscard]] auto read_who_am_i() noexcept {
+        return imu.read_who_am_i();
+    }
+    [[nodiscard]] bool is_failed() const noexcept {
+        return imu.is_failed();
+    }
+
   private:
     const Platform& platform; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     CmsisI2CBus& i2c;         // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)

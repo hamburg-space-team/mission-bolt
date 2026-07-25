@@ -10,9 +10,11 @@ ExpComputer::ExpComputer(const Platform& platform, CmsisI2CBus& i2c, Store& stor
     : NodeComputer(platform, i2c, storage), can(can) {
 }
 
-void ExpComputer::notify_sync(uint16_t tick) noexcept {
+void ExpComputer::notify_sync(uint16_t tick, BootState::Mode mode_in, uint8_t test_target_in) noexcept {
     this->sync_tick = tick;
-    this->sync_pending = true;
+    this->sync_mode = mode_in;
+    this->sync_test_target = test_target_in;
+    this->sync_pending = true; // publish last: the reader tests this flag first
 }
 
 bool ExpComputer::poll_sync(uint16_t& tick_out) noexcept {
@@ -73,6 +75,12 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     uint16_t can_tick = 0U;
 
     if (poll_sync(can_tick)) {
+        // the BTC owns the mode; a transition resets the experiment
+        if (this->mode != this->sync_mode) {
+            this->mode = this->sync_mode;
+            on_experiment_reset();
+        }
+        this->test_target = this->sync_test_target;
         this->last_sync_ms = now_ms;
         this->leds.can_tick(can_tick);
 
@@ -105,12 +113,70 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     send_timing_packet(can_tick, tick_start_us);
     BOLT_TIME(this->timings, TICK);
 
-    on_experiment_tick(can_tick, tick_start_us);
+    dispatch_mode_tick(can_tick, tick_start_us);
 
     BOLT_TIME(this->timings, SEND);
     send_env_packet(can_tick, tick_start_us);
     if ((this->local_tick % STATUS_INTERVAL) == 0U) {
         send_status_packet(can_tick, tick_start_us);
+    }
+}
+
+void ExpComputer::dispatch_mode_tick(uint16_t can_tick, uint32_t timestamp_us) {
+    // In autonomous fallback `mode` keeps its last value (cold start: TEST) -
+    // an EXP that never hears the BTC must never decide it is flying
+    if (this->mode == BootState::Mode::FLIGHT) {
+        on_experiment_tick(can_tick, timestamp_us);
+    } else {
+        service_self_test(can_tick, timestamp_us);
+        on_test_tick(can_tick, timestamp_us);
+    }
+}
+
+void ExpComputer::service_self_test(uint16_t can_tick, uint32_t timestamp_us) {
+    if (this->test_target != static_cast<uint8_t>(source_node())) {
+        // not our turn: drop report + half-finished run, so the next turn
+        // starts at step 0; the hook parks what the aborted step left engaged
+        this->last_report.reset();
+        if (this->tester.active()) {
+            this->tester.abort();
+            on_self_test_abort();
+        }
+        return;
+    }
+
+    // first tick of our turn; last_report outlives the runner on the final step
+    if (!this->tester.active() && !this->last_report) {
+        this->tester.start(self_test_steps());
+    }
+
+    if (this->tester.active()) {
+        if (const auto report = this->tester.step()) {
+            this->last_report = report;
+            send_test_packet(can_tick, timestamp_us, *report);
+        }
+    } else if (this->last_report) {
+        // run done but the turn not moved on yet - re-send so a dropped
+        // upstream frame self-heals within a tick
+        send_test_packet(can_tick, timestamp_us, *this->last_report);
+    }
+}
+
+void ExpComputer::send_test_packet(uint16_t can_tick, uint32_t timestamp_us, const SelfTest::Report& report) {
+    using namespace PacketProtocol;
+
+    PayloadTest p{};
+    p.test_id = report.test_id;
+    p.result = report.result;
+    p.last = report.last ? 1U : 0U;
+    p.data = report.data;
+
+    // normal EXP data path: the BTC forwards to ground and reads `last` off
+    // the same frame
+    auto built = this->pkt.build(this->tx_buf.data(), exp_test_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &p,
+                                 static_cast<uint8_t>(sizeof(p)));
+    if (built) {
+        this->can.send(exp_can_id(), this->tx_buf.data(), *built);
     }
 }
 
@@ -121,8 +187,8 @@ void ExpComputer::send_timing_packet(uint16_t can_tick, uint32_t timestamp_us) {
 }
 
 void ExpComputer::send_timing(uint16_t can_tick, uint32_t timestamp_us) {
-    if (auto len = this->pkt.build_timing(this->tx_buf.data(), PacketProtocol::Tick{can_tick},
-                                          PacketProtocol::TimestampUs{timestamp_us}, source_node(), this->timings)) {
+    if (auto len = this->pkt.build_timing(this->tx_buf.data(), exp_timing_type(), PacketProtocol::Tick{can_tick},
+                                          PacketProtocol::TimestampUs{timestamp_us}, this->timings)) {
         this->can.send(exp_can_id(), this->tx_buf.data(), *len);
         (void)this->storage.write(this->tx_buf.data(), *len);
     }

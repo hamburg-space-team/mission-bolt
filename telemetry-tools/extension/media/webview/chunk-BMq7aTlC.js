@@ -6970,8 +6970,10 @@ function saveState(state) {
   vscode.setState(state);
 }
 function useMessages(handler) {
+  const latest = reactExports.useRef(handler);
+  latest.current = handler;
   reactExports.useEffect(() => {
-    const onMessage = (e) => handler(e.data);
+    const onMessage = (e) => latest.current(e.data);
     window.addEventListener("message", onMessage);
     post({ type: "ready" });
     return () => window.removeEventListener("message", onMessage);
@@ -6985,4 +6987,4 @@ export {
   saveState as s,
   useMessages as u
 };
-//# sourceMappingURL=chunk-DHH7KV4w.js.map
+//# sourceMappingURL=chunk-BMq7aTlC.js.map

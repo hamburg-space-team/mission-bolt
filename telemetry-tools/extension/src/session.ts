@@ -83,7 +83,9 @@ export class SessionManager implements vscode.Disposable {
 
   constructor(private readonly log: vscode.LogOutputChannel) {}
 
-  private bin(name: string): string {
+  // Public: the RXSM debug monitor spawns the same bridge binary and must not
+  // duplicate this search (workspace subfolders + debug/release fallback)
+  bin(name: string): string {
     const cfg = vscode.workspace.getConfiguration("bolt");
     const dir = cfg.get<string>("binDir", "telemetry-tools/target/debug");
     if (path.isAbsolute(dir)) {

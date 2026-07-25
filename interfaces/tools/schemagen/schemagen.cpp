@@ -40,7 +40,13 @@ constexpr auto PAYLOADS = std::array{
     ^^PacketProtocol::PayloadExp2Ber,      ^^PacketProtocol::PayloadExp3StackA, ^^PacketProtocol::PayloadExp3StackB,
     ^^PacketProtocol::PayloadExp3Status,   ^^PacketProtocol::PayloadExp3Imu,    ^^PacketProtocol::PayloadGapMarker,
     ^^PacketProtocol::PayloadFault,        ^^PacketProtocol::PayloadBoot,       ^^PacketProtocol::PayloadCmdAck,
-    ^^PacketProtocol::PayloadTiming,
+    // Per-node timing: list the real structs, not the PayloadTiming alias -
+    // reflecting an alias yields no PACKET annotation
+    ^^PacketProtocol::PayloadBtcTiming,    ^^PacketProtocol::PayloadExp1Timing, ^^PacketProtocol::PayloadExp2Timing,
+    ^^PacketProtocol::PayloadExp3Timing,
+    // Per-node self-test step results (aliases carry no PACKET annotation)
+    ^^PacketProtocol::PayloadBtcTest,      ^^PacketProtocol::PayloadExp1Test,   ^^PacketProtocol::PayloadExp2Test,
+    ^^PacketProtocol::PayloadExp3Test,
 };
 
 // Pull the WIRE(...) annotation off a member, or a default if it has none.
@@ -241,7 +247,6 @@ void emit_json() {
 // Human-readable interface control doc (same single source, so it never drifts).
 void emit_icd(const char* generated_at) {
     constexpr int OVERHEAD = PacketProtocol::HEADER_SIZE + PacketProtocol::CRC_SIZE;
-    constexpr int LINK_BAUD = 38400; // RXSM downlink
 
     std::printf("# ICD-007: Downlink packet payloads\n\n");
     std::printf("## Document Information\n\n");
@@ -295,24 +300,19 @@ void emit_icd(const char* generated_at) {
                 "trailing %d B (the only big-endian field in the frame).\n",
                 (int)PacketProtocol::CRC_SIZE);
 
-    // Wire types + a bandwidth budget (size x rate). Rates are nominal.
-    std::printf("\n## Wire types & bandwidth budget\n\n");
-    std::printf("| Type | Byte | Node | Rate Hz | Payload B | Wire B | kbit/s | Description |\n");
-    std::printf("|---|--:|---|--:|--:|--:|--:|---|\n");
-    double total_bps = 0.0;
+    // Wire types. No bandwidth column: the rates are being reworked, a
+    // computed budget here would only document a stale plan
+    std::printf("\n## Wire types\n\n");
+    std::printf("| Type | Byte | Node | Rate Hz | Payload B | Wire B | Description |\n");
+    std::printf("|---|--:|---|--:|--:|--:|---|\n");
     template for (constexpr sm::info P : PAYLOADS) {
         constexpr std::string_view rname = std::string_view(sm::identifier_of(P)).substr(7);
         constexpr PacketProtocol::packet pk = packet_of(P);
         constexpr std::size_t psize = sm::size_of(P);
         constexpr std::size_t wire = psize + OVERHEAD;
-        const double bps = static_cast<double>(wire) * 8.0 * pk.rate_hz;
-        total_bps += bps;
-        std::printf("| %.*s | 0x%02X | %s | %d | %zu | %zu | %.2f | %s |\n", (int)rname.size(), rname.data(),
-                    static_cast<int>(pk.type), pk.node, pk.rate_hz, psize, wire, bps / 1000.0, pk.desc);
+        std::printf("| %.*s | 0x%02X | %s | %d | %zu | %zu | %s |\n", (int)rname.size(), rname.data(),
+                    static_cast<int>(pk.type), pk.node, pk.rate_hz, psize, wire, pk.desc);
     }
-    std::printf("\n**Total: %.1f kbit/s of %d kbit/s downlink (%.0f%%).** Rates nominal; event-driven types (rate 0) "
-                "excluded.\n",
-                total_bps / 1000.0, LINK_BAUD / 1000, total_bps / LINK_BAUD * 100.0);
 
     std::printf("\n## Payloads\n");
     template for (constexpr sm::info P : PAYLOADS) {

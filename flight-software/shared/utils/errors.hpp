@@ -128,6 +128,19 @@ struct ErrorClock {
     using clock_fn = uint32_t (*)();
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static inline clock_fn now_us = nullptr;
+
+    /// Raw cycle counter for interval measurements (wraps at 2^32)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    static inline clock_fn now_cycles = nullptr;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    static inline uint32_t cycles_per_us = 1U;
+
+    /// us between two now_cycles() samples. Subtract in the cycle domain -
+    /// the divided us clock wraps at 2^32/cycles_per_us, NOT a power of two,
+    /// so differences of us_now() values are wrong across a wrap
+    static uint32_t us_between(uint32_t cyc_start, uint32_t cyc_end) noexcept {
+        return (cyc_end - cyc_start) / cycles_per_us;
+    }
 };
 
 /// The error value inside every Result<T>: what failed, where it was

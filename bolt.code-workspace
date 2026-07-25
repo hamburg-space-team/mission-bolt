@@ -81,6 +81,7 @@
         "memory-inspector.groupings.groupsPerRow": "Autofit",
         "memory-inspector.groupings.MAUsPerGroup": 4,
         "memory-inspector.scrollingBehavior": "Auto-Append",
+        "bolt.rxsmDebugPort": "/dev/ttyUSB0",
     },
     "extensions": {
         "recommendations": [

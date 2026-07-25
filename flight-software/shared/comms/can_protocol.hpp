@@ -11,10 +11,19 @@
 /// @ingroup comms
 namespace CanProtocol {
 
-    /// SYNC frame: BTC -> EXPs, every 40ms. Payload is 2 bytes,
-    /// little-endian uint16_t tick counter.
+    /// SYNC frame: BTC -> EXPs, every 40ms. Payload is 4 bytes:
+    ///   [0..1] little-endian uint16_t tick counter
+    ///   [2]    BootState::Mode (0 = TEST, 1 = FLIGHT)
+    ///   [3]    self-test target: NodeId whose turn it is, or SELF_TEST_NONE
+    ///
+    /// Mode and target ride every SYNC as levels, not events - an EXP that
+    /// misses a frame converges within one tick
     constexpr uint32_t SYNC_ID = 0x001U;
-    constexpr uint8_t SYNC_DLC = 2U;
+    constexpr uint8_t SYNC_DLC = 4U;
+
+    /// SYNC byte [3] when no self-test run is in progress (not a NodeId -
+    /// 0xFF already means "origin unknown")
+    constexpr uint8_t SELF_TEST_NONE = 0xFEU;
 
     constexpr uint32_t STORAGE_START_ID = 0x002U;
     constexpr uint8_t STORAGE_START_DLC = 0U;

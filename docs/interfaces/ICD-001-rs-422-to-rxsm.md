@@ -17,6 +17,7 @@
 |---------|------|--------|---------|
 | 0.1 | 2026-05-15 | Max | Initial draft from CDR section 4.3 |
 | 1.0 | 2026-05-25 | Max | Approved for CDR |
+| 1.1 | 2026-07-25 | Max | Uplink telecommands documented (now implemented; was "reserved") |
 
 ## Purpose
 
@@ -38,6 +39,7 @@ This document specifies:
 - The REXUS connector pinout used by THHOR-BOLT
 - The discrete LO, SODS, and SOE signal handling
 - Downlink framing on the byte-stream link
+- Uplink telecommand framing and acknowledgement
 - Bandwidth budget and error handling
 
 This document does not cover:
@@ -52,7 +54,7 @@ This document does not cover:
 
 | Component | Hardware | Role |
 |-----------|----------|------|
-| BTC | STM32L476RGT6 | Transmits downlink; samples LO/SODS/SOE; receives uplink (reserved) |
+| BTC | STM32L476RGT6 | Transmits downlink; samples LO/SODS/SOE; receives and executes uplink telecommands |
 | RXSM | REXUS Service Module | Forwards downlink to ground via PCM; sources LO/SODS/SOE |
 
 ## Physical Layer
@@ -68,8 +70,9 @@ This document does not cover:
 | Direction | Differential pair per direction | |
 
 Downlink uses **EXP out+/EXP out-** (RXSM pins 6/7). The uplink
-pair **EXP in+/EXP in-** (pins 13/14) is wired but not currently
-used; the BTC ignores received bytes.
+pair **EXP in+/EXP in-** (pins 13/14) carries ground telecommands
+to the BTC, framed like the downlink (see the Uplink Telecommands
+section below).
 
 ### REXUS Connector and Pinout
 
@@ -87,8 +90,8 @@ used; the BTC ignores received bytes.
 | 10 | n.c. | -- | Not connected |
 | 11 | n.c. | -- | Not connected |
 | 12 | Charging Return | -- | Not connected |
-| 13 | EXP in+ | RXSM -> BTC | Uplink, non-inverted (reserved) |
-| 14 | EXP in- | RXSM -> BTC | Uplink, inverted (reserved) |
+| 13 | EXP in+ | RXSM -> BTC | Uplink, non-inverted |
+| 14 | EXP in- | RXSM -> BTC | Uplink, inverted |
 | 15 | 28 V Ground | -- | Ground |
 
 ### Discrete Signals
@@ -126,6 +129,31 @@ frame length is 14-64 bytes.
 
 The receiver re-syncs by scanning for the sync word and verifying
 the CRC. Bytes between frames are silence (idle line).
+
+### Uplink Telecommands
+
+The uplink direction uses the same frame format as the downlink
+(sync word, 12-byte header, CRC-16/CCITT): the header type byte
+carries the `CommandOpcode`, the sequence byte identifies the
+command instance, and the payload is empty. The command set and the
+`CMD_ACK` reply payload are defined in
+[ICD-007](ICD-007-packet-payloads.md).
+
+The BTC drains the uplink UART at the start of every tick and feeds
+the bytes to a resynchronising parser: line noise, a truncated frame,
+or a corrupt length field only cause a re-hunt for the sync word and
+never wedge the parser. Every frame that passes the structural checks
+and the CRC is answered with a `CMD_ACK` downlink packet echoing
+opcode and sequence number - `ACCEPTED` for a known opcode,
+`UNKNOWN_OPCODE` (with no action taken) otherwise. Frames that fail
+the CRC are dropped without an acknowledgement, since none of their
+content can be trusted.
+
+Mode guards are enforced on board and do not change the ACK: e.g.
+`STOP_EXPERIMENT` is ignored once LO has latched, and
+`FULL_SYSTEM_TEST` only starts a run in TEST mode. The RXSM stops
+forwarding the uplink at lift-off; the LO latch removes any
+dependence on that behaviour.
 
 ### Timing Requirements
 
@@ -177,8 +205,9 @@ counts them for monitoring.
 
 ### Recovery from Corruption
 
-No application-layer retransmission. The downlink is unidirectional
-from the BTC's perspective. The science survives on SD per I-7
+No application-layer retransmission. The uplink carries telecommands
+only, never acknowledgements for downlink data. The science survives
+on SD per I-7
 ([ADR-009](../decisions/ADR-009-raw-sensor-data-to-ground.md)).
 
 ### Missing Signals

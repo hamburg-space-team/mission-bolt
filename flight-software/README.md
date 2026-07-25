@@ -72,8 +72,9 @@ Output lands in `build/doxygen/html/`. Details:
 
 ## Toolchain
 
-- C++20 (`-std=gnu++20`), `arm-none-eabi-gcc` 13.3.1
-- CMSIS-Toolbox 2.12.0
+- C++23 (`-std=gnu++23`, `-fno-exceptions -fno-rtti`), `arm-none-eabi-gcc`
+- CMSIS-Toolbox - both pinned via `ARM_GNU_VERSION` / `CMSIS_TOOLBOX_VERSION`
+  in [.devcontainer/Dockerfile](../.devcontainer/Dockerfile)
 - STM32CubeMX for HAL and peripheral init
 - LittleFS v2.11.3 for SD
 - Catch2 v3.7.1 for host tests

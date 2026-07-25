@@ -23,7 +23,7 @@ class TelemetryEmitter {
                       PacketProtocol::CommandAckStatus status) noexcept;
     void emit_fault(PacketProtocol::Tick tick, uint8_t fault_code, const Error& err,
                     PacketProtocol::NodeId node) noexcept;
-    void emit_timing(PacketProtocol::Tick tick, PacketProtocol::TimestampUs ts_us, PacketProtocol::NodeId node,
+    void emit_timing(PacketProtocol::Tick tick, PacketProtocol::TimestampUs ts_us, PacketProtocol::PayloadType type,
                      const Wcet::Timing& timings) noexcept;
 
     /// Generic path for the fixed-layout BTC payloads (env / status / imu).
@@ -34,8 +34,8 @@ class TelemetryEmitter {
     //  on a successful build, send the framed packet
     void publish(const Result<uint8_t>& built) noexcept;
 
-    // Disable the BTC downlink for testing. The SD write is never gated.
-    static constexpr bool DOWNLINK_ENABLED = false;
+    // Disable the BTC downlink for testing
+    static constexpr bool DOWNLINK_ENABLED = true;
 
     PacketProtocol::PacketBuilder& pkt; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
     uint8_t* tx_buf;

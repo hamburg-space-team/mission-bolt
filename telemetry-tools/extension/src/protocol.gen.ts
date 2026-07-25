@@ -4,6 +4,7 @@ export const UPLINK_COMMANDS = [
   { id: "reset_tick", label: "Reset Tick", dangerous: true, desc: "reset the 25 Hz tick counter to 0" },
   { id: "start_experiment", label: "Start Experiment", dangerous: false, desc: "arm the experiment sequence" },
   { id: "activate_camera", label: "Activate Camera", dangerous: false, desc: "power the onboard camera" },
+  { id: "stop_experiment", label: "Stop Experiment", dangerous: true, desc: "stop the experiment sequence. Falls back to test sequence" },
   { id: "full_system_test", label: "Full System Test", dangerous: true, desc: "run the built-in self test" },
 ] as const;
 
@@ -27,5 +28,12 @@ export const PACKET_WIRE_BYTES: Record<string, number> = {
   "fault": 27,
   "boot": 18,
   "cmd_ack": 17,
-  "timing": 27,
+  "btc_timing": 26,
+  "exp1_timing": 26,
+  "exp2_timing": 26,
+  "exp3_timing": 26,
+  "btc_test": 21,
+  "exp1_test": 21,
+  "exp2_test": 21,
+  "exp3_test": 21,
 };

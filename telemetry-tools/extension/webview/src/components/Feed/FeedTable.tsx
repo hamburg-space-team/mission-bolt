@@ -3,6 +3,9 @@ import type { Row } from "../../utils/feed";
 import { summary, rowNode, faultTrace } from "../../utils/summary";
 
 export function FeedTable({ rows, onShowType }: { rows: Row[]; onShowType: (name: string) => void }) {
+  // Keyed by Row.uid, not by row index: the window shifts as the tail moves, and
+  // an index would keep the expander pinned to a slot while the packet under it
+  // changes
   const [open, setOpen] = useState<number | null>(null);
 
   return (
@@ -13,12 +16,11 @@ export function FeedTable({ rows, onShowType }: { rows: Row[]; onShowType: (name
         </tr>
       </thead>
       <tbody>
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const bad = !r.crc_ok || r.suspect;
-          const key = `${r.timestamp_us}-${r.seq ?? i}`;
           return (
-            <Fragment key={key}>
-              <tr className={bad ? "bad" : ""} onClick={() => setOpen(open === i ? null : i)} style={{ cursor: "pointer" }}>
+            <Fragment key={r.uid}>
+              <tr className={bad ? "bad" : ""} onClick={() => setOpen(open === r.uid ? null : r.uid)} style={{ cursor: "pointer" }}>
                 <td>{r.seq ?? ""}</td>
                 <td>{r.tick}</td>
                 <td>{r.timestamp_us}</td>
@@ -28,7 +30,7 @@ export function FeedTable({ rows, onShowType }: { rows: Row[]; onShowType: (name
                 <td>{r.suspect ? "⚠" : "✓"}</td>
                 <td>{summary(r)}</td>
               </tr>
-              {open === i && (
+              {open === r.uid && (
                 <tr>
                   <td colSpan={8} style={{ whiteSpace: "pre-wrap", fontSize: 11, background: "var(--vscode-editorWidget-background)" }}>
                     {r.name === "fault" ? faultTrace(r) : JSON.stringify(r.sample, null, 2)}

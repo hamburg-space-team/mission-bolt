@@ -9,6 +9,7 @@ type Pt = [number, number];
 const GAINS = ["1x", "3.7x", "16x", "64x"];
 const XYZ = ["#e06c75", "#98c379", "#61afef"];
 const CAP = 8000; // per-series live buffer cap
+const TICK_S = 0.04; // 25 Hz tick period
 const SPEEDS = [1, 2, 4, 10, 25];
 
 const num = (v: unknown): number | null => (v == null ? null : Number(v));
@@ -55,6 +56,8 @@ export function Experiment() {
   const ground = useRef<number | null>(null);
   const lastP = useRef<number | null>(null);
   const playT = useRef(0);
+  const prevTick = useRef<number | null>(null);
+  const tickBase = useRef(0);
 
   const bump = (force: boolean) => {
     const now = Date.now();
@@ -64,9 +67,33 @@ export function Experiment() {
     }
   };
 
-  const addSample = (name: string, s: Sample, tsUs: number, suspect: boolean, cap: boolean) => {
+  const clearBuffers = () => {
+    buf.current = emptyBuf();
+    lastImu.current = null;
+    ground.current = null;
+    lastP.current = null;
+    prevTick.current = null;
+    tickBase.current = 0;
+  };
+
+  // X axis in tick seconds - tick is the timeline. timestamp_us wraps every
+  // ~54 s (ICD-006) and would fold the charts back onto themselves.
+  const xOf = (tick: number): number => {
+    const p = prevTick.current;
+    if (p != null && tick < p) {
+      if (p - tick > 32768) {
+        tickBase.current += 65536; // uint16 wrap on long bench runs
+      } else if (p - tick > 250) {
+        clearBuffers(); // tick restarted (LO): a new timeline, not a wrap
+      }
+    }
+    prevTick.current = tick;
+    return (tickBase.current + tick) * TICK_S;
+  };
+
+  const addSample = (name: string, s: Sample, tick: number, suspect: boolean, cap: boolean) => {
     if (suspect && s.kind !== "status") return; // plot only real values
-    const t = tsUs / 1e6;
+    const t = xOf(tick);
     if (s.kind === "imu") {
       const a = arr3(s.accel_ms2), g = arr3(s.gyro_dps);
       lastImu.current = { accel: a, gyro: g };
@@ -88,10 +115,7 @@ export function Experiment() {
   };
 
   const reset = () => {
-    buf.current = emptyBuf();
-    lastImu.current = null;
-    ground.current = null;
-    lastP.current = null;
+    clearBuffers();
     setSpec(undefined);
     setMode("live");
     setPlaying(false);
@@ -102,11 +126,11 @@ export function Experiment() {
     else if (m.type === "reset") { reset(); bump(true); }
     else if (m.type === "frame") {
       setMode("live");
-      addSample(m.frame.name, m.frame.sample as Sample, m.frame.timestamp_us, m.frame.suspect, true);
+      addSample(m.frame.name, m.frame.sample as Sample, m.frame.tick, m.frame.suspect, true);
       bump(false);
     } else if (m.type === "load") {
       reset();
-      for (const r of m.records) addSample(String(r.name ?? ""), r.sample, r.timestamp_us, Boolean(r.suspect), false);
+      for (const r of m.records) addSample(String(r.name ?? ""), r.sample, r.tick, Boolean(r.suspect), false);
       playT.current = timeRange(buf.current)[0];
       setMode("post");
       bump(true);

@@ -48,9 +48,14 @@ class ICM42686 : public DeviceBase {
     /// Burst-read the 12 raw register bytes.
     [[nodiscard]] Result<ICM42686Result> read_sample();
 
+    /// Raw WHO_AM_I register (self-test WHOAMI). Diagnostic only - no
+    /// failure latch, no cold-boot retry loop
+    [[nodiscard]] Result<uint8_t> read_who_am_i();
+
+    static constexpr uint8_t EXPECTED_WHO_AM_I = 0x44U;
+
   private:
     static constexpr uint8_t REG_WHO_AM_I = 0x75U;
-    static constexpr uint8_t EXPECTED_WHO_AM_I = 0x44U;
     // Cold-power-up grace: retries x delay for the first WHO_AM_I access.
     static constexpr uint8_t WHOAMI_RETRIES = 5U;
     static constexpr uint32_t WHOAMI_RETRY_DELAY_MS = 2U;

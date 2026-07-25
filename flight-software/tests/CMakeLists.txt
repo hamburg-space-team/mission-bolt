@@ -17,6 +17,14 @@ target_link_libraries(test_crc16 PRIVATE Catch2::Catch2WithMain)
 
 add_executable(test_error_trace unit/test_error_trace.cpp)
 
+add_executable(test_wcet_wrap unit/test_wcet_wrap.cpp)
+
+target_include_directories(test_wcet_wrap PRIVATE
+    ${CMAKE_SOURCE_DIR}/shared
+)
+
+target_link_libraries(test_wcet_wrap PRIVATE Catch2::Catch2WithMain)
+
 target_include_directories(test_error_trace PRIVATE
     ${CMAKE_SOURCE_DIR}/shared
 )
@@ -26,3 +34,4 @@ target_link_libraries(test_error_trace PRIVATE Catch2::Catch2WithMain)
 include(Catch)
 catch_discover_tests(test_crc16)
 catch_discover_tests(test_error_trace)
+catch_discover_tests(test_wcet_wrap)

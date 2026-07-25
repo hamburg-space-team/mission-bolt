@@ -8,6 +8,8 @@
 #include "lo_tracker.hpp"
 #include "node_computer.hpp"
 #include "protocol/uplink_parser.hpp"
+#include "self_test.hpp"
+#include "self_test_sequencer.hpp"
 #include "telemetry_emitter.hpp"
 #include <bolt/wire/types.hpp>
 
@@ -58,6 +60,11 @@ class BtcComputer final : public NodeComputer {
     TelemetryEmitter emitter;
     LoTracker lo;
     ImuSupervisor imu_sup;
+    SelfTestSequencer sequencer;
+    SelfTest::Runner tester{*this};
+    // TEST until LO; recovered from .noinit on a warm reset so a reset in
+    // flight cannot drop the mission back into TEST
+    BootState::Mode mode = BootState::Mode::TEST;
     uint16_t sync_count = 0U;
     bool gc_done = false;
 
@@ -73,4 +80,17 @@ class BtcComputer final : public NodeComputer {
     void send_status_packet(uint32_t tick_start_us);
     void send_imu_packet(uint32_t timestamp_us);
     void send_timing(uint32_t timestamp_us);
+    void send_test_packet(uint32_t timestamp_us, const SelfTest::Report& report);
+    /// Step table: common sensors (test_id 0..2), then the board IMU (3..4)
+    [[nodiscard]] static std::span<const SelfTest::Step> self_test_steps() noexcept;
+    static std::optional<PacketProtocol::TestResult> step_imu_whoami(NodeComputer& node, bool first,
+                                                                     uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_imu_read(NodeComputer& node, bool first,
+                                                                   uint32_t& data) noexcept;
+    /// Switch the mission mode and persist it. LO / START_EXPERIMENT enter
+    /// FLIGHT; STOP_EXPERIMENT returns to TEST, but only before LO
+    void set_mode(BootState::Mode next);
+    /// Bench-only tick body: steps the BTC's own self-test while the
+    /// sequencer says it is our turn (EXPs are driven via SYNC instead)
+    void on_test_tick(uint32_t tick_start_us);
 };

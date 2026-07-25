@@ -42,6 +42,14 @@ Result<void> ICM42686::init(CmsisI2CBus* bus, uint8_t addr, ICM42686Odr odr, boo
     return {};
 }
 
+Result<uint8_t> ICM42686::read_who_am_i() {
+    auto val = this->bus->read_reg8(this->addr, REG_WHO_AM_I);
+    if (!val) {
+        return mark(val.error(), Step::IMU_WHOAMI);
+    }
+    return *val;
+}
+
 Result<void> ICM42686::check_who_am_i() {
     auto val = this->bus->read_reg8(this->addr, REG_WHO_AM_I);
     for (uint8_t i = 0U; (!val || *val != EXPECTED_WHO_AM_I) && i < WHOAMI_RETRIES; i++) {

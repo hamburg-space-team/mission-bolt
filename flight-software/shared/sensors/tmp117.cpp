@@ -20,6 +20,14 @@ Result<void> TMP117::init(CmsisI2CBus* bus, uint8_t addr) {
     return {};
 }
 
+Result<uint16_t> TMP117::read_device_id() {
+    auto dev_id = this->bus->read_reg16(this->addr, REG_DEV_ID);
+    if (!dev_id) {
+        return mark(dev_id.error(), Step::TMP_ID_CHECK);
+    }
+    return *dev_id;
+}
+
 Result<int16_t> TMP117::read() {
     if (is_failed()) {
         return fail(ErrorCode::DISABLED, Step::TMP_READ, __LINE__);

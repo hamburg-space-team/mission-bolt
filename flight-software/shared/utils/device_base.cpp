@@ -23,15 +23,16 @@ void DeviceBase::register_failure(const Error& e) {
 }
 
 void DeviceBase::arm_retry() {
-    this->failed_at_us = (ErrorClock::now_us != nullptr) ? ErrorClock::now_us() : 0U;
+    this->failed_at_cyc = (ErrorClock::now_cycles != nullptr) ? ErrorClock::now_cycles() : 0U;
 }
 
 bool DeviceBase::retry_due() const {
-    if (!this->failed || ErrorClock::now_us == nullptr) {
+    if (!this->failed || ErrorClock::now_cycles == nullptr) {
         return false;
     }
-    // Unsigned wrap-safe: the us clock wraps ~every 71 min, >> the 30 s cooldown.
-    return (ErrorClock::now_us() - this->failed_at_us) >= RETRY_COOLDOWN_US;
+    // cycle domain: the us clock wraps every 53.7 s (< 2x the cooldown), so
+    // us differences would fire early on more than half of all cooldowns
+    return ErrorClock::us_between(this->failed_at_cyc, ErrorClock::now_cycles()) >= RETRY_COOLDOWN_US;
 }
 
 void DeviceBase::clear_failures() {

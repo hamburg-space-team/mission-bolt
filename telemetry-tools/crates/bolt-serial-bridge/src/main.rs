@@ -41,6 +41,17 @@ struct Args {
     /// Stats emit interval in milliseconds
     #[arg(long, default_value_t = 500)]
     stats_ms: u64,
+
+    /// Read the RXSM simulator's ASCII debug port (its D-SUB 9, NOT the RS-422
+    /// telemetry link) and emit its status fields as JSON. Separate device and
+    /// baud from the flight downlink - see the RXSM SIM user manual 3.5
+    #[arg(long)]
+    rxsm_debug: Option<String>,
+
+    /// Baud for --rxsm-debug. The simulator's debug port is fixed at 115.2 kBd
+    /// 8N1 (manual 3.5); this is not the 38.4 kBd flight link
+    #[arg(long, default_value_t = 115_200)]
+    rxsm_baud: u32,
 }
 
 /// One stdout message. Tagged so the extension can switch on `t`.
@@ -75,6 +86,11 @@ enum Out<'a> {
     Log {
         level: &'a str,
         msg: String,
+    },
+    /// Latest RXSM simulator debug-port status. Ground equipment, not flight
+    /// telemetry; an open map because the simulator's label set is open-ended
+    Rxsm {
+        fields: &'a std::collections::BTreeMap<String, String>,
     },
 }
 
@@ -148,12 +164,122 @@ fn plain(port: String, kind: &'static str) -> PortInfo {
     PortInfo { port, kind, manufacturer: None, product: None, vid: None, pid: None, serial_number: None }
 }
 
+// Pull every "Label: Value" out of one debug-port line. The simulator lays
+// its status out in columns (manual 3.5):
+//
+//     Error Inhibit: OFF        Byte Dropout Rate: 2^-11
+//       |_ Duration: 800ms         Bit Error Rate: 2^-18
+//
+// Columns are runs of >=2 spaces, labels may contain single spaces - split on
+// the runs. Unknown labels pass through (the manual's listing is open-ended)
+fn parse_debug_line(line: &str, out: &mut std::collections::BTreeMap<String, String>) -> bool {
+    if line.trim_start().starts_with('#') {
+        return false;
+    }
+    let bytes = line.as_bytes();
+    let gap_at = |i: usize| bytes[i] == b' ' && bytes.get(i + 1) == Some(&b' ');
+
+    let mut changed = false;
+    let mut pos = 0usize; // start of the next label
+    while let Some(rel) = line[pos..].find(':') {
+        let colon = pos + rel;
+        let label = line[pos..colon]
+            .trim()
+            // continuation rows are prefixed with an arrow glyph
+            .trim_start_matches(['\u{21b3}', '>', '-', '|', '_'])
+            .trim();
+
+        // skip the alignment padding FIRST - it is itself >=2 spaces, so a
+        // gap-split without skipping severs every value from its label
+        let mut vs = colon + 1;
+        while vs < bytes.len() && bytes[vs] == b' ' {
+            vs += 1;
+        }
+        let mut ve = vs;
+        while ve < bytes.len() && !gap_at(ve) {
+            ve += 1; // only ever stops on an ASCII space or EOL -> char boundary
+        }
+        let value = line[vs..ve].trim();
+
+        if !label.is_empty() && !value.is_empty() && out.get(label).map(String::as_str) != Some(value) {
+            out.insert(label.to_string(), value.to_string());
+            changed = true;
+        }
+
+        pos = ve;
+        if pos >= line.len() {
+            break;
+        }
+    }
+    changed
+}
+
+// Read the simulator's ASCII debug port and republish its status as JSON.
+// Deliberately NOT BufReader::read_line: TimeoutRead maps a timeout to Ok(0),
+// which read_line treats as EOF - assemble lines ourselves and treat Ok(0)
+// as "nothing yet"
+fn run_rxsm_debug(port: &str, baud: u32) -> Result<()> {
+    log("info", format!("rxsm debug port {port} @ {baud} 8N1 (ground equipment, not flight data)"));
+    let (mut source, _) = open_serial(port, baud)?;
+
+    let mut fields = std::collections::BTreeMap::new();
+    let mut acc = String::new();
+    let mut buf = [0u8; 512];
+    let mut seen_any = false;
+    // opening the port lands mid-line; the first fragment would parse into a
+    // bogus field that sticks forever - sync to the first newline
+    let mut synced = false;
+
+    loop {
+        let n = match source.read(&mut buf) {
+            Ok(0) => continue, // read timeout (the port blocked first), not EOF
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::TimedOut => continue,
+            Err(e) => return Err(e).context("read rxsm debug port"),
+        };
+        if !seen_any {
+            seen_any = true;
+            log("info", "rxsm debug port: first bytes received");
+        }
+        // Lossy: the manual's own sample contains a non-ASCII arrow, and line
+        // noise must not kill the reader
+        acc.push_str(&String::from_utf8_lossy(&buf[..n]));
+
+        while let Some(idx) = acc.find('\n') {
+            let line: String = acc.drain(..=idx).collect();
+            if !synced {
+                synced = true; // partial first line - we opened mid-transmission
+                continue;
+            }
+            let line = line.trim_end_matches(['\r', '\n']);
+            if line.trim().is_empty() {
+                continue;
+            }
+            // Echo the raw line: the label set is open, so this is the only way
+            // to see a field the parser does not understand yet
+            log("info", format!("rxsm < {line}"));
+            if parse_debug_line(line, &mut fields) {
+                emit(&Out::Rxsm { fields: &fields });
+            }
+        }
+        // A port that never sends a newline must not grow the buffer forever
+        if acc.len() > 8192 {
+            log("warn", "rxsm debug port: 8 KB without a newline - discarding");
+            acc.clear();
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.list_ports {
         list_ports();
         return Ok(());
+    }
+
+    if let Some(port) = &args.rxsm_debug {
+        return run_rxsm_debug(port, args.rxsm_baud);
     }
 
     let spec: &'static MissionSpec =
@@ -266,8 +392,10 @@ fn main() -> Result<()> {
                                 sods = sig.sods;
                             }
                             let pt = bolt_codec::PayloadType::from_u8(f.header.ty);
-                            let (name, src) =
-                                pt.map_or(("unknown", "system"), |p| (p.name(), p.source()));
+                            let name = pt.map_or("unknown", bolt_codec::PayloadType::name);
+                            // frame_source, not p.source(): the generic types
+                            // carry their real origin in the payload
+                            let src = bolt_codec::frame_source(f.header.ty, &sample);
                             *counts.entry(name.to_string()).or_default() += 1;
                             emit(&Out::Frame {
                                 ty: f.header.ty,
@@ -432,4 +560,100 @@ fn heapless_vec(bytes: &[u8]) -> heapless::Vec<u8, { bolt_codec::MAX_PAYLOAD }> 
     let mut v = heapless::Vec::new();
     let _ = v.extend_from_slice(&bytes[..bytes.len().min(bolt_codec::MAX_PAYLOAD)]);
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Verbatim from the RXSM SIM user manual, listing 3.1: two columns per
+    // line, a continuation arrow, and a trailing comment line
+    const MANUAL_SAMPLE: &str = concat!(
+        "Error Inhibit: OFF        Byte Dropout Rate: 2^-11\r\n",
+        "  \u{21b3} Duration: 800ms          Bit Error Rate: 2^-18\r\n",
+        "# many more lines\r\n",
+    );
+
+    fn parse_all(s: &str) -> std::collections::BTreeMap<String, String> {
+        let mut fields = std::collections::BTreeMap::new();
+        for line in s.lines() {
+            parse_debug_line(line.trim_end_matches(['\r', '\n']), &mut fields);
+        }
+        fields
+    }
+
+
+    // Verbatim from the real simulator (the scanned manual was misleading:
+    // values are column-padded and the label is "Dropout Duration")
+    const REAL: &str = "Error Inhibit: ON         Byte Dropout Rate:   0          Dropout Duration:  7 B         Bit Error Rate:   0  ";
+
+    #[test]
+    fn parses_the_real_simulator_line() {
+        let f = parse_all(REAL);
+        assert_eq!(f.get("Error Inhibit").map(String::as_str), Some("ON"));
+        assert_eq!(f.get("Byte Dropout Rate").map(String::as_str), Some("0"));
+        assert_eq!(f.get("Dropout Duration").map(String::as_str), Some("7 B"));
+        assert_eq!(f.get("Bit Error Rate").map(String::as_str), Some("0"));
+        assert_eq!(f.len(), 4, "got {f:?}");
+    }
+
+    #[test]
+    fn parses_every_column_of_the_manual_sample() {
+        let f = parse_all(MANUAL_SAMPLE);
+        assert_eq!(f.get("Error Inhibit").map(String::as_str), Some("OFF"));
+        assert_eq!(f.get("Byte Dropout Rate").map(String::as_str), Some("2^-11"));
+        assert_eq!(f.get("Duration").map(String::as_str), Some("800ms"));
+        assert_eq!(f.get("Bit Error Rate").map(String::as_str), Some("2^-18"));
+        assert_eq!(f.len(), 4, "the comment line must not become a field");
+    }
+
+    #[test]
+    fn labels_keep_their_internal_spaces() {
+        // Splitting on single spaces would shred "Byte Dropout Rate"
+        let f = parse_all("Byte Dropout Rate: 2^-11\r\n");
+        assert_eq!(f.keys().collect::<Vec<_>>(), vec!["Byte Dropout Rate"]);
+    }
+
+    #[test]
+    fn unknown_labels_pass_through() {
+        // The manual documents only a few fields ("# many more lines"), so the
+        // parser must not filter on a known set
+        let f = parse_all("Some Future Knob: 42\r\n");
+        assert_eq!(f.get("Some Future Knob").map(String::as_str), Some("42"));
+    }
+
+    #[test]
+    fn only_real_changes_are_reported() {
+        let mut fields = std::collections::BTreeMap::new();
+        assert!(parse_debug_line("Error Inhibit: OFF", &mut fields), "first value is a change");
+        assert!(!parse_debug_line("Error Inhibit: OFF", &mut fields), "same value must not re-emit");
+        assert!(parse_debug_line("Error Inhibit: ON", &mut fields), "flip must re-emit");
+    }
+
+
+    // A serial read returns whatever bytes happen to be there; a status line
+    // routinely arrives in pieces, split across 200 ms timeout windows. The
+    // reader must stitch them back together instead of parsing fragments
+    #[test]
+    fn lines_split_across_reads_are_reassembled() {
+        let chunks = ["Error Inh", "ibit: OFF        Byte Dropout Rate: 2^-11\r\n"];
+        let mut fields = std::collections::BTreeMap::new();
+        let mut acc = String::new();
+        for c in chunks {
+            acc.push_str(c);
+            while let Some(idx) = acc.find('\n') {
+                let line: String = acc.drain(..=idx).collect();
+                parse_debug_line(line.trim_end_matches(['\r', '\n']), &mut fields);
+            }
+        }
+        assert_eq!(fields.get("Error Inhibit").map(String::as_str), Some("OFF"));
+        assert_eq!(fields.get("Byte Dropout Rate").map(String::as_str), Some("2^-11"));
+        assert_eq!(fields.len(), 2, "a fragment must never become its own field: {fields:?}");
+    }
+
+    #[test]
+    fn junk_lines_are_ignored() {
+        let f = parse_all("garbage without a colon\r\n\r\n# comment: not a field\r\n");
+        assert!(f.is_empty(), "got {f:?}");
+    }
 }

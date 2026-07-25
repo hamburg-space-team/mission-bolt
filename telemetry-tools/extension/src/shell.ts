@@ -55,6 +55,7 @@ export function webviewHtml(
     `default-src 'none'`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
     `script-src ${webview.cspSource} 'nonce-${nonce}'`,
+    `connect-src ${webview.cspSource}`,
     `font-src ${webview.cspSource}`,
     `img-src ${webview.cspSource} data:`,
   ].join("; ");

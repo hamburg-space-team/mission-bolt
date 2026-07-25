@@ -52,6 +52,11 @@ class MS5611 : public DeviceBase {
     /// after init while the pipeline primes. Failures latch via DeviceBase.
     [[nodiscard]] Result<MS5611Result> read();
 
+    /// Re-read the PROM into a local copy and re-verify its factory CRC-4
+    /// (self-test identity check - the chip has no WHO_AM_I). Diagnostic
+    /// only, no failure latch. Returns C1 as a per-device fingerprint
+    [[nodiscard]] Result<uint16_t> verify_prom();
+
   private:
     static constexpr uint8_t COEFF_COUNT = 8U;
 
@@ -95,5 +100,5 @@ class MS5611 : public DeviceBase {
     [[nodiscard]] Result<void> start_conversion(uint8_t cmd);
     [[nodiscard]] Result<uint32_t> read_adc_result();
     [[nodiscard]] Result<void> collect_pending();
-    [[nodiscard]] bool prom_crc_ok() const;
+    [[nodiscard]] static bool prom_crc_ok(const std::array<uint16_t, COEFF_COUNT>& prom_in);
 };

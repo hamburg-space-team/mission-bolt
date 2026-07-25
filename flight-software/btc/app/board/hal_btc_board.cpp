@@ -7,7 +7,7 @@ HalBtcBoard::HalBtcBoard(CAN_HandleTypeDef& hcan_in, RTC_HandleTypeDef& hrtc_in)
     : hcan(hcan_in), hrtc(hrtc_in) {
 }
 
-void HalBtcBoard::send_sync(uint16_t tick) noexcept {
+void HalBtcBoard::send_sync(uint16_t tick, BootState::Mode mode, uint8_t test_target) noexcept {
     CAN_TxHeaderTypeDef hdr{};
     hdr.StdId = CanProtocol::SYNC_ID;
     hdr.DLC = CanProtocol::SYNC_DLC;
@@ -16,6 +16,8 @@ void HalBtcBoard::send_sync(uint16_t tick) noexcept {
     const std::array<uint8_t, CanProtocol::SYNC_DLC> data = {
         static_cast<uint8_t>(tick),
         static_cast<uint8_t>(tick >> 8U),
+        static_cast<uint8_t>(mode),
+        test_target,
     };
 
     uint32_t mailbox = 0U;

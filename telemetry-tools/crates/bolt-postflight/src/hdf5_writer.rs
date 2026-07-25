@@ -11,17 +11,19 @@ mod real {
     use anyhow::{Context, Result};
     use bolt_codec::Sample;
 
+    #[derive(Default)]
     struct Cols {
-        source: String,
         tick: Vec<u16>,
         ts: Vec<u32>,
         cols: BTreeMap<&'static str, Vec<f32>>,
     }
 
-    // Accumulates columns in memory, then flushes to HDF5
+    // Accumulates columns in memory, then flushes to HDF5. Keyed by
+    // (source, name), not name alone - one bucket per name would merge all
+    // four nodes' TIMING rows into a single dataset
     #[derive(Default)]
     pub struct HdfCollector {
-        names: BTreeMap<String, Cols>,
+        groups: BTreeMap<(String, String), Cols>,
     }
 
     impl HdfCollector {
@@ -35,12 +37,7 @@ mod real {
             if channels.is_empty() {
                 return; // discrete/event payloads have no array
             }
-            let entry = self.names.entry(name.to_string()).or_insert_with(|| Cols {
-                source: source.to_string(),
-                tick: Vec::new(),
-                ts: Vec::new(),
-                cols: BTreeMap::new(),
-            });
+            let entry = self.groups.entry((source.to_string(), name.to_string())).or_default();
             entry.tick.push(tick);
             entry.ts.push(ts);
             for (col, v) in channels {
@@ -50,10 +47,10 @@ mod real {
 
         pub fn write(self, path: &str) -> Result<()> {
             let file = hdf5::File::create(path).with_context(|| format!("create {path}"))?;
-            for (name, c) in self.names {
+            for ((source, name), c) in self.groups {
                 let group = file
-                    .create_group(&format!("{}/{}", c.source, name))
-                    .with_context(|| format!("group {}/{name}", c.source))?;
+                    .create_group(&format!("{source}/{name}"))
+                    .with_context(|| format!("group {source}/{name}"))?;
                 ds_u32(&group, "timestamp_us", &c.ts)?;
                 ds_u16(&group, "tick", &c.tick)?;
                 for (col, data) in c.cols {

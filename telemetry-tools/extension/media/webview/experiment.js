@@ -1,4 +1,4 @@
-import { j as jsxRuntimeExports, r as reactExports, u as useMessages, s as saveState, c as createRoot$1 } from "./chunk-DHH7KV4w.js";
+import { j as jsxRuntimeExports, r as reactExports, u as useMessages, s as saveState, c as createRoot$1 } from "./chunk-BMq7aTlC.js";
 const WL = [410, 435, 460, 485, 510, 535, 560, 365, 340, 585, 610, 645, 680, 705, 730, 760, 810, 940];
 function wlRGB(wl) {
   let r = 0, g = 0, b = 0;
@@ -40181,6 +40181,7 @@ function RocketAttitude({ accel, gyro, altM }) {
 const GAINS = ["1x", "3.7x", "16x", "64x"];
 const XYZ = ["#e06c75", "#98c379", "#61afef"];
 const CAP = 8e3;
+const TICK_S = 0.04;
 const SPEEDS = [1, 2, 4, 10, 25];
 const num = (v) => v == null ? null : Number(v);
 const arr3 = (v) => Array.isArray(v) ? v.map(Number) : [0, 0, 0];
@@ -40222,6 +40223,8 @@ function Experiment() {
   const ground = reactExports.useRef(null);
   const lastP = reactExports.useRef(null);
   const playT = reactExports.useRef(0);
+  const prevTick = reactExports.useRef(null);
+  const tickBase = reactExports.useRef(0);
   const bump = (force) => {
     const now = Date.now();
     if (force || now - lastRender.current > 120) {
@@ -40229,9 +40232,29 @@ function Experiment() {
       setRev((r) => r + 1);
     }
   };
-  const addSample = (name, s2, tsUs, suspect, cap) => {
+  const clearBuffers = () => {
+    buf.current = emptyBuf();
+    lastImu.current = null;
+    ground.current = null;
+    lastP.current = null;
+    prevTick.current = null;
+    tickBase.current = 0;
+  };
+  const xOf = (tick) => {
+    const p = prevTick.current;
+    if (p != null && tick < p) {
+      if (p - tick > 32768) {
+        tickBase.current += 65536;
+      } else if (p - tick > 250) {
+        clearBuffers();
+      }
+    }
+    prevTick.current = tick;
+    return (tickBase.current + tick) * TICK_S;
+  };
+  const addSample = (name, s2, tick, suspect, cap) => {
     if (suspect && s2.kind !== "status") return;
-    const t = tsUs / 1e6;
+    const t = xOf(tick);
     if (s2.kind === "imu") {
       const a = arr3(s2.accel_ms2), g = arr3(s2.gyro_dps);
       lastImu.current = { accel: a, gyro: g };
@@ -40252,10 +40275,7 @@ function Experiment() {
     } else if (name.endsWith("spectrum")) setSpec(s2);
   };
   const reset = () => {
-    buf.current = emptyBuf();
-    lastImu.current = null;
-    ground.current = null;
-    lastP.current = null;
+    clearBuffers();
     setSpec(void 0);
     setMode("live");
     setPlaying(false);
@@ -40269,11 +40289,11 @@ function Experiment() {
       bump(true);
     } else if (m2.type === "frame") {
       setMode("live");
-      addSample(m2.frame.name, m2.frame.sample, m2.frame.timestamp_us, m2.frame.suspect, true);
+      addSample(m2.frame.name, m2.frame.sample, m2.frame.tick, m2.frame.suspect, true);
       bump(false);
     } else if (m2.type === "load") {
       reset();
-      for (const r of m2.records) addSample(String(r.name ?? ""), r.sample, r.timestamp_us, Boolean(r.suspect), false);
+      for (const r of m2.records) addSample(String(r.name ?? ""), r.sample, r.tick, Boolean(r.suspect), false);
       playT.current = timeRange(buf.current)[0];
       setMode("post");
       bump(true);

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use bolt_codec::{Payload, PayloadType, Sample};
+use bolt_codec::{frame_source, Payload, PayloadType, Sample};
 use serde::Serialize;
 
 // One timeline anchor: a timestamp and the row index reached in each
@@ -49,6 +49,19 @@ pub struct FaultEntry {
 }
 
 #[derive(Serialize)]
+pub struct TestEntry {
+    pub node: String,
+    pub test_id: u8,
+    pub result: u8,
+    pub result_name: String,
+    // raw diagnostic, judged on ground
+    pub data: u32,
+    // true on the node's last step
+    pub last: bool,
+    pub timestamp_us: u32,
+}
+
+#[derive(Serialize)]
 pub struct Manifest {
     pub mission: String,
     pub protocol_version: u8,
@@ -62,6 +75,7 @@ pub struct Manifest {
     pub gaps: Vec<GapEntry>,
     pub boots: Vec<BootEntry>,
     pub faults: Vec<FaultEntry>,
+    pub tests: Vec<TestEntry>,
     // RTC second at which LO was first observed; 0 = LO never received.
     pub lo_rtc_s: u32,
     pub t_start_us: u32,
@@ -83,6 +97,7 @@ pub struct Builder {
     gaps: Vec<GapEntry>,
     boots: Vec<BootEntry>,
     faults: Vec<FaultEntry>,
+    tests: Vec<TestEntry>,
     lo_rtc_s: u32,
     t_start: Option<u32>,
     t_end: u32,
@@ -112,6 +127,7 @@ impl Builder {
             gaps: Vec::new(),
             boots: Vec::new(),
             faults: Vec::new(),
+            tests: Vec::new(),
             lo_rtc_s: 0,
             t_start: None,
             t_end: 0,
@@ -142,9 +158,13 @@ impl Builder {
             }
         }
 
-        let (name, source) = PayloadType::from_u8(ty).map_or(("unknown", "system"), |p| (p.name(), p.source()));
+        let name = PayloadType::from_u8(ty).map_or("unknown", PayloadType::name);
+        // frame_source, not PayloadType::source(): TIMING/FAULT/BOOT/GAP_MARKER
+        // are type-annotated SYSTEM but carry their real origin in the payload
+        let source = frame_source(ty, sample);
         *self.packet_counts.entry(name.to_string()).or_default() += 1;
-        
+
+        // "system" is a placeholder, not a node - only real nodes are listed
         if source != "system" {
             self.sources.insert(source.to_string());
         }
@@ -198,6 +218,17 @@ impl Builder {
                     node: (*node).to_string(),
                 });
             }
+            (_, Sample::Test { node, test_id, result, result_name, last, data }) => {
+                self.tests.push(TestEntry {
+                    node: (*node).to_string(),
+                    test_id: *test_id,
+                    result: *result,
+                    result_name: (*result_name).to_string(),
+                    data: *data,
+                    last: *last,
+                    timestamp_us,
+                });
+            }
             _ => {}
         }
     }
@@ -217,6 +248,7 @@ impl Builder {
             gaps: self.gaps,
             boots: self.boots,
             faults: self.faults,
+            tests: self.tests,
             lo_rtc_s: self.lo_rtc_s,
             t_start_us: self.t_start.unwrap_or(0),
             t_end_us: self.t_end,

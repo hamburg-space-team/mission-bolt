@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::mission::{Calibration, MissionSpec};
-use crate::payloads::Payload;
+use crate::payloads::{Payload, PayloadType};
 
 const G_TO_MS2: f32 = 9.806_65;
 const GAUSS_TO_UT: f32 = 100.0;
@@ -145,7 +145,8 @@ pub enum Sample {
         result: &'static str,
     },
     Timing {
-        source_node: u8,
+        // From the type byte (BTC_TIMING / EXP1_TIMING / ...), not the payload:
+        // TIMING has one type per node, so it carries no source_node
         node: &'static str,
         // Worst-case us per scope since the last send (WCET / tick budget).
         tick_us: u16,
@@ -155,9 +156,35 @@ pub enum Sample {
         send_us: u16,
         store_us: u16,
     },
+    Test {
+        // from the type byte (BTC_TEST / EXP1_TEST / ...), per-node convention
+        node: &'static str,
+        test_id: u8,
+        result: u8,
+        result_name: &'static str,
+        // last step of the node's run
+        last: bool,
+        // raw diagnostic, meaning depends on test_id; judged on ground
+        data: u32,
+    },
 }
 
 impl Sample {
+    /// Origin node carried *inside* the payload, for the generic payload types
+    /// that can be emitted by any node. `None` for the per-node types, whose
+    /// origin is already encoded in the type byte
+    #[must_use]
+    pub fn node(&self) -> Option<&'static str> {
+        match self {
+            Sample::Gap { node, .. }
+            | Sample::Fault { node, .. }
+            | Sample::Boot { node, .. }
+            | Sample::Timing { node, .. }
+            | Sample::Test { node, .. } => Some(node),
+            _ => None,
+        }
+    }
+
     #[must_use]
     pub fn columns(&self) -> Vec<(&'static str, f64)> {
         // Emit NaN when the sensor's valid bit is clear, so invalid samples
@@ -236,7 +263,11 @@ impl Sample {
                 ("send_us", *send_us as f64),
                 ("store_us", *store_us as f64),
             ],
-            Sample::Gap { .. } | Sample::Fault { .. } | Sample::Boot { .. } | Sample::CmdAck { .. } => Vec::new(),
+            Sample::Gap { .. }
+            | Sample::Fault { .. }
+            | Sample::Boot { .. }
+            | Sample::CmdAck { .. }
+            | Sample::Test { .. } => Vec::new(),
         }
     }
 
@@ -354,6 +385,12 @@ impl Sample {
                 ("send_us", *send_us as f64),
                 ("store_us", *store_us as f64),
             ],
+            Sample::Test { test_id, result, last, data, .. } => vec![
+                ("test_id", *test_id as f64),
+                ("result", *result as f64),
+                ("last", u8::from(*last) as f64),
+                ("data", *data as f64),
+            ],
         }
     }
 
@@ -377,6 +414,30 @@ impl Sample {
 }
 
 // BtcEnv + the three EXP env payloads share this (identical layout, diff source).
+// Slots map to Wcet::Point; `source` comes from the per-node type byte
+fn test_sample(source: &'static str, test_id: u8, result: u8, last: u8, data: u32) -> Sample {
+    Sample::Test {
+        node: source,
+        test_id,
+        result,
+        result_name: test_result_name(result),
+        last: last != 0,
+        data,
+    }
+}
+
+fn timing_sample(source: &'static str, max_us: &[u16; 6]) -> Sample {
+    Sample::Timing {
+        node: source,
+        tick_us: max_us[0],
+        read_us: max_us[1],
+        cfg_us: max_us[2],
+        drive_us: max_us[3],
+        send_us: max_us[4],
+        store_us: max_us[5],
+    }
+}
+
 fn env_sample(source: &'static str, valid_mask: u8, temp_raw: i16, ms_pressure_raw: u32, ms_temperature_raw: u32,
               c: &Calibration) -> Sample {
     let (pm, mt) = ms5611_opt(ms_pressure_raw, ms_temperature_raw, &c.ms5611_coeffs, valid_mask & 0x01 != 0);
@@ -489,6 +550,17 @@ fn spectrum(chans: [u16; 18], gain_index: u8, c: &Calibration) -> [f32; 18] {
 // hand-mirroring of the firmware enums.
 include!(concat!(env!("OUT_DIR"), "/enums_gen.rs"));
 
+/// Effective origin node of a frame. The generic payloads (Fault, Boot,
+/// GapMarker) carry their real origin in `source_node` - prefer that; the
+/// type byte alone would file them all under "system"
+#[must_use]
+pub fn frame_source(ty: u8, sample: &Sample) -> &'static str {
+    match sample.node() {
+        Some(node) if node != "unknown" => node,
+        _ => PayloadType::from_u8(ty).map_or("system", PayloadType::source),
+    }
+}
+
 // Convert a raw [`Payload`] to a normalized [`Sample`] using the mission's
 // calibration.
 #[must_use]
@@ -591,16 +663,14 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             command: command_name(p.opcode),
             result: ack_status_name(p.status),
         },
-        Payload::Timing(p) => Sample::Timing {
-            source_node: p.source_node,
-            node: node_name(p.source_node),
-            tick_us: p.max_us[0],
-            read_us: p.max_us[1],
-            cfg_us: p.max_us[2],
-            drive_us: p.max_us[3],
-            send_us: p.max_us[4],
-            store_us: p.max_us[5],
-        },
+        Payload::BtcTiming(p) => timing_sample("btc", &p.max_us),
+        Payload::Exp1Timing(p) => timing_sample("exp1", &p.max_us),
+        Payload::Exp2Timing(p) => timing_sample("exp2", &p.max_us),
+        Payload::Exp3Timing(p) => timing_sample("exp3", &p.max_us),
+        Payload::BtcTest(p) => test_sample("btc", p.test_id, p.result, p.last, p.data),
+        Payload::Exp1Test(p) => test_sample("exp1", p.test_id, p.result, p.last, p.data),
+        Payload::Exp2Test(p) => test_sample("exp2", p.test_id, p.result, p.last, p.data),
+        Payload::Exp3Test(p) => test_sample("exp3", p.test_id, p.result, p.last, p.data),
     }
 }
 
@@ -611,6 +681,78 @@ mod tests {
     use crate::wire::{Frame, FrameEvent, Framer};
 
     use super::*;
+
+    fn boot_from(source_node: u8) -> Sample {
+        Sample::Boot { reason: "cold_start", reboot_count: 0, source_node, node: node_name(source_node) }
+    }
+
+    #[test]
+    fn per_node_types_route_by_their_type_byte() {
+        // TIMING has one type per node, so the header alone names the origin and
+        // the payload carries durations only
+        for (ty, node) in [
+            (PayloadType::BtcTiming, "btc"),
+            (PayloadType::Exp1Timing, "exp1"),
+            (PayloadType::Exp2Timing, "exp2"),
+            (PayloadType::Exp3Timing, "exp3"),
+        ] {
+            assert_eq!(PayloadType::from_u8(ty as u8).unwrap().source(), node);
+            assert_eq!(frame_source(ty as u8, &timing_sample(node, &[0; 6])), node);
+        }
+    }
+
+    #[test]
+    fn test_packets_decode_to_a_test_sample_and_route_by_type_byte() {
+        // A self-test step packet: test_id=2, result=FAIL(1), last=1. This is
+        // the "done, on the ground" signal - it must decode cleanly and name
+        // its origin node from the type byte
+        for (ty, node) in [
+            (PayloadType::BtcTest, "btc"),
+            (PayloadType::Exp1Test, "exp1"),
+            (PayloadType::Exp2Test, "exp2"),
+            (PayloadType::Exp3Test, "exp3"),
+        ] {
+            let payload = decode_payload(ty as u8, &[2, 1, 1, 0x17, 0x01, 0, 0]).unwrap();
+            let sample = normalize(&payload, default_mission());
+            match sample {
+                Sample::Test { node: n, test_id, result, result_name, last, data } => {
+                    assert_eq!(n, node);
+                    assert_eq!(test_id, 2);
+                    assert_eq!(result, 1);
+                    assert_eq!(result_name, "fail");
+                    assert!(last);
+                    assert_eq!(data, 0x117); // LE u32 - e.g. a TMP117 WHOAMI
+                }
+                other => panic!("expected Sample::Test, got {other:?}"),
+            }
+            assert_eq!(frame_source(ty as u8, &sample), node);
+        }
+    }
+
+    #[test]
+    fn generic_payloads_route_by_their_own_source_node() {
+        // BOOT/FAULT/GAP_MARKER stay shared types - any node emits them, so the
+        // type byte cannot say which and the origin travels in the payload
+        let ty = PayloadType::Boot as u8;
+        assert_eq!(PayloadType::from_u8(ty).unwrap().source(), "system");
+        assert_eq!(frame_source(ty, &boot_from(0)), "btc");
+        assert_eq!(frame_source(ty, &boot_from(3)), "exp3");
+    }
+
+    #[test]
+    fn payloads_without_a_source_node_fall_back_to_the_type_byte() {
+        // CMD_ACK carries no source_node and needs none: only the BTC has an
+        // uplink, so its type byte is annotated .node = "BTC"
+        let sample = Sample::CmdAck { opcode: 1, seq: 0, status: 0, command: "reset_tick", result: "accepted" };
+        assert_eq!(sample.node(), None);
+        assert_eq!(frame_source(PayloadType::CmdAck as u8, &sample), "btc");
+    }
+
+    #[test]
+    fn unknown_source_node_falls_back_rather_than_lying() {
+        // 255 = NodeId::UNKNOWN: prefer the honest placeholder over a wrong node
+        assert_eq!(frame_source(PayloadType::Boot as u8, &boot_from(255)), "system");
+    }
 
     // Real BTC_STATUS frame from the bench dump
     const STATUS: &[u8] = &[
