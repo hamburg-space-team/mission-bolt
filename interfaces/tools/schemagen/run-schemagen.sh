@@ -10,6 +10,7 @@ REPO="$(cd "${IFACE}/.." && pwd)"                    # mission-bolt/
 INCLUDE="${IFACE}/include"
 OUT="${IFACE}/tools/generated/schema.json"
 ICD="${REPO}/docs/interfaces/ICD-007-packet-payloads.md"
+TEX="${IFACE}/tools/generated/icd-007.tex"
 CXX_DIR="${CLANG_P2996_DIR:-/opt/compiler-explorer/clang-p2996}"
 
 if [ ! -x "${CXX_DIR}/bin/clang++" ]; then
@@ -25,6 +26,8 @@ BIN="$(mktemp -d)/schemagen"
 "${CXX_DIR}/bin/clang++" -std=c++26 -freflection -fannotation-attributes -fexpansion-statements \
     -stdlib=libc++ -DBOLT_SCHEMAGEN -I "${INCLUDE}" \
     "${HERE}/schemagen.cpp" -o "${BIN}"
+STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 LD_LIBRARY_PATH="${LIB}" "${BIN}" > "${OUT}"
-LD_LIBRARY_PATH="${LIB}" "${BIN}" icd "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "${ICD}"
-echo "wrote ${OUT} + ${ICD} via C++26 reflection (clang-p2996)"
+LD_LIBRARY_PATH="${LIB}" "${BIN}" icd "${STAMP}" > "${ICD}"
+LD_LIBRARY_PATH="${LIB}" "${BIN}" tex "${STAMP}" > "${TEX}"
+echo "wrote ${OUT} + ${ICD} + ${TEX} via C++26 reflection (clang-p2996)"

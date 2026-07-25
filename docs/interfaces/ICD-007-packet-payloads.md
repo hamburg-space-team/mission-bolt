@@ -7,7 +7,7 @@
 | Document ID | ICD-007 |
 | Protocol version | 1 |
 | Status | Generated |
-| Generated at | 2026-07-25T22:59:19Z |
+| Generated at | 2026-07-25T23:29:08Z |
 | Source | `bolt/wire/payloads.hpp` + `bolt/wire/types.hpp` |
 
 ## Purpose

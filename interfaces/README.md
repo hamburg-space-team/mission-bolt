@@ -39,11 +39,13 @@ Add `interfaces/include` to the include path:
 ## Regenerating the schema + ICD
 
 `tools/schemagen` reflects over the annotated structs (real C++26 P2996 +
-P3394) and regenerates two artefacts from the annotations — the single source,
+P3394) and regenerates three artefacts from the annotations — the single source,
 so they never drift:
 
 - `tools/generated/schema.json` — the ground codec's decode tables (`bolt-codec`)
 - `docs/interfaces/ICD-007-packet-payloads.md` — the human interface control doc
+- `tools/generated/icd-007.tex` — the same tables as LaTeX for the SED appendix
+  (`\input` it under the appendix subsection; needs `float` + `siunitx`)
 
 ```sh
 tools/schemagen/run-schemagen.sh          # VS Code: Run Build Task
