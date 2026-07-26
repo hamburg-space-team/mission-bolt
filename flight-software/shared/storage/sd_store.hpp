@@ -2,8 +2,8 @@
 
 #include "errors.hpp"
 #include "lfs.h"
-#include <bolt/wire/header.hpp>
 #include "store.hpp"
+#include <bolt/wire/header.hpp>
 
 #include <array>
 #include <cstdint>
