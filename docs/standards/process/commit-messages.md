@@ -89,3 +89,19 @@ Three reasons, in order:
 In code review, if a commit subject doesn't tell you what changed,
 ask for a rewrite. We squash on merge but the PR title becomes the
 final commit subject -- so the same rules apply to PR titles.
+
+## Assisted contributions
+
+A change produced with substantial help from a coding assistant carries a
+trailer in the footer:
+
+```
+Assisted-by: claude-code:claude-fable-5
+Signed-off-by: Max Atslega <max@atslega.dev>
+```
+
+An assistant never adds `Signed-off-by:`. That line certifies the right
+to submit the contribution and accepts responsibility for it, and only a
+person can certify that. Enforced by `scripts/hooks/commit-msg`
+(`git config core.hooksPath scripts/hooks`) and re-checked by the
+`provenance` verify stage; see [provenance](../ai/provenance.md).
