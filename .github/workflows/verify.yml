@@ -43,3 +43,11 @@ jobs:
             # the fresh regen
             git checkout -- interfaces/tools/generated docs/interfaces/ICD-007-packet-payloads.md
             scripts/verify.sh
+
+      - name: Upload flight binaries
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: flight-debug-${{ github.sha }}
+          path: flight-software/out/**/*.elf
+          if-no-files-found: error
