@@ -47,7 +47,7 @@ SHARED_ALLOW=(
 
 check_alloc() {
     local rc=0 elfs
-    mapfile -t elfs < <(find "${FSW}/out" -name '*.elf' 2>/dev/null | sort)
+    mapfile -t elfs < <(find "${FSW}/out" -name '*.elf' -not -path '*test-nucleo*' 2>/dev/null | sort)
     if [ "${#elfs[@]}" -eq 0 ]; then
         echo "alloc: no .elf found - build first (cbuild, or verify.sh flight-build)"
         return 1

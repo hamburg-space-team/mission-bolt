@@ -27,14 +27,12 @@ done
 
 cd "${FSW}"
 
-# Compile databases come from cbuild; produce them if missing
-if ! ls tmp/*/compile_commands.json >/dev/null 2>&1; then
-    echo "no compile databases - running cbuild once"
-    cbuild bolt.csolution.yml \
-        --context btc.Debug+btc --context exp1.Debug+exp1-space-disco \
-        --context exp2.Debug+exp2-bouncy-castle --context exp3.Debug+exp3-floaty-boi \
-        >/dev/null || { echo "error: cbuild failed"; exit 1; }
-fi
+
+echo "== cbuild: refreshing flight compile databases"
+cbuild bolt.csolution.yml \
+    --context btc.Debug+btc --context exp1.Debug+exp1-space-disco \
+    --context exp2.Debug+exp2-bouncy-castle --context exp3.Debug+exp3-floaty-boi \
+    >/dev/null || { echo "error: cbuild failed"; exit 1; }
 
 SAN="$(mktemp -d)"
 trap 'rm -rf "${SAN}"' EXIT
@@ -44,7 +42,7 @@ trap 'rm -rf "${SAN}"' EXIT
 jq -s '
   [ add[]
     | select(.file | test("/(shared|app)/.*\\.cpp$"))
-    | select(.file | test("/lib/") | not)
+    | select(.file | test("/lib/|test-nucleo") | not)
     | .command |= (
         gsub(" -masm-syntax-unified"; "")
         | gsub(" -isystem [^ ]*lib/gcc[^ ]*"; "")
