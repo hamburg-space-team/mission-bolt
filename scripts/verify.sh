@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 # One-stop verification for mission-bolt. Run it after any change - it is the
 # same gate for everyone (and for CI): flight builds, host unit tests,
-# generated-artifact drift, ground tooling, lint.
+# generated-artifact drift, flight invariants, ground tooling, provenance,
+# lint.
 #
-#   scripts/verify.sh                 full gate
-#   scripts/verify.sh --no-lint      skip clang-tidy/clang-format (slowest part)
-#   scripts/verify.sh --no-build     skip the flight cbuild
-#   scripts/verify.sh --no-rust      skip cargo checks
-#   scripts/verify.sh --no-ext       skip the extension typecheck
+#   scripts/verify.sh                    full gate
+#   scripts/verify.sh --list             list the stage names
+#   scripts/verify.sh host-tests lint-flight   run only the named stages
+#   scripts/verify.sh --no-lint          full gate without the lint pass
 #
-# Sections report PASS/FAIL/SKIP; the script exits non-zero if anything FAILs.
+# Skip flags: --no-build --no-rust --no-ext --no-lint --no-prov
+#
+# Stages report PASS/FAIL/SKIP; the script exits non-zero if anything FAILs.
 # SKIPs (missing optional tooling) never fail the gate, but are listed.
+# New checks carry a --selftest that proves they fail on known-bad input;
+# the stage runs the selftest first (docs/standards/ai/policy.md).
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,16 +22,35 @@ REPO="$(cd "${HERE}/.." && pwd)"
 FSW="${REPO}/flight-software"
 TT="${REPO}/telemetry-tools"
 
-DO_LINT=1 DO_BUILD=1 DO_RUST=1 DO_EXT=1
+STAGES=(flight-build host-tests schema-drift iface-headers invariants
+    rust-build rust-tests rust-fmt rust-clippy ext-build provenance lint-flight)
+
+DO_LINT=1 DO_BUILD=1 DO_RUST=1 DO_EXT=1 DO_PROV=1
+ONLY=()
 for arg in "$@"; do
     case "${arg}" in
+    --list) printf '%s\n' "${STAGES[@]}"; exit 0 ;;
     --no-lint) DO_LINT=0 ;;
     --no-build) DO_BUILD=0 ;;
     --no-rust) DO_RUST=0 ;;
     --no-ext) DO_EXT=0 ;;
-    *) echo "unknown option: ${arg}"; exit 2 ;;
+    --no-prov) DO_PROV=0 ;;
+    -*) echo "unknown option: ${arg} (--list shows stages)"; exit 2 ;;
+    *)
+        if ! printf '%s\n' "${STAGES[@]}" | grep -qx "${arg}"; then
+            echo "unknown stage: ${arg} (--list shows stages)"
+            exit 2
+        fi
+        ONLY+=("${arg}")
+        ;;
     esac
 done
+
+# wants <stage> - true when the stage is selected (default: all)
+wants() {
+    [ "${#ONLY[@]}" -eq 0 ] && return 0
+    printf '%s\n' "${ONLY[@]}" | grep -qx "$1"
+}
 
 declare -A RESULT
 ORDER=()
@@ -130,6 +153,21 @@ iface_headers() {
     return "${rc}"
 }
 
+# --- flight invariants with a mechanical check ----------------------------
+# selftest first: a check is only trusted after it rejected known-bad input
+invariants_check() {
+    "${HERE}/check-flight-invariants.sh" --selftest &&
+        "${HERE}/check-flight-invariants.sh"
+}
+
+# --- provenance of assisted contributions ---------------------------------
+# Disclosure is a property of the repository, not a habit; a branch that
+# bypassed the local hook fails here. See docs/standards/ai/provenance.md
+provenance_check() {
+    "${HERE}/check-provenance.sh" --selftest &&
+        "${HERE}/check-provenance.sh" "${PROVENANCE_RANGE:-origin/main..HEAD}"
+}
+
 # --- ground tooling -------------------------------------------------------
 rust_build() { (cd "${TT}" && cargo build --workspace --quiet); }
 rust_tests() { (cd "${TT}" && cargo test --workspace --quiet); }
@@ -138,58 +176,86 @@ rust_clippy() { (cd "${TT}" && cargo clippy --workspace --quiet -- -D warnings);
 ext_build() { (cd "${TT}/extension" && npm run --silent compile); }
 
 # --- run ------------------------------------------------------------------
-if [ "${DO_BUILD}" -eq 1 ]; then
-    section "flight-build" flight_build
-else
-    skip "flight-build" "--no-build"
+if wants flight-build; then
+    if [ "${DO_BUILD}" -eq 1 ]; then
+        section "flight-build" flight_build
+    else
+        skip "flight-build" "--no-build"
+    fi
 fi
 
-section "host-tests" host_tests
+wants host-tests && section "host-tests" host_tests
 
-if [ -x "${CLANG_P2996_DIR:-/opt/compiler-explorer/clang-p2996}/bin/clang++" ]; then
-    section "schema-drift" schema_drift
-else
-    skip "schema-drift" "clang-p2996 not installed"
+if wants schema-drift; then
+    if [ -x "${CLANG_P2996_DIR:-/opt/compiler-explorer/clang-p2996}/bin/clang++" ]; then
+        section "schema-drift" schema_drift
+    else
+        skip "schema-drift" "clang-p2996 not installed"
+    fi
 fi
 
-if command -v arm-none-eabi-g++ >/dev/null; then
-    section "iface-headers" iface_headers
-else
-    skip "iface-headers" "arm-none-eabi-g++ not found"
+if wants iface-headers; then
+    if command -v arm-none-eabi-g++ >/dev/null; then
+        section "iface-headers" iface_headers
+    else
+        skip "iface-headers" "arm-none-eabi-g++ not found"
+    fi
+fi
+
+if wants invariants; then
+    if command -v arm-none-eabi-nm >/dev/null; then
+        section "invariants" invariants_check
+    else
+        skip "invariants" "arm-none-eabi-nm not found"
+    fi
 fi
 
 if [ "${DO_RUST}" -eq 1 ]; then
-    section "rust-build" rust_build
-    section "rust-tests" rust_tests
-    if (cd "${TT}" && cargo fmt --version >/dev/null 2>&1); then
-        section "rust-fmt" rust_fmt
-    else
-        skip "rust-fmt" "rustfmt not installed"
+    wants rust-build && section "rust-build" rust_build
+    wants rust-tests && section "rust-tests" rust_tests
+    if wants rust-fmt; then
+        if (cd "${TT}" && cargo fmt --version >/dev/null 2>&1); then
+            section "rust-fmt" rust_fmt
+        else
+            skip "rust-fmt" "rustfmt not installed"
+        fi
     fi
-    if (cd "${TT}" && cargo clippy --version >/dev/null 2>&1); then
-        section "rust-clippy" rust_clippy
-    else
-        skip "rust-clippy" "clippy not installed"
+    if wants rust-clippy; then
+        if (cd "${TT}" && cargo clippy --version >/dev/null 2>&1); then
+            section "rust-clippy" rust_clippy
+        else
+            skip "rust-clippy" "clippy not installed"
+        fi
     fi
 else
-    skip "rust-build" "--no-rust"
-    skip "rust-tests" "--no-rust"
+    wants rust-build && skip "rust-build" "--no-rust"
+    wants rust-tests && skip "rust-tests" "--no-rust"
 fi
 
-if [ "${DO_EXT}" -eq 1 ]; then
-    if [ -d "${TT}/extension/node_modules" ]; then
+if wants ext-build; then
+    if [ "${DO_EXT}" -eq 0 ]; then
+        skip "ext-build" "--no-ext"
+    elif [ -d "${TT}/extension/node_modules" ]; then
         section "ext-build" ext_build
     else
         skip "ext-build" "node_modules missing - run npm ci in telemetry-tools/extension"
     fi
-else
-    skip "ext-build" "--no-ext"
 fi
 
-if [ "${DO_LINT}" -eq 1 ]; then
-    section "lint-flight" "${HERE}/lint-flight.sh"
-else
-    skip "lint-flight" "--no-lint"
+if wants provenance; then
+    if [ "${DO_PROV}" -eq 1 ]; then
+        section "provenance" provenance_check
+    else
+        skip "provenance" "--no-prov"
+    fi
+fi
+
+if wants lint-flight; then
+    if [ "${DO_LINT}" -eq 1 ]; then
+        section "lint-flight" "${HERE}/lint-flight.sh"
+    else
+        skip "lint-flight" "--no-lint"
+    fi
 fi
 
 # --- summary --------------------------------------------------------------
