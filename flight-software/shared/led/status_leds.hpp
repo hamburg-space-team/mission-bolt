@@ -106,18 +106,17 @@ class StatusLeds {
         }
 
         // One pattern cycle: N pulses (on+gap each) followed by the code gap.
-        auto pattern_len =
+        const auto pattern_len =
             static_cast<uint16_t>((this->active_code * (PULSE_ON_TICKS + PULSE_GAP_TICKS)) + CODE_GAP_TICKS);
         if (this->pattern_ticks >= pattern_len) {
             this->pattern_ticks = 0U;
         }
         // Rotate to the next latched code only at a pattern boundary, so a
-        // pulse group is never cut short mid-count.
+        // pulse group is never cut short mid-count. The new code's length
+        // takes effect via the wrap check on the next tick
         if (this->pattern_ticks == 0U && this->window_ticks >= ERR_WINDOW_TICKS) {
             this->active_code = next_fault(this->active_code);
             this->window_ticks = 0U;
-            pattern_len =
-                static_cast<uint16_t>((this->active_code * (PULSE_ON_TICKS + PULSE_GAP_TICKS)) + CODE_GAP_TICKS);
         }
         this->window_ticks++;
 

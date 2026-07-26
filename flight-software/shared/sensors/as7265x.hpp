@@ -93,8 +93,8 @@ class AS7265X : public DeviceBase {
     static constexpr uint8_t INT_ENABLE_BIT = 0x40U;
     static constexpr uint8_t VWRITE_FLAG = 0x80U;
     static constexpr uint8_t MODE_ONE_SHOT = 0b11U;
-    static constexpr uint32_t TIMEOUT_MS = 20U;   // hard deadline for a mailbox wait (stuck device)
-    static constexpr uint32_t BUSY_ITER = 100U;   // host-only cap when no ms-tick clock is wired
+    static constexpr uint32_t TIMEOUT_MS = 20U; // hard deadline for a mailbox wait (stuck device)
+    static constexpr uint32_t BUSY_ITER = 100U; // host-only cap when no ms-tick clock is wired
 
     static constexpr uint8_t FIRST_CHANNEL_VREG = 0x08U;
     static constexpr uint8_t VREG_DEV_SEL = 0x4FU;

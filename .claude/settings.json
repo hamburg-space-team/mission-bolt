@@ -1,0 +1,12 @@
+{
+    "permissions": {
+        "deny": [
+            "Edit(./flight-software/*/generated/**)",
+            "Write(./flight-software/*/generated/**)",
+            "Edit(./flight-software/*/RTE/**)",
+            "Write(./flight-software/*/RTE/**)",
+            "Edit(./flight-software/lib/littlefs/**)",
+            "Write(./flight-software/lib/littlefs/**)"
+        ]
+    }
+}

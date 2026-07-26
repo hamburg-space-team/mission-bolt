@@ -154,7 +154,11 @@ impl Builder {
         if !crc_ok {
             self.crc_fail_total += 1;
             if self.crc_fails.len() < MAX_CRC_LIST {
-                self.crc_fails.push(CrcFail { index: self.total - 1, ty, tick });
+                self.crc_fails.push(CrcFail {
+                    index: self.total - 1,
+                    ty,
+                    tick,
+                });
             }
         }
 
@@ -180,17 +184,35 @@ impl Builder {
         if !is_event {
             self.t_start.get_or_insert(timestamp_us);
             self.t_end = self.t_end.max(timestamp_us);
-            if timestamp_us >= self.last_anchor_us + ANCHOR_INTERVAL_US || self.timeline.is_empty() {
-                self.timeline.push(TimeAnchor { t_us: timestamp_us, rows: self.rows.clone() });
+            if timestamp_us >= self.last_anchor_us + ANCHOR_INTERVAL_US || self.timeline.is_empty()
+            {
+                self.timeline.push(TimeAnchor {
+                    t_us: timestamp_us,
+                    rows: self.rows.clone(),
+                });
                 self.last_anchor_us = timestamp_us;
             }
         }
 
         match (payload, sample) {
-            (_, Sample::Status { lo_rtc_s: Some(lo), .. }) if *lo != 0 && self.lo_rtc_s == 0 => {
+            (
+                _,
+                Sample::Status {
+                    lo_rtc_s: Some(lo), ..
+                },
+            ) if *lo != 0 && self.lo_rtc_s == 0 => {
                 self.lo_rtc_s = *lo;
             }
-            (Payload::GapMarker(_), Sample::Gap { first_missing_tick, count, reason, node, .. }) => {
+            (
+                Payload::GapMarker(_),
+                Sample::Gap {
+                    first_missing_tick,
+                    count,
+                    reason,
+                    node,
+                    ..
+                },
+            ) => {
                 self.gaps.push(GapEntry {
                     first_missing_tick: *first_missing_tick,
                     count: *count,
@@ -198,7 +220,15 @@ impl Builder {
                     node: (*node).to_string(),
                 });
             }
-            (Payload::Boot(_), Sample::Boot { reason, reboot_count, node, .. }) => {
+            (
+                Payload::Boot(_),
+                Sample::Boot {
+                    reason,
+                    reboot_count,
+                    node,
+                    ..
+                },
+            ) => {
                 self.boots.push(BootEntry {
                     reason: (*reason).to_string(),
                     reboot_count: *reboot_count,
@@ -206,7 +236,19 @@ impl Builder {
                     timestamp_us,
                 });
             }
-            (Payload::Fault(_), Sample::Fault { fault_code, error_code, line, depth, truncated, steps, node, .. }) => {
+            (
+                Payload::Fault(_),
+                Sample::Fault {
+                    fault_code,
+                    error_code,
+                    line,
+                    depth,
+                    truncated,
+                    steps,
+                    node,
+                    ..
+                },
+            ) => {
                 self.faults.push(FaultEntry {
                     fault_code: *fault_code,
                     error_code: *error_code,
@@ -218,7 +260,17 @@ impl Builder {
                     node: (*node).to_string(),
                 });
             }
-            (_, Sample::Test { node, test_id, result, result_name, last, data }) => {
+            (
+                _,
+                Sample::Test {
+                    node,
+                    test_id,
+                    result,
+                    result_name,
+                    last,
+                    data,
+                },
+            ) => {
                 self.tests.push(TestEntry {
                     node: (*node).to_string(),
                     test_id: *test_id,

@@ -39,7 +39,8 @@ Checks: >-
   bugprone-too-small-loop-variable, bugprone-undefined-memory-manipulation,
   bugprone-unused-return-value,
 
-  clang-analyzer-core.*, clang-analyzer-cplusplus.*,
+  clang-analyzer-core.*, -clang-analyzer-core.FixedAddressDereference,
+  clang-analyzer-cplusplus.*,
   clang-analyzer-deadcode.DeadStores, clang-analyzer-security.*,
 
   cppcoreguidelines-avoid-goto, cppcoreguidelines-interfaces-global-init,

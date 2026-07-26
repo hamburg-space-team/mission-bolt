@@ -128,7 +128,7 @@ Result<void> LP5810::enable_chip() {
             this->delay_ms(CHIP_EN_RETRY_DELAY_MS);
         }
     }
-    
+
     // Retries exhausted - r holds the last write's error chain.
     return mark(r.error(), Step::LED_ENABLE_CHIP);
 }

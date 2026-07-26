@@ -119,21 +119,23 @@ void Exp3Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
 
 std::optional<PacketProtocol::TestResult> Exp3Computer::step_imu_whoami(NodeComputer& node, bool /*first*/,
                                                                         uint32_t& data) noexcept {
-    return ImuSelfTest::whoami(static_cast<Exp3Computer&>(node).imu, data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    return ImuSelfTest::whoami(static_cast<Exp3Computer&>(node).imu, data);
 }
 
 std::optional<PacketProtocol::TestResult> Exp3Computer::step_imu_read(NodeComputer& node, bool /*first*/,
                                                                       uint32_t& data) noexcept {
-    return ImuSelfTest::read(static_cast<Exp3Computer&>(node).imu, data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    return ImuSelfTest::read(static_cast<Exp3Computer&>(node).imu, data);
 }
 
 std::span<const SelfTest::Step> Exp3Computer::self_test_steps() const noexcept {
-    static constexpr std::array<SelfTest::Step, 5U> STEPS = {{
+    static constexpr std::array<SelfTest::Step, 5U> steps = {{
         {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
         {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
         {&Exp3Computer::step_imu_whoami}, // 3: ICM-42686 WHO_AM_I
         {&Exp3Computer::step_imu_read},   // 4: ICM-42686 accel/gyro Z
     }};
-    return STEPS;
+    return steps;
 }

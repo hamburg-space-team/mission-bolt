@@ -1,0 +1,10 @@
+---
+description: Firmware rules - invariants, review checklist, driver procedure
+globs: flight-software/**
+alwaysApply: false
+---
+
+Bound by docs/standards/system-invariants.md. Review checklist and house
+patterns: docs/guides/reviewing-firmware-changes.md. New hardware:
+docs/guides/adding-a-driver.md. Never edit */generated/, */RTE/ or
+lib/littlefs. Verify with ./scripts/verify.sh.

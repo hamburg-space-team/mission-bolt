@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Reminds the committer of the provenance trailer (docs/standards/ai/
+# provenance.md): adds a commented template line to interactive commits.
+# Uncomment it if the change was substantially assisted; leave it alone
+# otherwise - git strips comment lines from edited messages.
+#
+# Runs only when an editor session follows ($2 empty or "template").
+# -m/-F messages keep comment lines, so injecting there would pollute the
+# message; merges, squashes and amends bring their own text.
+MSG_FILE="$1"
+SOURCE="${2:-}"
+
+case "${SOURCE}" in
+"" | template) ;;
+*) exit 0 ;;
+esac
+
+grep -qiE '^Assisted-by:' "${MSG_FILE}" && exit 0
+
+HINT='# Substantially assisted? Uncomment and adjust (docs/standards/ai/provenance.md):
+#Assisted-by: <agent>:<model>'
+
+# Insert ahead of git's own comment block, so an uncommented trailer lands
+# at the end of the message body
+awk -v hint="${HINT}" '
+    !done && /^#/ { print hint; done=1 }
+    { print }
+    END { if (!done) print hint }
+' "${MSG_FILE}" > "${MSG_FILE}.tmp" && mv "${MSG_FILE}.tmp" "${MSG_FILE}"

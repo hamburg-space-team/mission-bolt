@@ -54,6 +54,10 @@ class NodeComputer : public FlightComputer {
     }
 
     void retry_failed_devices();
+    void retry_i2c();
+    void retry_baro();
+    void retry_tmp();
+    void retry_storage();
 
     virtual void retry_extra_devices() {
     }

@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# CI runners remap the container user's uid (1001 vs the image's 1000), so
+# the packs volume and the baked cargo/rustup dirs belong to someone else
+# there. Take ownership of whatever we need to write
+for d in "${CMSIS_PACK_ROOT:-/opt/cmsis-packs}" /usr/local/cargo /usr/local/rustup; do
+    if [ -d "${d}" ] && [ ! -w "${d}" ]; then
+        sudo chown -R "$(id -u):$(id -g)" "${d}"
+    fi
+done
+
 if [ ! -f "${CMSIS_PACK_ROOT}/.Web/index.pidx" ]; then
     cpackget init https://www.keil.com/pack/index.pidx
 fi
@@ -29,20 +38,8 @@ if [ -d telemetry-tools ]; then
     ( cd telemetry-tools && cargo build ) \
         || ( echo "telemetry-tools: build with hdf5 failed (check libhdf5) - building without hdf5"; \
              cd telemetry-tools && cargo build --no-default-features )
-    ( cd telemetry-tools/extension && npm install && npm run compile ) \
-        || echo "telemetry-tools: extension build failed"
-
-    ext_dir="$HOME/.vscode-server/extensions"
-    code_server="$(ls -1 "$HOME"/.vscode-server/bin/*/bin/code-server \
-        /vscode/vscode-server/bin/*/bin/code-server 2>/dev/null | head -1)"
-    if [ -n "$code_server" ] && \
-       ( cd telemetry-tools/extension && npx --yes @vscode/vsce package --no-dependencies -o bolt.vsix ); then
-        "$code_server" --install-extension "$PWD/telemetry-tools/extension/bolt.vsix" \
-            --extensions-dir "$ext_dir" --force \
-            || echo "telemetry-tools: auto-install failed - build the extension and reload the window"
-    else
-        echo "telemetry-tools: code-server/vsce unavailable - build the extension and reload the window"
-    fi
+    bash scripts/rebuild-extension.sh \
+        || echo "telemetry-tools: extension build/install failed - run scripts/rebuild-extension.sh by hand"
 fi
 
 echo "Devcontainer ready. Build with:"

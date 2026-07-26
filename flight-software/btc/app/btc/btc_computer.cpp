@@ -184,25 +184,25 @@ void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
 
 std::optional<PacketProtocol::TestResult> BtcComputer::step_imu_whoami(NodeComputer& node, bool /*first*/,
                                                                        uint32_t& data) noexcept {
-    return ImuSelfTest::whoami(static_cast<BtcComputer&>(node).imu_sup,
-                               data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    return ImuSelfTest::whoami(static_cast<BtcComputer&>(node).imu_sup, data);
 }
 
 std::optional<PacketProtocol::TestResult> BtcComputer::step_imu_read(NodeComputer& node, bool /*first*/,
                                                                      uint32_t& data) noexcept {
-    return ImuSelfTest::read(static_cast<BtcComputer&>(node).imu_sup,
-                             data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    return ImuSelfTest::read(static_cast<BtcComputer&>(node).imu_sup, data);
 }
 
 std::span<const SelfTest::Step> BtcComputer::self_test_steps() noexcept {
-    static constexpr std::array<SelfTest::Step, 5U> STEPS = {{
+    static constexpr std::array<SelfTest::Step, 5U> steps = {{
         {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
         {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
         {&BtcComputer::step_imu_whoami},  // 3: ICM-42686 WHO_AM_I
         {&BtcComputer::step_imu_read},    // 4: ICM-42686 accel/gyro Z
     }};
-    return STEPS;
+    return steps;
 }
 
 void BtcComputer::send_test_packet(uint32_t timestamp_us, const SelfTest::Report& report) {
@@ -350,7 +350,7 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
 
     {
         BOLT_TIME(timings, SEND);
-        exp_forwarder::drain(reassembler, downlink, sequencer);
+        ExpForwarder::drain(reassembler, downlink, sequencer);
         send_env_packet(tick_start_us);
         send_status_packet(tick_start_us);
     }

@@ -145,19 +145,19 @@
       },
       {
         "command": "bolt.send.resetTick",
-        "title": "Bolt: Send \u25b8 Reset Tick"
+        "title": "Bolt: Send ▸ Reset Tick"
       },
       {
         "command": "bolt.send.startExperiment",
-        "title": "Bolt: Send \u25b8 Start Experiment"
+        "title": "Bolt: Send ▸ Start Experiment"
       },
       {
         "command": "bolt.send.activateCamera",
-        "title": "Bolt: Send \u25b8 Activate Camera"
+        "title": "Bolt: Send ▸ Activate Camera"
       },
       {
         "command": "bolt.send.fullSystemTest",
-        "title": "Bolt: Send \u25b8 Full System Test"
+        "title": "Bolt: Send ▸ Full System Test"
       },
       {
         "command": "bolt.inspectFault",
@@ -169,7 +169,7 @@
       },
       {
         "command": "bolt.filterFeed",
-        "title": "Bolt: Filter Live Feed by Packet\u2026",
+        "title": "Bolt: Filter Live Feed by Packet…",
         "icon": "$(filter)"
       },
       {
@@ -189,7 +189,7 @@
       },
       {
         "command": "bolt.rxsm.pickPort",
-        "title": "Bolt: Select RXSM Debug Port\u2026",
+        "title": "Bolt: Select RXSM Debug Port…",
         "icon": "$(plug)"
       }
     ],
@@ -299,7 +299,7 @@
     "walkthroughs": [
       {
         "id": "bolt.start",
-        "title": "Bolt: Connect \u00b7 Decode \u00b7 Review",
+        "title": "Bolt: Connect · Decode · Review",
         "description": "Get telemetry flowing in three steps.",
         "steps": [
           {
@@ -338,22 +338,26 @@
     "watch:host": "tsc -watch -p ./",
     "watch:webview": "vite build --watch --mode development",
     "vscode:prepublish": "npm run compile",
-    "package": "npm run compile && node --require ./scripts/file-global.cjs node_modules/@vscode/vsce/vsce package --no-dependencies"
+    "package": "npm run compile && node node_modules/@vscode/vsce/vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@types/vscode": "^1.90.0",
-    "@vitejs/plugin-react": "4.3.4",
-    "@vscode/vsce": "^2.32.0",
+    "@vitejs/plugin-react": "^6.0.4",
+    "@vscode/vsce": "^3.9.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.4",
-    "vite": "5.4.21"
+    "vite": "^8.1.5"
   },
   "dependencies": {
     "echarts": "^6.1.0",
     "tabulator-tables": "^6.5.2"
+  },
+  "allowScripts": {
+    "@vscode/vsce-sign@2.0.9": false,
+    "keytar@7.9.0": false
   }
 }

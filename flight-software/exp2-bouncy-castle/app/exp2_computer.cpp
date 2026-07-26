@@ -50,10 +50,10 @@ void Exp2Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
 
 std::span<const SelfTest::Step> Exp2Computer::self_test_steps() const noexcept {
     // common sensors only - the Li-Fi front end is TODO, like the tick body
-    static constexpr std::array<SelfTest::Step, 3U> STEPS = {{
+    static constexpr std::array<SelfTest::Step, 3U> steps = {{
         {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
         {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
     }};
-    return STEPS;
+    return steps;
 }

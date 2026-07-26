@@ -19,7 +19,10 @@ impl fmt::Display for DecodeError {
                 write!(f, "payload 0x{ty:02X} too short: need {need}, got {got}")
             }
             DecodeError::SizeMismatch { ty, expected, got } => {
-                write!(f, "payload 0x{ty:02X} size mismatch: expected {expected}, got {got}")
+                write!(
+                    f,
+                    "payload 0x{ty:02X} size mismatch: expected {expected}, got {got}"
+                )
             }
         }
     }

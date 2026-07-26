@@ -16,7 +16,8 @@ For the mission overview start at the top-level
 - **[standards/](standards/)** -- the rules
   - [system-invariants.md](standards/system-invariants.md) -- P-1..4, I-1..6
   - [coding/](standards/coding/) -- language-specific
-  - [documentation/](standards/documentation/) -- templates
+  - [documentation/](standards/documentation/) -- templates, writing style
+  - [ai/](standards/ai/) -- assisted development: acceptance criteria, workflow classification, provenance
 - **[decisions/](decisions/)** -- Architecture Decision Records (ADRs)
 - **[interfaces/](interfaces/)** -- Interface Control Documents (ICDs)
 - **[guides/](guides/)** -- task-oriented how-tos
@@ -35,6 +36,8 @@ For the mission overview start at the top-level
 | [008](decisions/ADR-008-noinit-ram-recovery.md) | Mid-flight recovery via `.noinit` SRAM |
 | [009](decisions/ADR-009-raw-sensor-data-to-ground.md) | Send raw sensor data, compensate on ground |
 | [010](decisions/ADR-010-packet-format-crc16.md) | 64-byte packet format with CRC-16/CCITT |
+| [012](decisions/ADR-012-error-step-trace.md) | Wire-stable error step trace + FAULT packet |
+| [013](decisions/ADR-013-assisted-development.md) | Assisted development under verified acceptance |
 
 ## ICDs
 

@@ -105,6 +105,28 @@ The `.noinit` section
 ([ADR-008](../decisions/ADR-008-noinit-ram-recovery.md)) lives in
 the linker user section.
 
+## Verifying a Change
+
+`scripts/verify.sh` is the one gate for everything - run it before
+every push. CI (`.github/workflows/verify.yml`) runs the same script
+inside the devcontainer on every PR and push to main:
+
+```sh
+scripts/verify.sh              # flight builds, host tests, schema drift,
+                               # interfaces header check (flight + reflection
+                               # view), cargo build/test/fmt/clippy, extension
+                               # build, clang-tidy + clang-format
+scripts/verify.sh --no-lint    # skip the lint pass (slowest section)
+scripts/lint-flight.sh --fix   # apply clang-format / tidy fixes in place
+scripts/rebuild-extension.sh   # rebuild the boltscope extension + install it
+                               # into VS Code (then reload the window)
+```
+
+Sections report PASS/FAIL/SKIP; missing optional tooling SKIPs
+without failing. The schema-drift section regenerates the schemagen
+artifacts and fails if they were stale - review and commit the
+regenerated files in that case.
+
 ## Common Issues
 
 - **`cbuild: command not found`** -- toolbox not on PATH. Source its

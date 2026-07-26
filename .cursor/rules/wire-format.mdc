@@ -1,0 +1,11 @@
+---
+description: Changing the wire format (payloads, enums, uplink commands) under interfaces/
+globs: interfaces/**
+alwaysApply: false
+---
+
+Follow docs/guides/changing-the-wire-format.md. The annotated structs
+are the single source; regenerate with
+interfaces/tools/schemagen/run-schemagen.sh and commit the artefacts
+with the source change. Type bytes and enum values are wire-stable.
+A changed unit/scale/offset/gate needs a named human datasheet review.

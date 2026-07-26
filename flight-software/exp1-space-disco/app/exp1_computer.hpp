@@ -82,6 +82,12 @@ class Exp1Computer final : public ExpComputer {
     void try_spec_recovery();
     void wait_spec_boot() noexcept;
     void report_experiment_faults() noexcept;
+    /// Block tick 0: latch the previous row's bookkeeping and read dies 0-1
+    void latch_prev_and_read_first();
+    /// Block tick 1a: read the last die and downlink the finished row
+    void finish_prev_read_and_send();
+    /// Block tick 1b: drive this row's LEDs and start its integration
+    void start_row(uint16_t can_tick, uint32_t timestamp_us);
 
     /// Retry the two LED drivers on the shared DeviceBase cooldown, like the
     /// common sensors. The spectrometer keeps its own reset-based recovery

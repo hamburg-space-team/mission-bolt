@@ -64,7 +64,10 @@ enum Parsed {
 // Offset of the next plausible sync start at position >= 1, or the whole
 // length if none - so a resync always makes forward progress.
 fn next_sync(buf: &[u8]) -> usize {
-    buf.iter().skip(1).position(|&b| b == SYNC_0).map_or(buf.len(), |p| p + 1)
+    buf.iter()
+        .skip(1)
+        .position(|&b| b == SYNC_0)
+        .map_or(buf.len(), |p| p + 1)
 }
 
 fn parse_one(buf: &[u8]) -> Parsed {
@@ -72,17 +75,23 @@ fn parse_one(buf: &[u8]) -> Parsed {
         return Parsed::NeedMore;
     }
     if buf[0] != SYNC_0 || buf[1] != SYNC_1 {
-        return Parsed::Resync { skip: next_sync(buf).max(1) };
+        return Parsed::Resync {
+            skip: next_sync(buf).max(1),
+        };
     }
     if buf.len() < HEADER_SIZE {
         return Parsed::NeedMore;
     }
     if buf[2] != PROTOCOL_VERSION {
-        return Parsed::Resync { skip: next_sync(buf).max(1) };
+        return Parsed::Resync {
+            skip: next_sync(buf).max(1),
+        };
     }
     let len = buf[5] as usize;
     if len > MAX_PAYLOAD {
-        return Parsed::Resync { skip: next_sync(buf).max(1) };
+        return Parsed::Resync {
+            skip: next_sync(buf).max(1),
+        };
     }
     let total = HEADER_SIZE + len + CRC_SIZE;
     if buf.len() < total {
@@ -99,7 +108,11 @@ fn parse_one(buf: &[u8]) -> Parsed {
 
     Parsed::Frame {
         consumed: total,
-        frame: Frame { header, payload, crc_ok: crc_calc == crc_wire },
+        frame: Frame {
+            header,
+            payload,
+            crc_ok: crc_calc == crc_wire,
+        },
     }
 }
 
@@ -114,7 +127,11 @@ pub struct Framer<'a> {
 impl<'a> Framer<'a> {
     #[must_use]
     pub fn new(buf: &'a [u8]) -> Self {
-        Framer { buf, pos: 0, resync_bytes: 0 }
+        Framer {
+            buf,
+            pos: 0,
+            resync_bytes: 0,
+        }
     }
 }
 
@@ -226,7 +243,9 @@ mod tests {
         stream.extend_from_slice(IMU);
         let events: Vec<_> = Framer::new(&stream).collect();
         // At least one resync, then the good frame.
-        assert!(events.iter().any(|e| matches!(e, FrameEvent::Resync { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, FrameEvent::Resync { .. })));
         let frame = events.iter().find_map(|e| match e {
             FrameEvent::Frame(fr) => Some(fr),
             _ => None,

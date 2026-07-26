@@ -4,7 +4,9 @@ mod manifest;
 use std::io::Write;
 
 use anyhow::{Context, Result};
-use bolt_codec::{decode_payload, frame_source, normalize, FrameEvent, Framer, MissionSpec, PayloadType};
+use bolt_codec::{
+    decode_payload, frame_source, normalize, FrameEvent, Framer, MissionSpec, PayloadType,
+};
 use clap::Parser;
 
 use hdf5_writer::HdfCollector;
@@ -20,7 +22,7 @@ struct Args {
     #[arg(long)]
     db: Option<String>,
 
-    // Query mode: read packets from --db as JSON lines on stdout instead of decoding a raw 
+    // Query mode: read packets from --db as JSON lines on stdout instead of decoding a raw
     #[arg(long)]
     query: bool,
 
@@ -219,26 +221,38 @@ fn main() -> Result<()> {
         if csv_rows.is_empty() {
             eprintln!("[postflight] no '{target}' packets found - CSV not written");
         } else {
-            let out = args.csv_out.clone().unwrap_or_else(|| format!("{target}.csv"));
+            let out = args
+                .csv_out
+                .clone()
+                .unwrap_or_else(|| format!("{target}.csv"));
             std::fs::write(&out, csv_rows.join("\n")).with_context(|| format!("write {out}"))?;
             eprintln!("[postflight] wrote {out} ({} rows)", csv_rows.len() - 1);
         }
     }
 
     if let Some(target) = &args.dump {
-        let out = args.dump_out.clone().unwrap_or_else(|| format!("{target}.jsonl"));
+        let out = args
+            .dump_out
+            .clone()
+            .unwrap_or_else(|| format!("{target}.jsonl"));
         std::fs::write(&out, dump_lines.join("\n")).with_context(|| format!("write {out}"))?;
         eprintln!("[postflight] wrote {out} ({} packets)", dump_lines.len());
     }
 
     if let Some(out) = &args.dump_all {
         std::fs::write(out, dump_all_lines.join("\n")).with_context(|| format!("write {out}"))?;
-        eprintln!("[postflight] wrote {out} ({} packets, all types)", dump_all_lines.len());
+        eprintln!(
+            "[postflight] wrote {out} ({} packets, all types)",
+            dump_all_lines.len()
+        );
     }
 
     if let Some(w) = db.take() {
         let n = w.finish()?;
-        eprintln!("[postflight] wrote {} ({n} packets indexed)", args.db.as_deref().unwrap_or("db"));
+        eprintln!(
+            "[postflight] wrote {} ({n} packets indexed)",
+            args.db.as_deref().unwrap_or("db")
+        );
     }
 
     Ok(())
@@ -316,13 +330,14 @@ impl DbWriter {
 
 // Serve the cache DB
 fn run_query(args: &Args) -> Result<()> {
-    let path = args.db.as_deref().context("--query requires --db <cache.sqlite>")?;
+    let path = args
+        .db
+        .as_deref()
+        .context("--query requires --db <cache.sqlite>")?;
 
-    let conn = rusqlite::Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .with_context(|| format!("open db {path}"))?;
+    let conn =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .with_context(|| format!("open db {path}"))?;
 
     let mut clauses: Vec<&str> = Vec::new();
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
@@ -351,13 +366,16 @@ fn run_query(args: &Args) -> Result<()> {
     } else {
         format!(" WHERE {}", clauses.join(" AND "))
     };
-    
+
     params.push(Box::new(args.limit.unwrap_or(100_000)));
     params.push(Box::new(args.offset.unwrap_or(0)));
 
     let sql = format!("SELECT json FROM packets{where_} ORDER BY id DESC LIMIT ? OFFSET ?");
     let mut stmt = conn.prepare(&sql)?;
-    let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|b| &**b as &dyn rusqlite::ToSql).collect();
+    let refs: Vec<&dyn rusqlite::ToSql> = params
+        .iter()
+        .map(|b| &**b as &dyn rusqlite::ToSql)
+        .collect();
     let rows = stmt.query_map(refs.as_slice(), |r| r.get::<_, String>(0))?;
 
     let stdout = std::io::stdout();

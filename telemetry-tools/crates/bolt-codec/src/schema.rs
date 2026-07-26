@@ -108,7 +108,12 @@ mod tests {
     fn all_payloads_present() {
         assert!(all().len() >= 16);
         // One TIMING layout per node (the type byte names the origin)
-        for p in ["PayloadBtcTiming", "PayloadExp1Timing", "PayloadExp2Timing", "PayloadExp3Timing"] {
+        for p in [
+            "PayloadBtcTiming",
+            "PayloadExp1Timing",
+            "PayloadExp2Timing",
+            "PayloadExp3Timing",
+        ] {
             assert!(payload(p).is_some(), "missing schema entry for {p}");
         }
     }

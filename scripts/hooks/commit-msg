@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Local enforcement of docs/standards/ai/provenance.md. Install once per
+# clone:
+#
+#   git config core.hooksPath scripts/hooks
+#
+# The same rules run again over the branch in CI (scripts/check-provenance.sh
+# via verify.sh), so bypassing the hook only moves the failure.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "${HERE}/../check-provenance.sh" --message "$1"

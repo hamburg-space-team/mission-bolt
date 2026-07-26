@@ -92,7 +92,11 @@ fn expected_size(ty: PayloadType) -> Option<usize> {
 // The exact match also guarantees every field offset below is in bounds.
 fn check_size(ty_byte: u8, ty: PayloadType, b: &[u8]) -> Result<(), DecodeError> {
     match expected_size(ty) {
-        Some(sz) if b.len() != sz => Err(DecodeError::SizeMismatch { ty: ty_byte, expected: sz, got: b.len() }),
+        Some(sz) if b.len() != sz => Err(DecodeError::SizeMismatch {
+            ty: ty_byte,
+            expected: sz,
+            got: b.len(),
+        }),
         _ => Ok(()),
     }
 }
@@ -142,11 +146,15 @@ mod tests {
     #[test]
     fn every_type_has_a_schema_size() {
         for ty in [
-            0x10u8, 0x11, 0x12, 0x13, 0x14, 0x20, 0x22, 0x23, 0x24, 0x25, 0x30, 0x31, 0x32, 0x33, 0x34,
-            0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0xF0, 0xF1, 0xF2, 0xFE,
+            0x10u8, 0x11, 0x12, 0x13, 0x14, 0x20, 0x22, 0x23, 0x24, 0x25, 0x30, 0x31, 0x32, 0x33,
+            0x34, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0xF0, 0xF1, 0xF2, 0xFE,
         ] {
             let t = PayloadType::from_u8(ty).unwrap();
-            assert!(expected_size(t).is_some(), "no schema size for {}", t.schema_name());
+            assert!(
+                expected_size(t).is_some(),
+                "no schema size for {}",
+                t.schema_name()
+            );
         }
     }
 
@@ -156,7 +164,11 @@ mod tests {
     fn wrong_size_is_rejected_exact_size_decodes() {
         assert!(matches!(
             decode_payload(0x10, &[0u8; 12]), // BtcEnv is 11 now
-            Err(DecodeError::SizeMismatch { expected: 11, got: 12, .. })
+            Err(DecodeError::SizeMismatch {
+                expected: 11,
+                got: 12,
+                ..
+            })
         ));
         assert!(decode_payload(0x10, &[0u8; 11]).is_ok());
     }

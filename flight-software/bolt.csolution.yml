@@ -1,6 +1,11 @@
 solution:
   compiler: GCC
   cdefault:
+  define:
+    - LFS_NO_MALLOC
+    - LFS_NO_ERROR
+    - LFS_NO_WARN
+    - LFS_NO_DEBUG
   misc:
     - for-compiler: GCC
       CPP:
