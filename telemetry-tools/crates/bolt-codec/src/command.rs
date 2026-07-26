@@ -22,7 +22,10 @@ pub enum Command {
     ActivateCamera,
     StopExperiment,
     FullSystemTest,
-    Raw { opcode: u8, payload: HVec<u8, MAX_PAYLOAD> },
+    Raw {
+        opcode: u8,
+        payload: HVec<u8, MAX_PAYLOAD>,
+    },
 }
 
 impl Command {
@@ -81,8 +84,12 @@ pub fn encode(cmd: &Command, seq: &mut u8) -> HVec<u8, MAX_PACKET_SIZE> {
         cmd.opcode(),
         *seq,
         len as u8,
-        0, 0, // tick = 0
-        0, 0, 0, 0, // timestamp_us = 0
+        0,
+        0, // tick = 0
+        0,
+        0,
+        0,
+        0, // timestamp_us = 0
     ]);
     let _ = buf.extend_from_slice(&payload[..len]);
 
@@ -96,7 +103,7 @@ pub fn encode(cmd: &Command, seq: &mut u8) -> HVec<u8, MAX_PACKET_SIZE> {
 
 #[cfg(test)]
 mod tests {
-    use crate::wire::{Framer, FrameEvent};
+    use crate::wire::{FrameEvent, Framer};
 
     use super::*;
 
@@ -114,7 +121,10 @@ mod tests {
         assert_eq!(f.header.ty, CommandType::ResetTick as u8);
         assert_eq!(f.header.sequence, 7);
         assert_eq!(f.header.length, 0);
-        assert!(f.header.ty < 0x10, "uplink opcode stays in the command range");
+        assert!(
+            f.header.ty < 0x10,
+            "uplink opcode stays in the command range"
+        );
     }
 
     #[test]

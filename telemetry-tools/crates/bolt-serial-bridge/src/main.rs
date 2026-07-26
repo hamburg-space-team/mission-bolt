@@ -106,7 +106,10 @@ fn emit(msg: &Out) {
 }
 
 fn log(level: &str, msg: impl Into<String>) {
-    emit(&Out::Log { level, msg: msg.into() });
+    emit(&Out::Log {
+        level,
+        msg: msg.into(),
+    });
 }
 
 /// One discovered serial port, for the extension's picker.
@@ -161,7 +164,15 @@ fn enumerate_ports() -> Vec<PortInfo> {
 
 #[cfg(feature = "serial")]
 fn plain(port: String, kind: &'static str) -> PortInfo {
-    PortInfo { port, kind, manufacturer: None, product: None, vid: None, pid: None, serial_number: None }
+    PortInfo {
+        port,
+        kind,
+        manufacturer: None,
+        product: None,
+        vid: None,
+        pid: None,
+        serial_number: None,
+    }
 }
 
 // Pull every "Label: Value" out of one debug-port line. The simulator lays
@@ -201,7 +212,10 @@ fn parse_debug_line(line: &str, out: &mut std::collections::BTreeMap<String, Str
         }
         let value = line[vs..ve].trim();
 
-        if !label.is_empty() && !value.is_empty() && out.get(label).map(String::as_str) != Some(value) {
+        if !label.is_empty()
+            && !value.is_empty()
+            && out.get(label).map(String::as_str) != Some(value)
+        {
             out.insert(label.to_string(), value.to_string());
             changed = true;
         }
@@ -219,7 +233,10 @@ fn parse_debug_line(line: &str, out: &mut std::collections::BTreeMap<String, Str
 // which read_line treats as EOF - assemble lines ourselves and treat Ok(0)
 // as "nothing yet"
 fn run_rxsm_debug(port: &str, baud: u32) -> Result<()> {
-    log("info", format!("rxsm debug port {port} @ {baud} 8N1 (ground equipment, not flight data)"));
+    log(
+        "info",
+        format!("rxsm debug port {port} @ {baud} 8N1 (ground equipment, not flight data)"),
+    );
     let (mut source, _) = open_serial(port, baud)?;
 
     let mut fields = std::collections::BTreeMap::new();
@@ -264,7 +281,10 @@ fn run_rxsm_debug(port: &str, baud: u32) -> Result<()> {
         }
         // A port that never sends a newline must not grow the buffer forever
         if acc.len() > 8192 {
-            log("warn", "rxsm debug port: 8 KB without a newline - discarding");
+            log(
+                "warn",
+                "rxsm debug port: 8 KB without a newline - discarding",
+            );
             acc.clear();
         }
     }
@@ -284,12 +304,17 @@ fn main() -> Result<()> {
 
     let spec: &'static MissionSpec =
         bolt_codec::find_mission(&args.mission).unwrap_or_else(bolt_codec::default_mission);
-    log("info", format!("mission = {} ({})", spec.id, spec.display_name));
+    log(
+        "info",
+        format!("mission = {} ({})", spec.id, spec.display_name),
+    );
 
     let mut tee = match &args.raw {
         Some(path) => {
             log("info", format!("recording raw -> {path}"));
-            Some(BufWriter::new(File::create(path).with_context(|| format!("create {path}"))?))
+            Some(BufWriter::new(
+                File::create(path).with_context(|| format!("create {path}"))?,
+            ))
         }
         None => None,
     };
@@ -300,19 +325,21 @@ fn main() -> Result<()> {
     let break_on_eof = !is_serial;
 
     // Open the byte source.
-    let (mut source, port_handle): (Box<dyn Read + Send>, Option<SharedPort>) = match (&args.replay,
-        &args.port)
-    {
-        (Some(path), _) => {
-            log("info", format!("replaying {path}"));
-            (Box::new(File::open(path).with_context(|| format!("open {path}"))?), None)
-        }
-        (None, Some(port)) => open_serial(port, args.baud)?,
-        (None, None) => {
-            log("info", "no --port/--replay: reading raw stream from stdin");
-            (Box::new(std::io::stdin()), None)
-        }
-    };
+    let (mut source, port_handle): (Box<dyn Read + Send>, Option<SharedPort>) =
+        match (&args.replay, &args.port) {
+            (Some(path), _) => {
+                log("info", format!("replaying {path}"));
+                (
+                    Box::new(File::open(path).with_context(|| format!("open {path}"))?),
+                    None,
+                )
+            }
+            (None, Some(port)) => open_serial(port, args.baud)?,
+            (None, None) => {
+                log("info", "no --port/--replay: reading raw stream from stdin");
+                (Box::new(std::io::stdin()), None)
+            }
+        };
 
     // Uplink: read command JSON lines from stdin and write encoded frames
     // to the serial port. Only meaningful in live mode.
@@ -386,7 +413,10 @@ fn main() -> Result<()> {
                     match decode_payload(f.header.ty, &f.payload) {
                         Ok(payload) => {
                             let sample = normalize(&payload, spec);
-                            if let Sample::Status { signal: Some(sig), .. } = &sample {
+                            if let Sample::Status {
+                                signal: Some(sig), ..
+                            } = &sample
+                            {
                                 lo = sig.lo;
                                 soe = sig.soe;
                                 sods = sig.sods;
@@ -529,7 +559,10 @@ fn send_command(port: &SharedPort, seq: &mut u8, msg: CmdMsg) {
         "raw" => match msg.opcode {
             Some(op) => {
                 let mut p = heapless_vec(&msg.payload);
-                Command::Raw { opcode: op, payload: std::mem::take(&mut p) }
+                Command::Raw {
+                    opcode: op,
+                    payload: std::mem::take(&mut p),
+                }
             }
             None => {
                 log("warn", "raw command needs an opcode");
@@ -547,7 +580,10 @@ fn send_command(port: &SharedPort, seq: &mut u8, msg: CmdMsg) {
     let this_seq = *seq;
     let bytes = encode(&cmd, seq);
     match port.lock().unwrap().write_all(&bytes) {
-        Ok(()) => log("info", format!("uplink '{}' sent (seq {this_seq})", msg.cmd)),
+        Ok(()) => log(
+            "info",
+            format!("uplink '{}' sent (seq {this_seq})", msg.cmd),
+        ),
         Err(e) => log("error", format!("uplink write failed: {e}")),
     }
 }
@@ -582,7 +618,6 @@ mod tests {
         fields
     }
 
-
     // Verbatim from the real simulator (the scanned manual was misleading:
     // values are column-padded and the label is "Dropout Duration")
     const REAL: &str = "Error Inhibit: ON         Byte Dropout Rate:   0          Dropout Duration:  7 B         Bit Error Rate:   0  ";
@@ -601,7 +636,10 @@ mod tests {
     fn parses_every_column_of_the_manual_sample() {
         let f = parse_all(MANUAL_SAMPLE);
         assert_eq!(f.get("Error Inhibit").map(String::as_str), Some("OFF"));
-        assert_eq!(f.get("Byte Dropout Rate").map(String::as_str), Some("2^-11"));
+        assert_eq!(
+            f.get("Byte Dropout Rate").map(String::as_str),
+            Some("2^-11")
+        );
         assert_eq!(f.get("Duration").map(String::as_str), Some("800ms"));
         assert_eq!(f.get("Bit Error Rate").map(String::as_str), Some("2^-18"));
         assert_eq!(f.len(), 4, "the comment line must not become a field");
@@ -625,11 +663,19 @@ mod tests {
     #[test]
     fn only_real_changes_are_reported() {
         let mut fields = std::collections::BTreeMap::new();
-        assert!(parse_debug_line("Error Inhibit: OFF", &mut fields), "first value is a change");
-        assert!(!parse_debug_line("Error Inhibit: OFF", &mut fields), "same value must not re-emit");
-        assert!(parse_debug_line("Error Inhibit: ON", &mut fields), "flip must re-emit");
+        assert!(
+            parse_debug_line("Error Inhibit: OFF", &mut fields),
+            "first value is a change"
+        );
+        assert!(
+            !parse_debug_line("Error Inhibit: OFF", &mut fields),
+            "same value must not re-emit"
+        );
+        assert!(
+            parse_debug_line("Error Inhibit: ON", &mut fields),
+            "flip must re-emit"
+        );
     }
-
 
     // A serial read returns whatever bytes happen to be there; a status line
     // routinely arrives in pieces, split across 200 ms timeout windows. The
@@ -647,8 +693,15 @@ mod tests {
             }
         }
         assert_eq!(fields.get("Error Inhibit").map(String::as_str), Some("OFF"));
-        assert_eq!(fields.get("Byte Dropout Rate").map(String::as_str), Some("2^-11"));
-        assert_eq!(fields.len(), 2, "a fragment must never become its own field: {fields:?}");
+        assert_eq!(
+            fields.get("Byte Dropout Rate").map(String::as_str),
+            Some("2^-11")
+        );
+        assert_eq!(
+            fields.len(),
+            2,
+            "a fragment must never become its own field: {fields:?}"
+        );
     }
 
     #[test]

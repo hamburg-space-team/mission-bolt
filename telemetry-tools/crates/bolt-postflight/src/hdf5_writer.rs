@@ -37,7 +37,10 @@ mod real {
             if channels.is_empty() {
                 return; // discrete/event payloads have no array
             }
-            let entry = self.groups.entry((source.to_string(), name.to_string())).or_default();
+            let entry = self
+                .groups
+                .entry((source.to_string(), name.to_string()))
+                .or_default();
             entry.tick.push(tick);
             entry.ts.push(ts);
             for (col, v) in channels {

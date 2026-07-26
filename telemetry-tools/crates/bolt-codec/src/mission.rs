@@ -21,7 +21,9 @@ pub struct Calibration {
 
 // 1 / schema scale = LSB per engineering unit for a linear field.
 fn lsb_per_unit(payload: &str, field: &str) -> f32 {
-    let scale = schema::payload(payload).and_then(|p| p.field(field)).map_or(1.0, |f| f.scale);
+    let scale = schema::payload(payload)
+        .and_then(|p| p.field(field))
+        .map_or(1.0, |f| f.scale);
     (1.0 / scale) as f32
 }
 
