@@ -16,9 +16,9 @@ include(Catch)
 file(GLOB_RECURSE BOLT_UNIT_TESTS CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/shared/*.test.cpp"
     "${CMAKE_SOURCE_DIR}/btc/app/*.test.cpp"
-    "${CMAKE_SOURCE_DIR}/exp1/app/*.test.cpp"
-    "${CMAKE_SOURCE_DIR}/exp2/app/*.test.cpp"
-    "${CMAKE_SOURCE_DIR}/exp3/app/*.test.cpp")
+    "${CMAKE_SOURCE_DIR}/exp1-space-disco/app/*.test.cpp"
+    "${CMAKE_SOURCE_DIR}/exp2-bouncy-castle/app/*.test.cpp"
+    "${CMAKE_SOURCE_DIR}/exp3-floaty-boi/app/*.test.cpp")
 
 foreach(src IN LISTS BOLT_UNIT_TESTS)
     # shared/utils/crc16.test.cpp -> target shared-utils-crc16
