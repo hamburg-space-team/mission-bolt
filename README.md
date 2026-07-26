@@ -31,7 +31,12 @@ a REXUS sounding rocket.
 ### Software
 
 - [`flight-software/`](flight-software/) -- Embedded code for STM32-based flight computers
+- [`interfaces/`](interfaces/) -- The wire contract: annotated headers as the single source
+  for the packet schema, the ICDs and the decoders (C++26 reflection)
+- [`telemetry-tools/`](telemetry-tools/) -- Rust decoding stack (`bolt-codec`, serial bridge,
+  post-flight export) and the Bolt VS Code extension for live and post-flight telemetry
 - [`ground-station/`](ground-station/) -- Telemetry reception, dashboards, and operations tools
+- [`scripts/`](scripts/) -- The verify gate (`verify.sh`) and repository tooling
 
 ### Documentation
 
