@@ -46,11 +46,12 @@ reject. The checks added since carry it as an executable `--selftest`
 that the verify stage runs first, so the demonstration cannot silently
 rot after landing.
 
-The requirement has already earned its keep twice. The first version of
-the prose check grepped for a mojibake byte instead of the em dash it
-meant to find, and the first version of the allocation check flagged
-placement `new`, which allocates nothing. Both were caught by writing the
-known-bad (and known-good) fixtures, before either check was trusted.
+The requirement has already earned its keep: the first version of the
+allocation check flagged placement `new`, which allocates nothing, and
+a since-removed prose check turned out to grep for a mojibake byte
+instead of the em dash it meant to find. Both defects were caught by
+writing the known-bad and known-good fixtures, before either check was
+trusted.
 
 ## Classification table
 

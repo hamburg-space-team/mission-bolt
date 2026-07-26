@@ -126,17 +126,11 @@ Good:  The Linux kernel policy prescribes `Assisted-by:` and forbids an
 
 ## How this is checked
 
-Review, mostly. A reviewer who cannot find the information in a paragraph
-asks for the paragraph, not for a rewrite of its wording.
-
-One mechanical check exists, for the one rule that is unambiguous:
-`scripts/check-prose.sh` reports em dashes and the stock openers in
-tracked Markdown and LaTeX. It is advisory and prints findings rather
-than failing a build, because the remaining rules are judgements and a
-grep cannot make them. Its first version searched for a mojibake byte
-instead of the em dash it meant to find; the fixture that caught this is
-why [tool-classification.md](../ai/tool-classification.md) insists a
-check fails on known-bad input before it is trusted.
+Review, and only review. A reviewer who cannot find the information in a
+paragraph asks for the paragraph, not for a rewrite of its wording.
+There is deliberately no mechanical prose check: the rules that matter
+here are judgements, and a grep that enforces the one mechanical rule
+would lend the rest a false sense of coverage.
 
 ## Related
 
