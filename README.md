@@ -6,6 +6,21 @@ This repository contains the flight software, ground station, and supporting
 infrastructure for BOLT missions developed by TUHH Orbital Research at
 Hamburg University of Technology.
 
+## What to Expect From This Code
+
+BOLT is a student project, and this repository is as much a place to
+learn engineering as it is a payload. Read it with that in mind: parts
+of it are the second or third rewrite by someone who learned the topic
+on this project, and open problems live in the issues and docs instead
+of being polished away.
+
+What we hold ourselves to is not polish but verifiability: the
+[system invariants](docs/standards/system-invariants.md) state what must
+hold, `scripts/verify.sh` checks everything a machine can check, and the
+[decision records](docs/decisions/) say why things are the way they are.
+If you reuse something from here, treat it as a starting point you
+verify yourself, not as a certified component.
+
 ## Currently Flying
 
 **THHOR-BOLT REXUS 37** - Three-experiment LiFi technology demonstrator on
