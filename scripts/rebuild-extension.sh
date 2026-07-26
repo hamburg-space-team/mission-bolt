@@ -13,10 +13,8 @@ cd "${EXT}"
 # gen-commands + tsc (host & webview) + vite build
 npm run compile
 
-# same invocation as package.json's "package" script; the --require shim only
-# matters on Node < 20 and is a no-op otherwise
-node --require ./scripts/file-global.cjs node_modules/@vscode/vsce/vsce \
-    package --no-dependencies -o bolt.vsix
+# same invocation as package.json's "package" script
+node node_modules/@vscode/vsce/vsce package --no-dependencies -o bolt.vsix
 
 # install: prefer the devcontainer's code-server, fall back to the code CLI
 ext_dir="${HOME}/.vscode-server/extensions"

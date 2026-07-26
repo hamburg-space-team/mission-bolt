@@ -1,18 +1,18 @@
 {
-  "_chunk-!~{001}~.js": {
-    "file": "api.css",
-    "src": "_chunk-!~{001}~.js"
-  },
-  "_chunk-BMq7aTlC.js": {
-    "file": "chunk-BMq7aTlC.js",
-    "name": "api",
+  "_chunk-19Q_QZ2X.js": {
+    "file": "chunk-19Q_QZ2X.js",
+    "name": "jsx-runtime",
     "css": [
-      "api.css"
+      "jsx-runtime.css"
     ]
   },
-  "_chunk-CG4_lz18.js": {
-    "file": "chunk-CG4_lz18.js",
+  "_chunk-DwebAtj3.js": {
+    "file": "chunk-DwebAtj3.js",
     "name": "format"
+  },
+  "_jsx-runtime.css": {
+    "file": "jsx-runtime.css",
+    "src": "_jsx-runtime.css"
   },
   "webview/src/entries/experiment.tsx": {
     "file": "experiment.js",
@@ -20,7 +20,7 @@
     "src": "webview/src/entries/experiment.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-BMq7aTlC.js"
+      "_chunk-19Q_QZ2X.js"
     ]
   },
   "webview/src/entries/feed.tsx": {
@@ -29,8 +29,8 @@
     "src": "webview/src/entries/feed.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-BMq7aTlC.js",
-      "_chunk-CG4_lz18.js"
+      "_chunk-19Q_QZ2X.js",
+      "_chunk-DwebAtj3.js"
     ]
   },
   "webview/src/entries/overview.tsx": {
@@ -39,8 +39,8 @@
     "src": "webview/src/entries/overview.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-BMq7aTlC.js",
-      "_chunk-CG4_lz18.js"
+      "_chunk-19Q_QZ2X.js",
+      "_chunk-DwebAtj3.js"
     ]
   },
   "webview/src/entries/packets.tsx": {
@@ -49,8 +49,8 @@
     "src": "webview/src/entries/packets.tsx",
     "isEntry": true,
     "imports": [
-      "_chunk-BMq7aTlC.js",
-      "_chunk-CG4_lz18.js"
+      "_chunk-19Q_QZ2X.js",
+      "_chunk-DwebAtj3.js"
     ],
     "css": [
       "packets.css"
