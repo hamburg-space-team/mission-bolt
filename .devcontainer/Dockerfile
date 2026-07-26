@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 ARG ARM_GNU_VERSION=15.2.rel1
 ARG CMSIS_TOOLBOX_VERSION=2.14.1
+ARG NODE_MAJOR=20
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -60,6 +61,21 @@ RUN CE="https://s3.amazonaws.com/compiler-explorer" \
     && mkdir -p /opt/compiler-explorer \
     && curl -fsSL "${CE}/${KEY}" | tar -xJ -C /opt/compiler-explorer \
     && ln -sfn "/opt/compiler-explorer/${NAME}" /opt/compiler-explorer/clang-p2996
+
+# --- Node.js + Rust ------------------------------------------------------
+# Baked into the image instead of devcontainer features: feature downloads
+# are a per-run network dependency in CI (ECONNRESET flakes), and the node
+# feature silently left the container on the distro's node 18
+RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
+RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path \
+        --default-toolchain stable --profile minimal \
+        --component rustfmt --component clippy \
+    && chown -R vscode:vscode /usr/local/rustup /usr/local/cargo
+ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 ENV PATH="/opt/cmsis-toolbox/bin:/opt/arm-gnu-toolchain/bin:${PATH}"
 ENV CLANG_P2996_DIR="/opt/compiler-explorer/clang-p2996"

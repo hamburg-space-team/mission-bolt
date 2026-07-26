@@ -2,11 +2,6 @@
     "name": "mission-bolt",
     "build": { "dockerfile": "Dockerfile" },
 
-    "features": {
-        "ghcr.io/devcontainers/features/rust:1": {},
-        "ghcr.io/devcontainers/features/node:1": { "version": "20" }
-    },
-
     "privileged": true,
     "mounts": [
         // "source=/dev/bus/usb,target=/dev/bus/usb,type=bind"
