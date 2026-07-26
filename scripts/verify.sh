@@ -22,7 +22,7 @@ REPO="$(cd "${HERE}/.." && pwd)"
 FSW="${REPO}/flight-software"
 TT="${REPO}/telemetry-tools"
 
-STAGES=(flight-build host-tests schema-drift iface-headers invariants
+STAGES=(flight-build host-tests coverage schema-drift iface-headers invariants
     rust-build rust-tests rust-fmt rust-clippy ext-build provenance lint-flight)
 
 DO_LINT=1 DO_BUILD=1 DO_RUST=1 DO_EXT=1 DO_PROV=1
@@ -83,12 +83,44 @@ flight_build() {
         --context exp2.Debug+exp2-bouncy-castle --context exp3.Debug+exp3-floaty-boi)
 }
 
-# --- host unit tests (Catch2 via ctest) -----------------------------------
+# --- host unit tests (Catch2 via ctest, ASan+UBSan on by default) ---------
 host_tests() {
     local bld="${FSW}/build/tests"
     cmake -S "${FSW}" -B "${bld}" >/dev/null &&
         cmake --build "${bld}" >/dev/null &&
         ctest --test-dir "${bld}" --output-on-failure
+}
+
+# --- host-test coverage ----------------------------------------------------
+# Separate build tree with gcov instrumentation (sanitizers off, they skew
+# the counters). The test RUN is the hard gate; the line numbers are honesty
+# about what the suites reach, never a threshold to game
+coverage_check() {
+    local bld="${FSW}/build/coverage"
+    cmake -S "${FSW}" -B "${bld}" -DBOLT_SANITIZE=OFF -DBOLT_COVERAGE=ON >/dev/null &&
+        cmake --build "${bld}" >/dev/null &&
+        ctest --test-dir "${bld}" --output-on-failure >/dev/null || return 1
+    local gcovdir
+    gcovdir="$(mktemp -d)"
+    (cd "${gcovdir}" && find "${bld}" -name '*.gcda' -exec gcov {} + 2>/dev/null) |
+        awk -v repo="${REPO}/" '
+            /^File /  { f = $2; gsub(/\x27/, "", f); sub(repo, "", f) }
+            /^Lines executed/ {
+                split($0, a, /:| of /)
+                pct = a[2]; n = a[3]
+                if (f ~ /flight-software\/(shared|tests)\//) {
+                    printf "  %6s of %4d lines  %s\n", pct, n, f
+                    covered += (substr(pct, 1, length(pct)-1) / 100) * n
+                    total += n
+                }
+            }
+            END {
+                if (total > 0) printf "  total: %.1f%% of %d lines in shared/ + tests/\n",
+                    100 * covered / total, total
+            }'
+    echo "  note: counts only code the host tests link at all - most of shared/"
+    echo "  (core, comms, sensors) is not host-linkable yet and appears nowhere here"
+    rm -rf "${gcovdir}"
 }
 
 # --- generated artifacts in sync with the annotated headers ---------------
@@ -185,6 +217,7 @@ if wants flight-build; then
 fi
 
 wants host-tests && section "host-tests" host_tests
+wants coverage && section "coverage" coverage_check
 
 if wants schema-drift; then
     if [ -x "${CLANG_P2996_DIR:-/opt/compiler-explorer/clang-p2996}/bin/clang++" ]; then

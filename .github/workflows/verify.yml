@@ -23,7 +23,7 @@ jobs:
       matrix:
         include:
           - leg: flight
-            stages: flight-build host-tests schema-drift iface-headers invariants provenance
+            stages: flight-build host-tests coverage schema-drift iface-headers invariants provenance
           - leg: ground
             stages: rust-build rust-tests rust-fmt rust-clippy ext-build
           - leg: lint
@@ -51,12 +51,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build devcontainer and run the gate leg
+      - name: Build devcontainer
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/${{ github.repository }}/devcontainer
           cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
           push: ${{ matrix.leg == 'flight' && github.event_name == 'push' && 'always' || 'never' }}
+          runCmd: echo "devcontainer ready"
+
+      - name: Run gate leg
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/${{ github.repository }}/devcontainer
+          cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
+          push: never
           runCmd: |
             git config --global --add safe.directory "$PWD"
             # post-create regenerates the schema artifacts; restore the
