@@ -27,39 +27,32 @@ commands.
 
 ## Layout
 
+Tests live next to the code they test, named `<unit>.test.cpp`:
+
 ```
-flight-software/tests/
-+-- unit/             host-portable test cases
-+-- integration/      reserved for target-level tests later
+shared/utils/crc16.hpp        the unit
+shared/utils/crc16.test.cpp   its tests
 ```
 
-Right now there's just `test_crc16.cpp`. Coming
-([per the CDR](../cdr/)):
+`tests/CMakeLists.txt` globs `*.test.cpp` across `shared/` and the
+four `*/app/` trees and builds one executable per file. The flight
+builds cannot pick them up: the cprojects list their sources
+explicitly, so a `.test.cpp` next to flight code is inert there.
 
-- `test_packet_builder.cpp` -- header construction + CRC framing
-- `test_boot_state.cpp` -- warm/cold boot state machine
-- `test_can_protocol.cpp` -- fragmentation encode/decode
+Current suites: `crc16.test.cpp`, `errors.test.cpp` (error trace
+chain), `wcet.test.cpp` (CYCCNT wrap arithmetic).
 
 ## Adding a Test
 
-1. Drop `test_<name>.cpp` under `tests/unit/`.
-2. Register it in [`tests/CMakeLists.txt`](../../flight-software/tests/CMakeLists.txt):
+Drop `<unit>.test.cpp` next to the code it tests, then rebuild and
+rerun. No CMake registration needed -- the glob re-runs on build
+(`CONFIGURE_DEPENDS`).
 
-```cmake
-add_executable(test_<name> unit/test_<name>.cpp)
-target_include_directories(test_<name> PRIVATE
-    ${CMAKE_SOURCE_DIR}/shared)
-target_link_libraries(test_<name> PRIVATE Catch2::Catch2WithMain)
-catch_discover_tests(test_<name>)
-```
-
-3. Rebuild and rerun.
-
-Minimal case:
+Minimal case (`shared/utils/crc16.test.cpp`):
 
 ```cpp
-#include <catch2/catch_test_macros.hpp>
 #include "utils/crc16.hpp"
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("CRC-16 known vector", "[crc16]") {
     constexpr uint8_t data[] = {'1','2','3','4','5'};
@@ -92,9 +85,11 @@ compiler versions match.
 
 ## Coverage
 
-TODO: not wired up yet. Plan is gcov + gcovr via a `tests-cov`
-build directory. Until then, focus on test depth, not coverage
-numbers.
+Wired up as the `coverage` stage of `scripts/verify.sh`: a separate
+`build/coverage` tree (sanitizers off) runs the same suites under
+gcov and prints per-file lines reached. The number is a gap gauge,
+never a threshold -- it counts only code the tests link at all.
+Focus on test depth, not coverage numbers.
 
 ## Related
 

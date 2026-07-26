@@ -1,5 +1,5 @@
-#include "utils/errors.hpp"
 #include "utils/wcet.hpp"
+#include "utils/errors.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

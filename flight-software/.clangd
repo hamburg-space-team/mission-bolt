@@ -33,3 +33,20 @@ If:
 Diagnostics:
   Suppress:
     - "*"
+---
+# Co-located unit tests (*.test.cpp) compile in the host test build, not
+# the flight contexts: read flags from the host DB and drop the tidy
+# checks that misfire on Catch2's macro-generated code (these lived in
+# tests/.clang-tidy before the tests moved next to their units)
+If:
+  PathMatch:
+    - '.*\.test\.cpp'
+CompileFlags:
+  CompilationDatabase: build/tests
+Diagnostics:
+  ClangTidy:
+    Remove:
+      - misc-use-anonymous-namespace
+      - readability-function-cognitive-complexity
+      - bugprone-chained-comparison
+      - cert-err58-cpp

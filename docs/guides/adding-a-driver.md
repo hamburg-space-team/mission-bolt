@@ -67,6 +67,6 @@ raw diagnostic u32, the ground judges it.
 
 ## Gate
 
-`./scripts/verify.sh` - and a Catch2 host test under
-`flight-software/tests/unit/` for any logic that runs on the host
-(CRC, parsing, state machines).
+`./scripts/verify.sh` - and a co-located Catch2 host test
+(`<unit>.test.cpp` next to the driver) for any logic that runs on
+the host (CRC, parsing, state machines).

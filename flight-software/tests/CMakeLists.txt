@@ -6,32 +6,30 @@ FetchContent_Declare(
     GIT_TAG        v3.7.1
 )
 FetchContent_MakeAvailable(Catch2)
-
-add_executable(test_crc16 unit/test_crc16.cpp)
-
-target_include_directories(test_crc16 PRIVATE
-    ${CMAKE_SOURCE_DIR}/shared
-)
-
-target_link_libraries(test_crc16 PRIVATE Catch2::Catch2WithMain)
-
-add_executable(test_error_trace unit/test_error_trace.cpp)
-
-add_executable(test_wcet_wrap unit/test_wcet_wrap.cpp)
-
-target_include_directories(test_wcet_wrap PRIVATE
-    ${CMAKE_SOURCE_DIR}/shared
-)
-
-target_link_libraries(test_wcet_wrap PRIVATE Catch2::Catch2WithMain)
-
-target_include_directories(test_error_trace PRIVATE
-    ${CMAKE_SOURCE_DIR}/shared
-)
-
-target_link_libraries(test_error_trace PRIVATE Catch2::Catch2WithMain)
-
 include(Catch)
-catch_discover_tests(test_crc16)
-catch_discover_tests(test_error_trace)
-catch_discover_tests(test_wcet_wrap)
+
+# Unit tests live next to the code they test: shared/utils/crc16.test.cpp
+# checks shared/utils/crc16.hpp. One executable per test file, discovered
+# at configure time (CONFIGURE_DEPENDS re-globs on build) - adding a test
+# needs no CMake edit. The flight builds cannot pick these up: the
+# cprojects list their sources explicitly
+file(GLOB_RECURSE BOLT_UNIT_TESTS CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/shared/*.test.cpp"
+    "${CMAKE_SOURCE_DIR}/btc/app/*.test.cpp"
+    "${CMAKE_SOURCE_DIR}/exp1/app/*.test.cpp"
+    "${CMAKE_SOURCE_DIR}/exp2/app/*.test.cpp"
+    "${CMAKE_SOURCE_DIR}/exp3/app/*.test.cpp")
+
+foreach(src IN LISTS BOLT_UNIT_TESTS)
+    # shared/utils/crc16.test.cpp -> target shared-utils-crc16
+    file(RELATIVE_PATH rel "${CMAKE_SOURCE_DIR}" "${src}")
+    string(REGEX REPLACE "\\.test\\.cpp$" "" rel "${rel}")
+    string(REPLACE "/" "-" tgt "${rel}")
+    add_executable(${tgt} "${src}")
+    target_include_directories(${tgt} PRIVATE ${CMAKE_SOURCE_DIR}/shared)
+    target_link_libraries(${tgt} PRIVATE Catch2::Catch2WithMain)
+    catch_discover_tests(${tgt})
+endforeach()
+
+list(LENGTH BOLT_UNIT_TESTS BOLT_UNIT_TEST_COUNT)
+message(STATUS "bolt: ${BOLT_UNIT_TEST_COUNT} co-located unit test files")

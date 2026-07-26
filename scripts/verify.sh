@@ -98,8 +98,10 @@ host_tests() {
 coverage_check() {
     local bld="${FSW}/build/coverage"
     cmake -S "${FSW}" -B "${bld}" -DBOLT_SANITIZE=OFF -DBOLT_COVERAGE=ON >/dev/null &&
-        cmake --build "${bld}" >/dev/null &&
-        ctest --test-dir "${bld}" --output-on-failure >/dev/null || return 1
+        cmake --build "${bld}" >/dev/null || return 1
+    # counters of tests that no longer exist would double-count the summary
+    find "${bld}" -name '*.gcda' -delete 2>/dev/null
+    ctest --test-dir "${bld}" --output-on-failure >/dev/null || return 1
     local gcovdir
     gcovdir="$(mktemp -d)"
     (cd "${gcovdir}" && find "${bld}" -name '*.gcda' -exec gcov {} + 2>/dev/null) |
