@@ -14,21 +14,33 @@ permissions:
   packages: write
 
 jobs:
-  verify:
-    name: verify
+  gate:
+    name: gate / ${{ matrix.leg }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: flight
+            stages: flight-build host-tests schema-drift iface-headers invariants provenance
+          - leg: ground
+            stages: rust-build rust-tests rust-fmt rust-clippy ext-build
+          - leg: lint
+            stages: lint-flight
     steps:
+      # full history only where the provenance stage runs
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
-      
+          fetch-depth: ${{ matrix.leg == 'flight' && '0' || '1' }}
+
       - name: Restore tooling caches
         uses: actions/cache@v6
         with:
           path: |
             telemetry-tools/target
             telemetry-tools/extension/node_modules
+            flight-software/build/tests
           key: tooling-${{ hashFiles('telemetry-tools/Cargo.lock', 'telemetry-tools/extension/package-lock.json') }}
           restore-keys: tooling-
 
@@ -39,24 +51,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build devcontainer and run the verify gate
+      - name: Build devcontainer and run the gate leg
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/${{ github.repository }}/devcontainer
           cacheFrom: ghcr.io/${{ github.repository }}/devcontainer
-          push: ${{ github.event_name == 'push' && 'always' || 'never' }}
+          push: ${{ matrix.leg == 'flight' && github.event_name == 'push' && 'always' || 'never' }}
           runCmd: |
             git config --global --add safe.directory "$PWD"
             # post-create regenerates the schema artifacts; restore the
             # committed versions so schema-drift checks the commit, not
             # the fresh regen
             git checkout -- interfaces/tools/generated docs/interfaces/ICD-007-packet-payloads.md
-            scripts/verify.sh
+            scripts/verify.sh ${{ matrix.stages }}
 
       - name: Upload flight binaries
-        if: github.event_name == 'push'
+        if: matrix.leg == 'flight' && github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: flight-debug-${{ github.sha }}
           path: flight-software/out/**/*.elf
           if-no-files-found: error
+
+  verify:
+    name: verify
+    needs: gate
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All gate legs green
+        run: test "${{ needs.gate.result }}" = "success"

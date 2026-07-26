@@ -109,7 +109,9 @@ the linker user section.
 
 `scripts/verify.sh` is the one gate for everything - run it before
 every push. CI (`.github/workflows/verify.yml`) runs the same script
-inside the devcontainer on every PR and push to main:
+inside the devcontainer on every PR and push to main, split into three
+parallel legs (flight / ground / lint) via the stage selection; the
+required status check is the `verify` summary job:
 
 ```sh
 scripts/verify.sh              # flight builds, host tests, schema drift,
