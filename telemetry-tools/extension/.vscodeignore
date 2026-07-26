@@ -3,7 +3,11 @@ webview/**
 node_modules/**
 tsconfig.json
 vite.config.ts
-out/**/*.map
+**/*.map
 **/*.ts
 .vscode/**
-bolt.vsix
+.gitignore
+package-lock.json
+scripts/**
+media/webview/.vite/**
+*.vsix
