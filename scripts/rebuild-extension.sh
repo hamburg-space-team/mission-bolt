@@ -6,15 +6,28 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXT="$(cd "${HERE}/../telemetry-tools/extension" && pwd)"
+REPO="$(cd "${HERE}/.." && pwd)"
 cd "${EXT}"
 
-[ -d node_modules ] || npm install
+# Skip the build when bolt.vsix is newer than everything that feeds it -
+# a container rebuild then only reinstalls (seconds instead of a minute).
+# --force rebuilds regardless
+build_needed() {
+    [ "${1:-}" = "--force" ] && return 0
+    [ -f bolt.vsix ] || return 0
+    [ -n "$(find src webview package.json "${REPO}/interfaces/tools/generated/schema.json" \
+        -newer bolt.vsix -print -quit 2>/dev/null)" ]
+}
 
-# gen-commands + tsc (host & webview) + vite build
-npm run compile
-
-# same invocation as package.json's "package" script
-node node_modules/@vscode/vsce/vsce package --no-dependencies -o bolt.vsix
+if build_needed "${1:-}"; then
+    [ -d node_modules ] || npm install
+    # gen-commands + tsc (host & webview) + vite build
+    npm run compile
+    # same invocation as package.json's "package" script
+    node node_modules/@vscode/vsce/vsce package --no-dependencies -o bolt.vsix
+else
+    echo "bolt.vsix up to date - skipping build (--force to rebuild)"
+fi
 
 # install: prefer the devcontainer's code-server, fall back to the code CLI
 ext_dir="${HOME}/.vscode-server/extensions"

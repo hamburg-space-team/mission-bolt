@@ -2,6 +2,7 @@
     "name": "mission-bolt",
     "build": {
         "dockerfile": "Dockerfile",
+        "context": "..",
         "cacheFrom": "ghcr.io/hamburg-space-team/mission-bolt/devcontainer"
     },
     "runArgs": ["--add-host=bolt-station.local:host-gateway"],

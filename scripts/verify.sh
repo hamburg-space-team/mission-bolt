@@ -173,7 +173,7 @@ rust_build() { (cd "${TT}" && cargo build --workspace --quiet); }
 rust_tests() { (cd "${TT}" && cargo test --workspace --quiet); }
 rust_fmt() { (cd "${TT}" && cargo fmt --all --check); }
 rust_clippy() { (cd "${TT}" && cargo clippy --workspace --quiet -- -D warnings); }
-ext_build() { (cd "${TT}/extension" && npm run --silent compile); }
+ext_build() { (cd "${TT}/extension" && { [ -d node_modules ] || npm ci; } && npm run --silent compile); }
 
 # --- run ------------------------------------------------------------------
 if wants flight-build; then
@@ -235,10 +235,8 @@ fi
 if wants ext-build; then
     if [ "${DO_EXT}" -eq 0 ]; then
         skip "ext-build" "--no-ext"
-    elif [ -d "${TT}/extension/node_modules" ]; then
-        section "ext-build" ext_build
     else
-        skip "ext-build" "node_modules missing - run npm ci in telemetry-tools/extension"
+        section "ext-build" ext_build
     fi
 fi
 

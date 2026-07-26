@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CI runners remap the container user's uid (1001 vs the image's 1000), so
-# the packs volume and the baked cargo/rustup dirs belong to someone else
-# there. Take ownership of whatever we need to write
-for d in "${CMSIS_PACK_ROOT:-/opt/cmsis-packs}" /usr/local/cargo /usr/local/rustup; do
+# CI runners remap the container user's uid (1001 vs the image's 1000), and
+# fresh named volumes arrive root-owned. Take ownership of whatever we write
+for d in "${CMSIS_PACK_ROOT:-/opt/cmsis-packs}" /usr/local/cargo /usr/local/rustup \
+    /usr/local/cargo/registry "${HOME}/.npm"; do
     if [ -d "${d}" ] && [ ! -w "${d}" ]; then
         sudo chown -R "$(id -u):$(id -g)" "${d}"
     fi
@@ -26,18 +26,40 @@ done
 
 # Regenerate the payload schema from the bolt/wire WIRE(...) annotations so
 # bolt-codec's build.rs picks up any change (C++26 reflection via clang-p2996).
-if [ -f interfaces/tools/schemagen/run-schemagen.sh ]; then
+# Only when a wire header is newer than the committed schema - the verify
+# gate's drift stage catches anything this heuristic misses
+if [ -n "$(find interfaces/include/bolt -name '*.hpp' \
+    -newer interfaces/tools/generated/schema.json -print -quit 2>/dev/null)" ]; then
     echo "== regenerating payload schema.json =="
     interfaces/tools/schemagen/run-schemagen.sh \
         || echo "schemagen: skipped (schema.json kept as committed)"
+else
+    echo "== schema.json current - skipping schemagen"
+fi
+
+# Under devcontainers/ci (GITHUB_ENV is plumbed in) the verify gate builds
+# codec, tooling and extension itself right after this script - rebuilding
+# them here would be the same work twice
+if [ -n "${GITHUB_ENV:-}" ]; then
+    echo "== CI - packs are set up, the verify gate builds the rest"
+    exit 0
 fi
 
 # --- telemetry-tools (Bolt): Rust codec/CLIs + VS Code extension ---
 if [ -d telemetry-tools ]; then
-    echo "== building telemetry-tools (Bolt) =="
-    ( cd telemetry-tools && cargo build ) \
-        || ( echo "telemetry-tools: build with hdf5 failed (check libhdf5) - building without hdf5"; \
-             cd telemetry-tools && cargo build --no-default-features )
+    # skip even cargo's freshness check when the bridge binary is newer
+    # than every input (same idea as the bolt.vsix guard)
+    if [ -f telemetry-tools/target/debug/bolt-serial-bridge ] &&
+        [ -z "$(find telemetry-tools/crates telemetry-tools/Cargo.toml telemetry-tools/Cargo.lock \
+            interfaces/tools/generated/schema.json \
+            -newer telemetry-tools/target/debug/bolt-serial-bridge -print -quit 2>/dev/null)" ]; then
+        echo "== telemetry-tools binaries current - skipping cargo build"
+    else
+        echo "== building telemetry-tools (Bolt) =="
+        ( cd telemetry-tools && cargo build ) \
+            || ( echo "telemetry-tools: build with hdf5 failed (check libhdf5) - building without hdf5"; \
+                 cd telemetry-tools && cargo build --no-default-features )
+    fi
     bash scripts/rebuild-extension.sh \
         || echo "telemetry-tools: extension build/install failed - run scripts/rebuild-extension.sh by hand"
 fi

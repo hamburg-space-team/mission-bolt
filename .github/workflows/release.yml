@@ -17,6 +17,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Restore tooling caches
+        uses: actions/cache@v6
+        with:
+          path: |
+            telemetry-tools/target
+            telemetry-tools/extension/node_modules
+          key: tooling-${{ hashFiles('telemetry-tools/Cargo.lock', 'telemetry-tools/extension/package-lock.json') }}
+          restore-keys: tooling-
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:

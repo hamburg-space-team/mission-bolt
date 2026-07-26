@@ -85,3 +85,10 @@ ENV GCC_TOOLCHAIN_15_2_1=/opt/arm-gnu-toolchain/bin
 ENV CMSIS_PACK_ROOT=/opt/cmsis-packs
 
 RUN mkdir -p /opt/cmsis-packs && chown vscode:vscode /opt/cmsis-packs
+
+COPY flight-software/bolt.csolution.yml /tmp/bolt.csolution.yml
+RUN cpackget init https://www.keil.com/pack/index.pidx \
+    && grep -oE '[A-Za-z0-9_-]+::[A-Za-z0-9_-]+@[0-9][0-9.]*' /tmp/bolt.csolution.yml \
+       | while read -r p; do cpackget add --agree-embedded-license "${p}"; done \
+    && rm /tmp/bolt.csolution.yml \
+    && chown -R vscode:vscode /opt/cmsis-packs

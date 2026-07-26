@@ -27,7 +27,23 @@ BIN="$(mktemp -d)/schemagen"
     -stdlib=libc++ -DBOLT_SCHEMAGEN -I "${INCLUDE}" \
     "${HERE}/schemagen.cpp" -o "${BIN}"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-LD_LIBRARY_PATH="${LIB}" "${BIN}" > "${OUT}"
-LD_LIBRARY_PATH="${LIB}" "${BIN}" icd "${STAMP}" > "${ICD}"
-LD_LIBRARY_PATH="${LIB}" "${BIN}" tex "${STAMP}" > "${TEX}"
-echo "wrote ${OUT} + ${ICD} + ${TEX} via C++26 reflection (clang-p2996)"
+GEN="$(mktemp -d)"
+trap 'rm -rf "${GEN}"' EXIT
+LD_LIBRARY_PATH="${LIB}" "${BIN}" > "${GEN}/schema.json"
+LD_LIBRARY_PATH="${LIB}" "${BIN}" icd "${STAMP}" > "${GEN}/icd.md"
+LD_LIBRARY_PATH="${LIB}" "${BIN}" tex "${STAMP}" > "${GEN}/icd.tex"
+
+# Only touch a file whose CONTENT changed - otherwise every container
+# create/regen would churn the embedded generation timestamps through git
+install_if_changed() { # <new> <dest>
+    if [ -f "$2" ] && diff <(grep -v "Generated at\|generated (" "$1") \
+        <(grep -v "Generated at\|generated (" "$2") >/dev/null 2>&1; then
+        echo "unchanged: $2"
+    else
+        mv "$1" "$2"
+        echo "wrote:     $2"
+    fi
+}
+install_if_changed "${GEN}/schema.json" "${OUT}"
+install_if_changed "${GEN}/icd.md" "${ICD}"
+install_if_changed "${GEN}/icd.tex" "${TEX}"
