@@ -42,7 +42,8 @@
             "settings": {
                 "clangd.arguments": [
                     "--compile-commands-dir=${workspaceFolder}/flight-software/tmp"
-                ]
+                ],
+                "git.alwaysSignOff": true
             }
         }
     },
