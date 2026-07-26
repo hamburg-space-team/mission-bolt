@@ -18,7 +18,8 @@ struct Args {
     #[arg(long)]
     list_ports: bool,
 
-    /// Serial device (live mode), e.g. /dev/ttyUSB0
+    /// Serial device (live mode), e.g. /dev/ttyUSB0 - or tcp://host:port for
+    /// the debug station's UART-over-TCP bridge (baud is then the station's)
     #[arg(long)]
     port: Option<String>,
 
@@ -320,8 +321,13 @@ fn main() -> Result<()> {
     };
 
     // For a live serial port a read timeout surfaces as 0 bytes and must
-    // NOT end the loop; for a file/stdin replay, 0 bytes is real EOF.
-    let is_serial = args.replay.is_none() && args.port.is_some();
+    // NOT end the loop; for TCP, replay and stdin, 0 bytes is real EOF
+    // (a closed station connection must end the bridge, not spin it).
+    let is_tcp = args
+        .port
+        .as_deref()
+        .is_some_and(|p| p.starts_with("tcp://"));
+    let is_serial = args.replay.is_none() && args.port.is_some() && !is_tcp;
     let break_on_eof = !is_serial;
 
     // Open the byte source.
@@ -334,7 +340,7 @@ fn main() -> Result<()> {
                     None,
                 )
             }
-            (None, Some(port)) => open_serial(port, args.baud)?,
+            (None, Some(port)) => open_source(port, args.baud)?,
             (None, None) => {
                 log("info", "no --port/--replay: reading raw stream from stdin");
                 (Box::new(std::io::stdin()), None)
@@ -480,10 +486,28 @@ fn main() -> Result<()> {
 
 // --- serial + uplink -------------------------------------------------------
 
-#[cfg(feature = "serial")]
-type SharedPort = Arc<Mutex<Box<dyn serialport::SerialPort>>>;
-#[cfg(not(feature = "serial"))]
-type SharedPort = Arc<Mutex<()>>;
+// Uplink writer half of the byte source; serial handle or TCP stream
+type SharedPort = Arc<Mutex<Box<dyn Write + Send>>>;
+
+/// tcp://host:port or a local serial device
+fn open_source(spec: &str, baud: u32) -> Result<(Box<dyn Read + Send>, Option<SharedPort>)> {
+    match spec.strip_prefix("tcp://") {
+        Some(addr) => open_tcp(addr),
+        None => open_serial(spec, baud),
+    }
+}
+
+// The debug station serves the RXSM UART as a raw TCP socket. Blocking
+// reads: 0 bytes means the station closed, which main treats as EOF
+fn open_tcp(addr: &str) -> Result<(Box<dyn Read + Send>, Option<SharedPort>)> {
+    let stream =
+        std::net::TcpStream::connect(addr).with_context(|| format!("connect tcp {addr}"))?;
+    let _ = stream.set_nodelay(true); // uplink frames are 14 B, don't batch them
+    log("info", format!("tcp {addr} connected"));
+    let writer = stream.try_clone().context("clone tcp for writing")?;
+    let shared: SharedPort = Arc::new(Mutex::new(Box::new(writer)));
+    Ok((Box::new(stream), Some(shared)))
+}
 
 #[cfg(feature = "serial")]
 fn open_serial(port: &str, baud: u32) -> Result<(Box<dyn Read + Send>, Option<SharedPort>)> {
@@ -493,13 +517,13 @@ fn open_serial(port: &str, baud: u32) -> Result<(Box<dyn Read + Send>, Option<Sh
         .with_context(|| format!("open serial {port} @ {baud}"))?;
     log("info", format!("serial {port} @ {baud} open"));
     let reader = handle.try_clone().context("clone serial for reading")?;
-    let shared: SharedPort = Arc::new(Mutex::new(handle));
+    let shared: SharedPort = Arc::new(Mutex::new(Box::new(handle)));
     Ok((Box::new(TimeoutRead(reader)), Some(shared)))
 }
 
 #[cfg(not(feature = "serial"))]
 fn open_serial(_port: &str, _baud: u32) -> Result<(Box<dyn Read + Send>, Option<SharedPort>)> {
-    anyhow::bail!("built without the `serial` feature; use --replay or pipe raw on stdin")
+    anyhow::bail!("built without the `serial` feature; use tcp://host:port, --replay or stdin")
 }
 
 /// Serial reads return WouldBlock/TimedOut on idle; map those to 0-length
@@ -553,7 +577,6 @@ fn spawn_command_reader(port: SharedPort, running: Arc<AtomicBool>) {
     });
 }
 
-#[cfg(feature = "serial")]
 fn send_command(port: &SharedPort, seq: &mut u8, msg: CmdMsg) {
     let cmd = match msg.cmd.as_str() {
         "raw" => match msg.opcode {
@@ -588,10 +611,6 @@ fn send_command(port: &SharedPort, seq: &mut u8, msg: CmdMsg) {
     }
 }
 
-#[cfg(not(feature = "serial"))]
-fn send_command(_port: &SharedPort, _seq: &mut u8, _msg: CmdMsg) {}
-
-#[cfg(feature = "serial")]
 fn heapless_vec(bytes: &[u8]) -> heapless::Vec<u8, { bolt_codec::MAX_PAYLOAD }> {
     let mut v = heapless::Vec::new();
     let _ = v.extend_from_slice(&bytes[..bytes.len().min(bolt_codec::MAX_PAYLOAD)]);

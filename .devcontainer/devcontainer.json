@@ -4,6 +4,7 @@
         "dockerfile": "Dockerfile",
         "cacheFrom": "ghcr.io/hamburg-space-team/mission-bolt/devcontainer"
     },
+    "runArgs": ["--add-host=bolt-station.local:host-gateway"],
 
     "privileged": true,
     "mounts": [

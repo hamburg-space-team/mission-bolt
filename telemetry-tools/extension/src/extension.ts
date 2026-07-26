@@ -349,7 +349,10 @@ async function exportHdf5(session: SessionManager): Promise<void> {
 async function pickSerialPort(session: SessionManager): Promise<string | undefined> {
   const ports = await session.listPorts();
   const manualEntry = async () =>
-    vscode.window.showInputBox({ prompt: "Serial device path", value: "/dev/ttyUSB0" });
+    vscode.window.showInputBox({
+      prompt: "Serial device path or tcp://host:port (debug station)",
+      value: "/dev/ttyUSB0",
+    });
 
   if (ports.length === 0) {
     void vscode.window.showWarningMessage("Bolt: no serial ports detected (is the adapter passed through?).");
@@ -366,6 +369,11 @@ async function pickSerialPort(session: SessionManager): Promise<string | undefin
       detail: name ? ids : undefined,
       port: p.port,
     };
+  });
+  items.push({
+    label: "$(globe) Debug station",
+    description: "tcp://bolt-station.local:5000",
+    port: "tcp://bolt-station.local:5000",
   });
   items.push({ label: "$(edit) Enter manually…" });
 

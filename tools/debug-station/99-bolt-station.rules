@@ -1,0 +1,5 @@
+# Stable device name for the RXSM simulator's UART adapter, so ser2net
+# survives replugging into a different USB port. Fill in the adapter's
+# serial number, found with:
+#   udevadm info -a -n /dev/ttyUSB0 | grep '{serial}' | head -1
+SUBSYSTEM=="tty", ATTRS{serial}=="REPLACE-ME", SYMLINK+="ttyRXSM"
