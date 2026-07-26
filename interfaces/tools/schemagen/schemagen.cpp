@@ -36,18 +36,34 @@ namespace sm = std::meta;
 // field data (names, types, offsets, units, scales, gates) comes from
 // reflection + the WIRE(...) annotations, so it can never drift.
 constexpr auto PAYLOADS = std::array{
-    ^^PacketProtocol::PayloadBtcEnv,       ^^PacketProtocol::PayloadBtcStatus,  ^^PacketProtocol::PayloadBtcImu,
-    ^^PacketProtocol::PayloadExp1Spectrum, ^^PacketProtocol::PayloadExp1Env,    ^^PacketProtocol::PayloadExp2Env,
-    ^^PacketProtocol::PayloadExp3Env,      ^^PacketProtocol::PayloadExp1Status, ^^PacketProtocol::PayloadExp2Status,
-    ^^PacketProtocol::PayloadExp2Ber,      ^^PacketProtocol::PayloadExp3StackA, ^^PacketProtocol::PayloadExp3StackB,
-    ^^PacketProtocol::PayloadExp3Status,   ^^PacketProtocol::PayloadExp3Imu,    ^^PacketProtocol::PayloadGapMarker,
-    ^^PacketProtocol::PayloadFault,        ^^PacketProtocol::PayloadBoot,       ^^PacketProtocol::PayloadCmdAck,
+    ^^PacketProtocol::PayloadBtcEnv,
+    ^^PacketProtocol::PayloadBtcStatus,
+    ^^PacketProtocol::PayloadBtcImu,
+    ^^PacketProtocol::PayloadExp1Spectrum,
+    ^^PacketProtocol::PayloadExp1Env,
+    ^^PacketProtocol::PayloadExp2Env,
+    ^^PacketProtocol::PayloadExp3Env,
+    ^^PacketProtocol::PayloadExp1Status,
+    ^^PacketProtocol::PayloadExp2Status,
+    ^^PacketProtocol::PayloadExp2Ber,
+    ^^PacketProtocol::PayloadExp3StackA,
+    ^^PacketProtocol::PayloadExp3StackB,
+    ^^PacketProtocol::PayloadExp3Status,
+    ^^PacketProtocol::PayloadExp3Imu,
+    ^^PacketProtocol::PayloadGapMarker,
+    ^^PacketProtocol::PayloadFault,
+    ^^PacketProtocol::PayloadBoot,
+    ^^PacketProtocol::PayloadCmdAck,
     // Per-node timing: list the real structs, not the PayloadTiming alias -
     // reflecting an alias yields no PACKET annotation
-    ^^PacketProtocol::PayloadBtcTiming,    ^^PacketProtocol::PayloadExp1Timing, ^^PacketProtocol::PayloadExp2Timing,
+    ^^PacketProtocol::PayloadBtcTiming,
+    ^^PacketProtocol::PayloadExp1Timing,
+    ^^PacketProtocol::PayloadExp2Timing,
     ^^PacketProtocol::PayloadExp3Timing,
     // Per-node self-test step results (aliases carry no PACKET annotation)
-    ^^PacketProtocol::PayloadBtcTest,      ^^PacketProtocol::PayloadExp1Test,   ^^PacketProtocol::PayloadExp2Test,
+    ^^PacketProtocol::PayloadBtcTest,
+    ^^PacketProtocol::PayloadExp1Test,
+    ^^PacketProtocol::PayloadExp2Test,
     ^^PacketProtocol::PayloadExp3Test,
 };
 
@@ -123,14 +139,22 @@ consteval std::vector<sm::info> documented_enums() {
 // reflected display string - the same mapping bolt-codec's build.rs uses, so
 // the ICD speaks the ground station's language, not the compiler's.
 consteval std::string_view scalar_wire(std::string_view ctype) {
-    if (ctype == "unsigned char" || ctype == "char") return "u8";
-    if (ctype == "signed char") return "i8";
-    if (ctype == "short" || ctype == "short int") return "i16";
-    if (ctype == "unsigned short" || ctype == "unsigned short int") return "u16";
-    if (ctype == "int") return "i32";
-    if (ctype == "unsigned int") return "u32";
-    if (ctype == "long" || ctype == "long int") return "i64";
-    if (ctype == "unsigned long" || ctype == "unsigned long int") return "u64";
+    if (ctype == "unsigned char" || ctype == "char")
+        return "u8";
+    if (ctype == "signed char")
+        return "i8";
+    if (ctype == "short" || ctype == "short int")
+        return "i16";
+    if (ctype == "unsigned short" || ctype == "unsigned short int")
+        return "u16";
+    if (ctype == "int")
+        return "i32";
+    if (ctype == "unsigned int")
+        return "u32";
+    if (ctype == "long" || ctype == "long int")
+        return "i64";
+    if (ctype == "unsigned long" || ctype == "unsigned long int")
+        return "u64";
     return "?";
 }
 
@@ -285,9 +309,8 @@ void emit_icd(const char* generated_at) {
                 (int)PacketProtocol::SYNC_0, (int)PacketProtocol::SYNC_1, (int)PacketProtocol::PROTOCOL_VERSION);
     std::printf("### Header (%d B)\n\n| Field | Type | Off | Size |\n|---|---|--:|--:|\n",
                 (int)PacketProtocol::HEADER_SIZE);
-    template for (constexpr sm::info m :
-                  std::define_static_array(sm::nonstatic_data_members_of(^^PacketProtocol::PacketHeader,
-                                                                          sm::access_context::current()))) {
+    template for (constexpr sm::info m : std::define_static_array(
+                      sm::nonstatic_data_members_of(^^PacketProtocol::PacketHeader, sm::access_context::current()))) {
         constexpr std::string_view fn = sm::identifier_of(m);
         constexpr sm::info ty = sm::type_of(m);
         constexpr std::string_view wt = field_wire(ty);
@@ -384,12 +407,23 @@ std::string tex(std::string_view s) {
             out += '\\';
             out += c;
             break;
-        case '<': out += "\\textless{}"; break;
-        case '>': out += "\\textgreater{}"; break;
-        case '~': out += "\\textasciitilde{}"; break;
-        case '^': out += "\\textasciicircum{}"; break;
-        case '\\': out += "\\textbackslash{}"; break;
-        default: out += c;
+        case '<':
+            out += "\\textless{}";
+            break;
+        case '>':
+            out += "\\textgreater{}";
+            break;
+        case '~':
+            out += "\\textasciitilde{}";
+            break;
+        case '^':
+            out += "\\textasciicircum{}";
+            break;
+        case '\\':
+            out += "\\textbackslash{}";
+            break;
+        default:
+            out += c;
         }
     }
     return out;
@@ -437,9 +471,8 @@ void emit_tex(const char* generated_at) {
     std::printf("\\begin{table}[H]\n    \\centering\\footnotesize\n    \\begin{tabular}{|l|l|r|r|}\n"
                 "        \\hline\n        \\textbf{Field} & \\textbf{Type} & \\textbf{Off} & \\textbf{Size} \\\\\n"
                 "        \\hline\n");
-    template for (constexpr sm::info m :
-                  std::define_static_array(sm::nonstatic_data_members_of(^^PacketProtocol::PacketHeader,
-                                                                          sm::access_context::current()))) {
+    template for (constexpr sm::info m : std::define_static_array(
+                      sm::nonstatic_data_members_of(^^PacketProtocol::PacketHeader, sm::access_context::current()))) {
         constexpr std::string_view fn = sm::identifier_of(m);
         constexpr sm::info ty = sm::type_of(m);
         constexpr std::string_view wt = field_wire(ty);
