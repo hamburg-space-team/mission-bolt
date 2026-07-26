@@ -1,5 +1,5 @@
 #include "icm42688.hpp"
-#include "stm32l4xx_hal.h"
+#include "main.h" // family-correct HAL per target (L4 flight, H7 nucleo)
 
 #include <array>
 

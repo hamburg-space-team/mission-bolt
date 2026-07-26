@@ -1,5 +1,5 @@
 #include "icm42686.hpp"
-#include "stm32l4xx_hal.h"
+#include "main.h" // family-correct HAL per target (L4 flight, H7 nucleo)
 #include <array>
 
 Result<void> ICM42686::init(CmsisI2CBus* bus, uint8_t addr, ICM42686Odr odr, bool drdy_int1) {

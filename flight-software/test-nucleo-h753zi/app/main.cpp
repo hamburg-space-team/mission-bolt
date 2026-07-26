@@ -60,7 +60,7 @@ namespace {
 
         for (uint8_t addr = 0x08U; addr <= 0x77U; ++addr) {
             uint8_t dummy = 0U;
-            if (bus.read(addr, &dummy, 1U) == 0) {
+            if (bus.read(addr, &dummy, 1U)) {
                 if (found_count < found.size()) {
                     found[found_count++] = addr;
                 }
@@ -127,7 +127,7 @@ extern "C" void app_main(void) {
     // in main.c before app_main() ran, so the peripheral is already live.
     hal_i2c_scan();
 
-    if (i2c.init() < 0) {
+    if (!i2c.init()) {
         print("I2C1 init FAILED\r\n");
         while (true) {
             HAL_Delay(1000);
@@ -136,7 +136,7 @@ extern "C" void app_main(void) {
 
     i2c_scan(i2c);
 
-    if (imu.init(&i2c) < 0) {
+    if (!imu.init(&i2c)) {
         print("ICM42688 init FAILED -- check wiring (SDA/SCL, AD0=GND for 0x68) and power.\r\n");
         while (true) {
             HAL_Delay(1000);
@@ -146,9 +146,8 @@ extern "C" void app_main(void) {
     print("ICM42688 ready\r\n");
 
     while (true) {
-        ICM42688Result sample{};
-        if (imu.read_sample(&sample) == 0) {
-            print_sample(sample);
+        if (auto sample = imu.read_sample()) {
+            print_sample(*sample);
         } else {
             print("read_sample FAILED\r\n");
         }
