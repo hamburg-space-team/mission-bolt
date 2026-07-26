@@ -18,3 +18,6 @@ captures/
 
 .devcontainer/devcontainer-lock.json
 devcontainer-lock.json
+
+# release payload (scripts/package-release.sh)
+dist/

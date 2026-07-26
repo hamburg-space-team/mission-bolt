@@ -1,6 +1,9 @@
 {
     "name": "mission-bolt",
-    "build": { "dockerfile": "Dockerfile" },
+    "build": {
+        "dockerfile": "Dockerfile",
+        "cacheFrom": "ghcr.io/hamburg-space-team/mission-bolt/devcontainer"
+    },
 
     "privileged": true,
     "mounts": [
