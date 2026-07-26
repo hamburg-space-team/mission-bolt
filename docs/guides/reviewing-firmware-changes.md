@@ -19,9 +19,10 @@ checks below are the ones that catch real defects in this codebase.
   critical path).
 - **I-3 no dynamic allocation.** No `new`, `vector`, `string`,
   `function`, no hidden allocations (e.g. `std::function` captures).
-  The `invariants` verify stage rejects allocating `operator new` in the
-  image; it cannot see newlib `malloc` reachability, so review still
-  looks for printf-family additions on the flight path.
+  The images are allocator-free and the `invariants` verify stage
+  rejects any allocator symbol; a printf-family call anywhere in flight
+  code fails it, because stdio pulls the heap back in
+  (`shared/utils/assert_trap.cpp` explains the seams that keep it out).
 - **I-4 monotonic timeline.** `sync_count` only moves forward except at
   the LO epoch reset. Anything persisted for warm recovery lives in the
   `.noinit` block (`BootState`); a state that must survive a mid-flight

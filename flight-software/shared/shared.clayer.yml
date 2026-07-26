@@ -19,6 +19,7 @@ layer:
 
     - group: Utils
       files:
+        - file: utils/assert_trap.cpp
         - file: utils/crc16_hw.cpp
         - file: utils/device_base.cpp
 

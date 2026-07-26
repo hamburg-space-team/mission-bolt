@@ -69,9 +69,11 @@ writing firmware:
   unbounded waits on the critical path. SD writes are the documented
   exception and run off the critical path.
 - **I-3**: no dynamic allocation after init. No `new`, `vector`,
-  `string`, `function`. Fixed buffers and `std::array` only. The
-  `invariants` verify stage rejects allocating `operator new` in any
-  flight image; newlib's `malloc` presence is reported as an open item.
+  `string`, `function`. Fixed buffers and `std::array` only. The flight
+  images are allocator-free (no malloc/free/sbrk, no allocating
+  `operator new`); the `invariants` verify stage rejects any allocator
+  symbol that reappears. Do not add printf-family calls to flight code:
+  stdio pulls the heap back in.
 - **I-6**: never substitute a fallback for a bad reading. Set the
   `valid_mask` bit, or emit a `GAP_MARKER` with a reason.
 

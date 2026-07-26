@@ -32,10 +32,12 @@ The invariant checks exist because the classification in
 most likely to be hit by idiomatic-looking assistant code. Both live in
 [`scripts/check-flight-invariants.sh`](../../../scripts/check-flight-invariants.sh)
 and both carry a `--selftest` that rejects a known-bad input, which the
-stage runs first. Two residuals remain and are stated rather than
-implied away: newlib's `malloc` is linked into every image by the
-`vsnprintf` family and its unreachability from flight code is not
-proven, and eight `shared/` files legitimately include HAL and are
+stage runs first. The flight images are allocator-free by construction
+(littlefs on static buffers with `LFS_NO_MALLOC`, assert and log paths
+trap instead of printing, `operator delete` replaced; see
+`shared/utils/assert_trap.cpp`), and the check rejects any allocator
+symbol that reappears. One residual remains and is stated rather than
+implied away: eight `shared/` files legitimately include HAL and are
 allowlisted; the allowlist is a ratchet, so a ninth fails.
 
 This is the same principle as the generated wire format. Where a

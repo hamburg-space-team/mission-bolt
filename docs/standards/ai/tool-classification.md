@@ -56,7 +56,7 @@ known-bad (and known-good) fixtures, before either check was trusted.
 
 | Workflow | Assistant produces | An undetected error causes | Detected independently by | Residual risk |
 |---|---|---|---|---|
-| Flight logic and drivers | Code in the flight image | A defect that flies | `clang-tidy` and `clang-format`, the four Debug builds, host unit tests, the `invariants` stage (allocating `operator new` in the image, HAL includes across the layer boundary), review under the comprehension rule | Semantic errors no gate encodes; newlib `malloc` linked via `vsnprintf` with unreachability unproven; the eight allowlisted HAL includes in `shared/`. Owner: reviewer |
+| Flight logic and drivers | Code in the flight image | A defect that flies | `clang-tidy` and `clang-format`, the four Debug builds, host unit tests, the `invariants` stage (any allocator symbol in the image, HAL includes across the layer boundary), review under the comprehension rule | Semantic errors no gate encodes; the eight allowlisted HAL includes in `shared/`. Owner: reviewer |
 | **Verification code**: gates, bench harness, expected-range comparison | Code that judges other code | Silent loss of coverage; green reports over real faults | Only a deliberate known-bad input. Nothing else looks at it | **Highest.** Requires the fail-first demonstration above |
 | Interface annotations: unit, scale, offset, gate | Values that convert raw counts to engineering units | Consistently wrong engineering data in flight binary, decoder and ICD at once | Datasheet review by a person. The drift check proves agreement, not correctness | High. Owner: named reviewer in the PR |
 | Build and toolchain configuration | Container, csolution, CI definitions | A flight binary built differently than believed | Version pins in one place (the devcontainer Dockerfile ARGs), reproducible container build, CI running the same `verify.sh` | Moderate |
@@ -83,9 +83,10 @@ the first names its datasheet reviewer in the pull request, the second
 is excluded from assistance entirely. The two checks earlier drafts
 listed as missing now exist in
 [`scripts/check-flight-invariants.sh`](../../../scripts/check-flight-invariants.sh),
-each with its fail-first selftest. What they leave open is stated in
-their output rather than implied away: `malloc` reachability, and the
-`shared/` HAL allowlist that may shrink but not grow.
+each with its fail-first selftest. The allocation check is total: the
+images carry no allocator symbol at all, and the check rejects any that
+reappears. What stays a ratchet is the `shared/` HAL allowlist, which
+may shrink but not grow.
 
 ## Limitations of this classification
 

@@ -2,13 +2,14 @@
 # Mechanical checks for two properties review used to carry alone
 # (docs/standards/ai/tool-classification.md names them as the gaps):
 #
-#   alloc   no C++ heap allocation in any flight image. arm-none-eabi-nm
-#           over out/**/*.elf rejects operator new (_Znwm/_Znam and array
-#           forms). operator delete (_ZdlPv*) is expected: every virtual
-#           destructor emits a deleting variant that references it, used
-#           or not. newlib's _malloc_r/_sbrk_r are REPORTED, not failed:
-#           they are linked by the vsnprintf family and their
-#           reachability from flight code is an open item.
+#   alloc   the flight images are allocator-free and stay that way.
+#           arm-none-eabi-nm over out/**/*.elf rejects allocating
+#           operator new AND any newlib heap symbol (malloc/free/sbrk).
+#           This holds because littlefs runs on static buffers with
+#           LFS_NO_MALLOC, its log/assert paths trap instead of printf
+#           (shared/utils/assert_trap.cpp), and operator delete is
+#           replaced with a trap - the deleting-destructor artefacts
+#           would otherwise pull free via libstdc++.
 #
 #   layers  mission logic must not include board or vendor HAL headers.
 #           Hard-clean zone: btc/app/btc, btc/app/protocol. The shared/
@@ -28,6 +29,7 @@ FSW="$(cd "${HERE}/../flight-software" && pwd)"
 # manglings. Placement new (_Zn..Pv) allocates nothing and is exempt: the
 # optional/expected machinery emits it as a weak symbol
 NEW_RE=' _Zn[wa][jm]($|St11align_val_t|RKSt9nothrow_t)'
+HEAP_RE=' (_malloc_r|malloc|_free_r|free|_sbrk_r|_sbrk|_calloc_r|calloc|_realloc_r|realloc)$'
 HAL_RE='#include[^"<]*["<](main\.h|stm32[^">]*|cmsis_os[^">]*)[">]'
 
 # shared/ files allowed to touch HAL: the platform-facing side of the
@@ -58,11 +60,14 @@ check_alloc() {
             grep -E "${NEW_RE}" <<<"${syms}" | sed 's/^/  /'
             rc=1
         fi
-        if grep -qE ' _malloc_r$| _sbrk_r?$' <<<"${syms}"; then
-            echo "alloc: note ${e#"${FSW}"/}: newlib malloc linked (vsnprintf family); reachability unproven"
+        if grep -qE "${HEAP_RE}" <<<"${syms}"; then
+            echo "alloc: FAIL ${e#"${FSW}"/}: newlib heap in the image (I-3)"
+            grep -E "${HEAP_RE}" <<<"${syms}" | sed 's/^/  /'
+            echo "  a printf/assert path or an allocating call slipped in; see assert_trap.cpp + the LFS_NO_* defines"
+            rc=1
         fi
     done
-    [ "${rc}" = 0 ] && echo "alloc: no operator new in ${#elfs[@]} images"
+    [ "${rc}" = 0 ] && echo "alloc: ${#elfs[@]} images allocator-free"
     return "${rc}"
 }
 
@@ -128,6 +133,16 @@ selftest() {
     # known-good: placement new allocates nothing and must NOT be flagged
     if grep -qE "${NEW_RE}" <<<"08001234 W _ZnwjPv"; then
         echo "SELFTEST FAIL: placement new wrongly flagged"
+        ok=0
+    fi
+    # known-bad: newlib heap symbol -> must be caught
+    if ! grep -qE "${HEAP_RE}" <<<"08001234 T _malloc_r"; then
+        echo "SELFTEST FAIL: newlib malloc fixture not detected"
+        ok=0
+    fi
+    # known-good: plain libc string routine must NOT be flagged
+    if grep -qE "${HEAP_RE}" <<<"08001234 T memcpy"; then
+        echo "SELFTEST FAIL: memcpy wrongly flagged as heap"
         ok=0
     fi
     # known-bad source file: vendor HAL include -> must be caught
