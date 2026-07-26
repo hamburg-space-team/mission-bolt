@@ -134,8 +134,9 @@ consteval std::string_view scalar_wire(std::string_view ctype) {
     return "?";
 }
 
-// Enums are all unsigned here; report the underlying wire width.
-consteval std::string_view enum_wire(std::size_t bytes) {
+// Enums are all unsigned here; report the underlying wire width. Returns a
+// literal (not a string_view) so it can feed printf's %s directly
+consteval const char* enum_wire(std::size_t bytes) {
     return bytes == 1 ? "u8" : bytes == 2 ? "u16" : bytes == 4 ? "u32" : "u64";
 }
 
@@ -518,7 +519,7 @@ void emit_tex(const char* generated_at) {
                 "the ground UI gates these behind an arm + confirm step.\n");
     template for (constexpr sm::info E : std::define_static_array(documented_enums())) {
         constexpr std::string_view enm = sm::identifier_of(E);
-        std::printf("\n\\paragraph{%s (\\texttt{%s})}\n", tex(enm).c_str(), enum_wire(sm::size_of(E)).data());
+        std::printf("\n\\paragraph{%s (\\texttt{%s})}\n", tex(enm).c_str(), enum_wire(sm::size_of(E)));
         std::printf("\\begin{center}\\footnotesize\n    \\begin{tabular}{|r|l|p{7.2cm}|}\n        \\hline\n"
                     "        \\textbf{Value} & \\textbf{Name} & \\textbf{Description} \\\\\n        \\hline\n");
         template for (constexpr sm::info c : std::define_static_array(sm::enumerators_of(E))) {
