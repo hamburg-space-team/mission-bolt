@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 ARG ARM_GNU_VERSION=15.2.rel1
 ARG CMSIS_TOOLBOX_VERSION=2.14.1
-ARG NODE_MAJOR=20
+ARG NODE_MAJOR=24
 
 ENV DEBIAN_FRONTEND=noninteractive
 

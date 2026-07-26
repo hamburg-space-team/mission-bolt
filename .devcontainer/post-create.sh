@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# CI runners remap the container user's uid (1001 vs the image's 1000), so
+# the packs volume and the baked cargo/rustup dirs belong to someone else
+# there. Take ownership of whatever we need to write
+for d in "${CMSIS_PACK_ROOT:-/opt/cmsis-packs}" /usr/local/cargo /usr/local/rustup; do
+    if [ -d "${d}" ] && [ ! -w "${d}" ]; then
+        sudo chown -R "$(id -u):$(id -g)" "${d}"
+    fi
+done
+
 if [ ! -f "${CMSIS_PACK_ROOT}/.Web/index.pidx" ]; then
     cpackget init https://www.keil.com/pack/index.pidx
 fi
