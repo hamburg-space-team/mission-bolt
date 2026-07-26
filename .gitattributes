@@ -1,17 +1,13 @@
-*.sh        text eol=lf
-*.mjs       text eol=lf
-*.bash      text eol=lf
-Dockerfile  text eol=lf
-*.py        text eol=lf
+* text=auto eol=lf
 
 
-# STM32CubeMX output: HAL/LL drivers, CMSIS, startup, generated Core/config
-**/generated/**            linguist-generated=true
-**/MX_Device/**            linguist-generated=true
-*.ioc                      linguist-generated=true
+# STM32CubeMX output: HAL/LL drivers, CMSIS, startup, generated Core/config.
+**/generated/**            linguist-generated=true -text
+**/MX_Device/**            linguist-generated=true -text
+*.ioc                      linguist-generated=true -text
 
 # CMSIS-pack managed run-time environment
-**/RTE/**                  linguist-generated=true
+**/RTE/**                  linguist-generated=true -text
 
 # Vendored third-party libraries
 flight-software/lib/littlefs/** linguist-vendored=true
