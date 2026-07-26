@@ -270,78 +270,90 @@ void Exp1Computer::on_experiment_tick(uint16_t can_tick, uint32_t timestamp_us) 
         return;
     }
 
-    const MeasStep& step = MATRIX[step_idx];
-
     if (block_tick == 0U) {
-        prev_ready = cur_started;
-        prev_valid = cur_valid;
-        prev_step_idx = cur_step_idx;
-        prev_start_tick = cur_start_tick;
-        prev_start_us = cur_start_us;
-
-        if (prev_ready) {
-            const bool rdy = spec.data_ready();
-            if (!rdy && data_ready_fails != 0xFFU) {
-                data_ready_fails++;
-            }
-            bool ok = false;
-            {
-                BOLT_TIME(timings, READ);
-                ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
-            }
-            prev_valid = prev_valid && rdy && ok;
-        }
+        latch_prev_and_read_first();
     } else if (block_tick == 1U) {
-        if (prev_ready) {
-            bool ok = false;
-            {
-                BOLT_TIME(timings, READ);
-                ok = spec.read_channels_dies(&result, 2U, 1U).has_value();
-            }
-            prev_valid = prev_valid && ok;
-
-            {
-                BOLT_TIME(timings, SEND);
-                send_spectrum(prev_step_idx, prev_valid, prev_start_tick, prev_start_us);
-            }
-            prev_ready = false;
-        }
-
-        bool led_ok = false;
-        {
-            BOLT_TIME(timings, DRIVE);
-            led_ok = lp5810_rgb.set_channels(step.rgb_mask, step.pwm).has_value();
-            led_ok = lp5810_uv_ir.set_channels(step.uvir_mask, step.pwm).has_value() && led_ok;
-        }
-        bool it_ok = false;
-        bool start_ok = false;
-        {
-            BOLT_TIME(timings, CFG);
-            it_ok = spec.set_integration(step.integration_cycles).has_value();
-            start_ok = spec.start_measurement().has_value();
-        }
-
-        // Transient diagnostics: count which link failed (EXP1_STATUS).
-        if (!led_ok && led_write_fails != 0xFFU) {
-            led_write_fails++;
-        }
-        if ((!it_ok || !start_ok) && spec_start_fails != 0xFFU) {
-            spec_start_fails++;
-        }
-
-        cur_started = true;
-        cur_valid = led_ok && it_ok && start_ok;
-        cur_step_idx = step_idx;
-        cur_start_tick = can_tick;
-        cur_start_us = timestamp_us;
+        finish_prev_read_and_send();
+        start_row(can_tick, timestamp_us);
     }
     // block_tick >= 2: the integration runs; the LEDs stay on for the row.
 
     block_tick++;
-    if (block_tick >= step.block_ticks) {
+    if (block_tick >= MATRIX[step_idx].block_ticks) {
         block_tick = 0U;
         step_idx = static_cast<uint8_t>((step_idx + 1U) % MATRIX_SIZE);
     }
+}
+
+void Exp1Computer::latch_prev_and_read_first() {
+    prev_ready = cur_started;
+    prev_valid = cur_valid;
+    prev_step_idx = cur_step_idx;
+    prev_start_tick = cur_start_tick;
+    prev_start_us = cur_start_us;
+
+    if (prev_ready) {
+        const bool rdy = spec.data_ready();
+        if (!rdy && data_ready_fails != 0xFFU) {
+            data_ready_fails++;
+        }
+        bool ok = false;
+        {
+            BOLT_TIME(timings, READ);
+            ok = spec.read_channels_dies(&result, 0U, 2U).has_value();
+        }
+        prev_valid = prev_valid && rdy && ok;
+    }
+}
+
+void Exp1Computer::finish_prev_read_and_send() {
+    if (!prev_ready) {
+        return;
+    }
+    bool ok = false;
+    {
+        BOLT_TIME(timings, READ);
+        ok = spec.read_channels_dies(&result, 2U, 1U).has_value();
+    }
+    prev_valid = prev_valid && ok;
+
+    {
+        BOLT_TIME(timings, SEND);
+        send_spectrum(prev_step_idx, prev_valid, prev_start_tick, prev_start_us);
+    }
+    prev_ready = false;
+}
+
+void Exp1Computer::start_row(uint16_t can_tick, uint32_t timestamp_us) {
+    const MeasStep& step = MATRIX[step_idx];
+
+    bool led_ok = false;
+    {
+        BOLT_TIME(timings, DRIVE);
+        led_ok = lp5810_rgb.set_channels(step.rgb_mask, step.pwm).has_value();
+        led_ok = lp5810_uv_ir.set_channels(step.uvir_mask, step.pwm).has_value() && led_ok;
+    }
+    bool it_ok = false;
+    bool start_ok = false;
+    {
+        BOLT_TIME(timings, CFG);
+        it_ok = spec.set_integration(step.integration_cycles).has_value();
+        start_ok = spec.start_measurement().has_value();
+    }
+
+    // Transient diagnostics: count which link failed (EXP1_STATUS).
+    if (!led_ok && led_write_fails != 0xFFU) {
+        led_write_fails++;
+    }
+    if ((!it_ok || !start_ok) && spec_start_fails != 0xFFU) {
+        spec_start_fails++;
+    }
+
+    cur_started = true;
+    cur_valid = led_ok && it_ok && start_ok;
+    cur_step_idx = step_idx;
+    cur_start_tick = can_tick;
+    cur_start_us = timestamp_us;
 }
 
 void Exp1Computer::send_spectrum(uint8_t matrix_idx, bool valid, uint16_t start_tick, uint32_t start_us) {
@@ -434,7 +446,8 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_collect(uint32
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb(NodeComputer& node, bool /*first*/,
                                                                      uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
-    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    auto& self = static_cast<Exp1Computer&>(node);
     if (self.lp5810_rgb.is_failed()) {
         return TestResult::SKIPPED;
     }
@@ -448,7 +461,8 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb(NodeCompute
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir(NodeComputer& node, bool /*first*/,
                                                                       uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
-    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    auto& self = static_cast<Exp1Computer&>(node);
     if (self.lp5810_uv_ir.is_failed()) {
         return TestResult::SKIPPED;
     }
@@ -461,7 +475,8 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir(NodeComput
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_dark(NodeComputer& node, bool first,
                                                                        uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
-    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    auto& self = static_cast<Exp1Computer&>(node);
     uint32_t sum = 0U;
     const auto verdict = self.spec_test_measure(first, 0U, 0U, sum);
     if (verdict == TestResult::PASS) {
@@ -475,7 +490,8 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_dark(NodeCompu
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_rgb(NodeComputer& node, bool first,
                                                                           uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
-    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    auto& self = static_cast<Exp1Computer&>(node);
     const auto verdict = self.spec_test_measure(first, RGB_CHANNELS, 0U, data);
     if (!verdict) {
         return std::nullopt;
@@ -491,7 +507,8 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_rgb(NodeCo
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_uvir(NodeComputer& node, bool first,
                                                                            uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
-    auto& self = static_cast<Exp1Computer&>(node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    auto& self = static_cast<Exp1Computer&>(node);
     const auto verdict = self.spec_test_measure(first, 0U, SELF_TEST_UVIR_CHANNELS, data);
     if (!verdict) {
         return std::nullopt;

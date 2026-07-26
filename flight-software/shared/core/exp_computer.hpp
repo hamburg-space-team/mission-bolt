@@ -1,7 +1,7 @@
 #pragma once
 
-#include "can_transport.hpp"
 #include "can_protocol.hpp"
+#include "can_transport.hpp"
 #include "node_computer.hpp"
 #include "self_test.hpp"
 #include <bolt/wire/payloads.hpp>
@@ -106,6 +106,8 @@ class ExpComputer : public NodeComputer {
     void on_init() override;
     void on_tick(uint32_t tick_start_us, uint16_t missed_periods) final;
     bool poll_sync(uint16_t& tick_out) noexcept;
+    /// SYNC arrived this tick: follow the BTC's mode/target, detect gaps
+    void on_sync_received(uint16_t can_tick, uint32_t now_ms, uint32_t tick_start_us);
     void send_timing_packet(uint16_t can_tick, uint32_t timestamp_us);
     /// FLIGHT -> experiment body; TEST -> self-test service + test body
     void dispatch_mode_tick(uint16_t can_tick, uint32_t timestamp_us);

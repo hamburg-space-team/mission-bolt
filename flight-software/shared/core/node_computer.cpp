@@ -26,61 +26,77 @@ void NodeComputer::init_sensors() {
 }
 
 void NodeComputer::retry_failed_devices() {
-    // Bus first: if it recovers, the sensors sharing it can re-init the same
-    // tick. reset() = DeInit + init, which also clears a latched BERR /
-    // arbitration-lost / lock-up.
-    if (this->i2c.retry_due()) {
-        this->platform.kick_wdg();
-
-        if (this->i2c.reset()) {
-            this->i2c.clear_latch();
-        } else {
-            this->i2c.arm_retry();
-            report_fault(StatusLeds::Fault::I2C_BUS, this->i2c.last_error());
-        }
-    }
-
-    if (this->baro.retry_due()) {
-        this->platform.kick_wdg();
-
-        MS5611 new_baro;
-        if (new_baro.init(&this->i2c, MS5611_ADDR, MS5611Osr::OSR_4096, this->platform.delay_ms)) {
-            this->baro = new_baro;
-        } else {
-            this->baro.arm_retry();
-            report_fault(StatusLeds::Fault::BARO, this->baro.last_error());
-        }
-    }
-
-    if (this->tmp.retry_due()) {
-        this->platform.kick_wdg();
-
-        TMP117 new_tmp;
-        if (new_tmp.init(&this->i2c, TMP117_ADDR)) {
-            this->tmp = new_tmp;
-        } else {
-            this->tmp.arm_retry();
-            report_fault(StatusLeds::Fault::TMP, this->tmp.last_error());
-        }
-    }
-
-    // The Store recovers in place (it owns the SDMMC handle + LittleFS buffers
-    // and is held by reference, so it cannot be swapped for a fresh instance):
-    // re-init re-mounts, clear_latch() lets writes resume.
-    if (this->storage.retry_due()) {
-        this->platform.kick_wdg();
-
-        if (this->storage.init()) {
-            this->storage.clear_latch();
-        } else {
-            this->storage.arm_retry();
-            report_fault(StatusLeds::Fault::SD, this->storage.last_error());
-        }
-    }
-
+    // Bus first: if it recovers, the sensors sharing it can re-init the same tick
+    retry_i2c();
+    retry_baro();
+    retry_tmp();
+    retry_storage();
     // Board-specific devices (IMU, ...) - each concrete node reuses the same
     // cooldown pattern.
     retry_extra_devices();
+}
+
+// reset() = DeInit + init, which also clears a latched BERR /
+// arbitration-lost / lock-up
+void NodeComputer::retry_i2c() {
+    if (!this->i2c.retry_due()) {
+        return;
+    }
+    this->platform.kick_wdg();
+
+    if (this->i2c.reset()) {
+        this->i2c.clear_latch();
+    } else {
+        this->i2c.arm_retry();
+        report_fault(StatusLeds::Fault::I2C_BUS, this->i2c.last_error());
+    }
+}
+
+void NodeComputer::retry_baro() {
+    if (!this->baro.retry_due()) {
+        return;
+    }
+    this->platform.kick_wdg();
+
+    MS5611 new_baro;
+    if (new_baro.init(&this->i2c, MS5611_ADDR, MS5611Osr::OSR_4096, this->platform.delay_ms)) {
+        this->baro = new_baro;
+    } else {
+        this->baro.arm_retry();
+        report_fault(StatusLeds::Fault::BARO, this->baro.last_error());
+    }
+}
+
+void NodeComputer::retry_tmp() {
+    if (!this->tmp.retry_due()) {
+        return;
+    }
+    this->platform.kick_wdg();
+
+    TMP117 new_tmp;
+    if (new_tmp.init(&this->i2c, TMP117_ADDR)) {
+        this->tmp = new_tmp;
+    } else {
+        this->tmp.arm_retry();
+        report_fault(StatusLeds::Fault::TMP, this->tmp.last_error());
+    }
+}
+
+// The Store recovers in place (it owns the SDMMC handle + LittleFS buffers
+// and is held by reference, so it cannot be swapped for a fresh instance):
+// re-init re-mounts, clear_latch() lets writes resume
+void NodeComputer::retry_storage() {
+    if (!this->storage.retry_due()) {
+        return;
+    }
+    this->platform.kick_wdg();
+
+    if (this->storage.init()) {
+        this->storage.clear_latch();
+    } else {
+        this->storage.arm_retry();
+        report_fault(StatusLeds::Fault::SD, this->storage.last_error());
+    }
 }
 
 void NodeComputer::init_storage() {

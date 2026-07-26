@@ -75,26 +75,7 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     uint16_t can_tick = 0U;
 
     if (poll_sync(can_tick)) {
-        // the BTC owns the mode; a transition resets the experiment
-        if (this->mode != this->sync_mode) {
-            this->mode = this->sync_mode;
-            on_experiment_reset();
-        }
-        this->test_target = this->sync_test_target;
-        this->last_sync_ms = now_ms;
-        this->leds.can_tick(can_tick);
-
-        if (this->autonomous) {
-            this->autonomous = false;
-        } else if (this->last_can_tick != NO_LAST_TICK) {
-            const auto diff = static_cast<uint16_t>(can_tick - this->last_can_tick);
-
-            if (diff > 1U && diff <= MAX_REPORTABLE_GAP) {
-                const auto first = static_cast<uint16_t>(this->last_can_tick + 1U);
-                send_gap(first, static_cast<uint8_t>(diff - 1U), PacketProtocol::GapReason::NO_DATA, tick_start_us);
-            }
-        }
-
+        on_sync_received(can_tick, now_ms, tick_start_us);
     } else {
         if (!this->autonomous && (now_ms - this->last_sync_ms) < AUTONOMOUS_TIMEOUT_MS) {
             return;
@@ -119,6 +100,28 @@ void ExpComputer::on_tick(uint32_t tick_start_us, uint16_t /*missed_periods*/) {
     send_env_packet(can_tick, tick_start_us);
     if ((this->local_tick % STATUS_INTERVAL) == 0U) {
         send_status_packet(can_tick, tick_start_us);
+    }
+}
+
+void ExpComputer::on_sync_received(uint16_t can_tick, uint32_t now_ms, uint32_t tick_start_us) {
+    // the BTC owns the mode; a transition resets the experiment
+    if (this->mode != this->sync_mode) {
+        this->mode = this->sync_mode;
+        on_experiment_reset();
+    }
+    this->test_target = this->sync_test_target;
+    this->last_sync_ms = now_ms;
+    this->leds.can_tick(can_tick);
+
+    if (this->autonomous) {
+        this->autonomous = false;
+    } else if (this->last_can_tick != NO_LAST_TICK) {
+        const auto diff = static_cast<uint16_t>(can_tick - this->last_can_tick);
+
+        if (diff > 1U && diff <= MAX_REPORTABLE_GAP) {
+            const auto first = static_cast<uint16_t>(this->last_can_tick + 1U);
+            send_gap(first, static_cast<uint8_t>(diff - 1U), PacketProtocol::GapReason::NO_DATA, tick_start_us);
+        }
     }
 }
 
