@@ -25,6 +25,13 @@ class LoTracker {
         return false;
     }
 
+    /// Warm-recovery path: re-arm the latch from persisted state so the level
+    /// fallback cannot re-trigger and zero the resumed tick epoch
+    void restore(uint32_t rtc_s) noexcept {
+        lo_received = true;
+        lo_rtc_s = rtc_s;
+    }
+
     [[nodiscard]] bool received() const noexcept {
         return lo_received;
     }

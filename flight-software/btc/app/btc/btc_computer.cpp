@@ -47,6 +47,11 @@ void BtcComputer::on_init() {
     // Cold start => TEST. A warm reset restores whatever the mission was in, so
     // resetting after LO comes straight back up in FLIGHT
     mode = boot.mode;
+    // Restore the LO latch too: the line is still asserted mid-flight, and an
+    // un-latched tracker would re-fire the level fallback and zero the epoch
+    if (boot.lo_latched) {
+        lo.restore(boot.lo_rtc_s);
+    }
 
     // Install one exact-match RX filter per EXP, start CAN, enable RX notify.
     board.start_can(EXP_DATA_IDS);
@@ -178,13 +183,15 @@ void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
 }
 
 std::optional<PacketProtocol::TestResult> BtcComputer::step_imu_whoami(NodeComputer& node, bool /*first*/,
-                                                                        uint32_t& data) noexcept {
-    return ImuSelfTest::whoami(static_cast<BtcComputer&>(node).imu_sup, data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+                                                                       uint32_t& data) noexcept {
+    return ImuSelfTest::whoami(static_cast<BtcComputer&>(node).imu_sup,
+                               data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 }
 
 std::optional<PacketProtocol::TestResult> BtcComputer::step_imu_read(NodeComputer& node, bool /*first*/,
                                                                      uint32_t& data) noexcept {
-    return ImuSelfTest::read(static_cast<BtcComputer&>(node).imu_sup, data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+    return ImuSelfTest::read(static_cast<BtcComputer&>(node).imu_sup,
+                             data); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 }
 
 std::span<const SelfTest::Step> BtcComputer::self_test_steps() noexcept {
@@ -325,6 +332,7 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
         // LO is the point of no return: the mission is flying. set_mode persists
         // it, so a reset from here on comes back up in FLIGHT
         set_mode(BootState::Mode::FLIGHT); // also aborts any self-test mid-run
+        BootState::save_lo(lo.rtc_s());
     }
 
     if (missed_periods > 0U) {
