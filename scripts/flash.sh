@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Flash one or all boards over the debug station (tools/debug-station/).
-# GDB transfers the ELF over the wire, so nothing is copied to the Pi and
-# the binary on the board is exactly the one in out/.
+# Build one board's context and flash it over the debug station
+# (tools/debug-station/). GDB transfers the ELF over the wire, so nothing
+# is copied to the Pi and the binary on the board is exactly the one just
+# built into out/.
 #
 #   scripts/flash.sh <btc|exp1|exp2|exp3> [Debug|Release]
 #
@@ -52,7 +53,16 @@ flash_one() {
     tgt="${MAP[${node}]}"
     port="${PORT}"
     elf="${FSW}/out/${node}/${tgt}/${CFG}/${node}.elf"
-    [ -f "${elf}" ] || { echo "error: ${elf} missing - build the ${CFG} context first"; return 1; }
+
+    # incremental cbuild is seconds; flashing a stale ELF costs a bench trip
+    if command -v cbuild >/dev/null; then
+        echo "== ${node}: cbuild ${node}.${CFG}+${tgt}"
+        (cd "${FSW}" && cbuild bolt.csolution.yml --context "${node}.${CFG}+${tgt}" >/dev/null) \
+            || { echo "== ${node}: build FAILED"; return 1; }
+    else
+        echo "   note: cbuild not found - flashing the existing ELF as-is"
+    fi
+    [ -f "${elf}" ] || { echo "error: ${elf} missing"; return 1; }
 
     echo "== ${node}: ${elf#"${FSW}"/} -> ${HOST}:${port} (probe must sit on ${node}!)"
     wait_for_station || return 1
