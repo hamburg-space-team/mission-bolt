@@ -23,7 +23,8 @@ FSW="${REPO}/flight-software"
 TT="${REPO}/telemetry-tools"
 
 STAGES=(flight-build host-tests coverage schema-drift iface-headers invariants
-    rust-build rust-tests rust-fmt rust-clippy ext-build provenance lint-flight)
+    rust-build rust-tests rust-fmt rust-clippy ext-build ui-build provenance
+    lint-flight)
 
 DO_LINT=1 DO_BUILD=1 DO_RUST=1 DO_EXT=1 DO_PROV=1
 ONLY=()
@@ -78,6 +79,11 @@ skip() { # skip <name> <reason>
 
 # --- flight build: all four Debug contexts --------------------------------
 flight_build() {
+    # an uninitialised submodule fails as a missing header three layers deep
+    if [ ! -f "${FSW}/lib/littlefs/lfs.c" ]; then
+        echo "littlefs submodule not checked out - run: git submodule update --init"
+        return 1
+    fi
     (cd "${FSW}" && cbuild bolt.csolution.yml \
         --context btc.Debug+btc --context exp1.Debug+exp1-space-disco \
         --context exp2.Debug+exp2-bouncy-castle --context exp3.Debug+exp3-floaty-boi)
@@ -110,14 +116,14 @@ coverage_check() {
             /^Lines executed/ {
                 split($0, a, /:| of /)
                 pct = a[2]; n = a[3]
-                if (f ~ /flight-software\/(shared|tests)\//) {
+                if (f ~ /flight-software\/(shared|[a-z0-9-]+\/app)\//) {
                     printf "  %6s of %4d lines  %s\n", pct, n, f
                     covered += (substr(pct, 1, length(pct)-1) / 100) * n
                     total += n
                 }
             }
             END {
-                if (total > 0) printf "  total: %.1f%% of %d lines in shared/ + tests/\n",
+                if (total > 0) printf "  total: %.1f%% of %d lines in shared/ + app/\n",
                     100 * covered / total, total
             }'
     echo "  note: counts only code the host tests link at all - most of shared/"
@@ -208,6 +214,8 @@ rust_tests() { (cd "${TT}" && cargo test --workspace --quiet); }
 rust_fmt() { (cd "${TT}" && cargo fmt --all --check); }
 rust_clippy() { (cd "${TT}" && cargo clippy --workspace --quiet -- -D warnings); }
 ext_build() { (cd "${TT}/extension" && { [ -d node_modules ] || npm ci; } && npm run --silent compile); }
+# the station's kiosk dashboard; its build runs tsc --noEmit first
+ui_build() { (cd "${TT}/station-ui" && { [ -d node_modules ] || npm ci; } && npm run --silent build); }
 
 # --- run ------------------------------------------------------------------
 if wants flight-build; then
@@ -272,6 +280,14 @@ if wants ext-build; then
         skip "ext-build" "--no-ext"
     else
         section "ext-build" ext_build
+    fi
+fi
+
+if wants ui-build; then
+    if [ "${DO_EXT}" -eq 0 ]; then
+        skip "ui-build" "--no-ext"
+    else
+        section "ui-build" ui_build
     fi
 fi
 

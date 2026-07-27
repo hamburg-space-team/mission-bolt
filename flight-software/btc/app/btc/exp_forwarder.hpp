@@ -14,14 +14,21 @@
 
 namespace ExpForwarder {
 
-    /// Read "EXP n finished its self-test" off a frame we forward anyway, or
-    /// nullopt. NOT CRC-checked (the reassembler hands over raw bytes, ground
+    /// One *_TEST frame's origin and whether it was the node's last step
+    ///
+    /// @ingroup apps
+    struct TestFrame {
+        PacketProtocol::NodeId node;
+        bool last;
+    };
+
+    /// Self-test progress read off a frame we forward anyway.
+    /// NOT CRC-checked (the reassembler hands over raw bytes, ground
     /// validates) - the structural checks stand in. Bounded risk: TEST mode on
     /// the pad only, and the ground sees the same frame with its bad CRC
     ///
     /// @ingroup apps
-    [[nodiscard]] inline std::optional<PacketProtocol::NodeId> test_done_node(const uint8_t* buf,
-                                                                              uint8_t len) noexcept {
+    [[nodiscard]] inline std::optional<TestFrame> test_frame(const uint8_t* buf, uint8_t len) noexcept {
         using namespace PacketProtocol;
 
         constexpr uint8_t test_packet_len = static_cast<uint8_t>(HEADER_SIZE) +
@@ -37,17 +44,15 @@ namespace ExpForwarder {
         if (buf[HEADER_LENGTH_OFFSET] != sizeof(PayloadTest)) {
             return std::nullopt;
         }
-        if (buf[last_offset] != 1U) {
-            return std::nullopt; // a *_TEST step, but not the node's last
-        }
 
+        const bool last = buf[last_offset] == 1U;
         switch (static_cast<PayloadType>(buf[HEADER_TYPE_OFFSET])) {
         case PayloadType::EXP1_TEST:
-            return NodeId::EXP1;
+            return TestFrame{.node = NodeId::EXP1, .last = last};
         case PayloadType::EXP2_TEST:
-            return NodeId::EXP2;
+            return TestFrame{.node = NodeId::EXP2, .last = last};
         case PayloadType::EXP3_TEST:
-            return NodeId::EXP3;
+            return TestFrame{.node = NodeId::EXP3, .last = last};
         default:
             return std::nullopt;
         }
@@ -64,8 +69,12 @@ namespace ExpForwarder {
             // forward first, inspect second - the peek must never cost a frame
             downlink.send(buf.data(), len);
 
-            if (const auto done = test_done_node(buf.data(), len)) {
-                sequencer.on_node_done(*done);
+            if (const auto tf = test_frame(buf.data(), len)) {
+                if (tf->last) {
+                    sequencer.on_node_done(tf->node);
+                } else {
+                    sequencer.on_node_report(tf->node); // alive: re-arm its budget
+                }
             }
         }
     }

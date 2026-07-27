@@ -68,12 +68,16 @@ class BtcComputer final : public NodeComputer {
     uint16_t sync_count = 0U;
     bool gc_done = false;
 
-    // Set from ISR context via the notify_* methods, read in the main loop.
+    // Downlink share of the IMU stream
+    static constexpr uint8_t IMU_DOWNLINK_EVERY_NTH = 8U;
+
     volatile bool lo_pending = false;
     volatile bool imu_drdy = false;
     volatile uint32_t imu_drdy_ts = 0U;
+    uint8_t imu_downlink_nth = 0U;
 
-    void send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason, uint32_t timestamp_us);
+    void send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason, uint32_t timestamp_us,
+                          PacketProtocol::NodeId source);
     void poll_uplink(uint32_t timestamp_us);
     void handle_uplink(uint8_t opcode, uint8_t seq, uint32_t timestamp_us);
     void send_env_packet(uint32_t tick_start_us);
