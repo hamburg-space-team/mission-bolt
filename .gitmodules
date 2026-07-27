@@ -1,0 +1,4 @@
+[submodule "flight-software/lib/littlefs"]
+	path = flight-software/lib/littlefs
+	url = https://github.com/littlefs-project/littlefs.git
+	shallow = true

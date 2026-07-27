@@ -10,6 +10,9 @@ for d in "${CMSIS_PACK_ROOT:-/opt/cmsis-packs}" /usr/local/cargo /usr/local/rust
     fi
 done
 
+# littlefs is a submodule pinned to one commit; without it there is no lfs.c
+git submodule update --init
+
 if [ ! -f "${CMSIS_PACK_ROOT}/.Web/index.pidx" ]; then
     cpackget init https://www.keil.com/pack/index.pidx
 fi
