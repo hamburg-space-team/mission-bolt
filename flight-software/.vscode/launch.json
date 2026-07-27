@@ -116,6 +116,10 @@
             },
             "preLaunchTask": "Build exp3.Debug"
         },
+        // "@ station" configs attach to the debug station's remote OpenOCD.
+        // cortex-debug prints "Live watch is not officially supported for
+        // servertype 'external'" - expected: remote gdb servers are outside
+        // its test matrix. Live watch works over it; ignore the notice.
         {
             "name": "btc @ station",
             "type": "cortex-debug",
