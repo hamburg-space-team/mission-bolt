@@ -350,31 +350,29 @@ async function pickSerialPort(session: SessionManager): Promise<string | undefin
   const ports = await session.listPorts();
   const manualEntry = async () =>
     vscode.window.showInputBox({
-      prompt: "Serial device path or tcp://host:port (debug station)",
-      value: "/dev/ttyUSB0",
+      prompt: "tcp://host:port (debug station) or a serial device path",
+      value: "tcp://bolt-station.local:5000",
     });
 
-  if (ports.length === 0) {
-    void vscode.window.showWarningMessage("Bolt: no serial ports detected (is the adapter passed through?).");
-    return manualEntry();
-  }
-
+  // the debug station is the standard source; local serial is the exception
   type Item = vscode.QuickPickItem & { port?: string };
-  const items: Item[] = ports.map((p) => {
+  const items: Item[] = [
+    {
+      label: "$(globe) Debug station",
+      description: "tcp://bolt-station.local:5000",
+      port: "tcp://bolt-station.local:5000",
+    },
+  ];
+  for (const p of ports) {
     const name = [p.product, p.manufacturer].filter(Boolean).join(" · ");
     const ids = p.vid != null ? `${hex4(p.vid)}:${hex4(p.pid ?? 0)} (${p.kind})` : p.kind;
-    return {
+    items.push({
       label: `$(plug) ${p.port}`,
       description: name || ids,
       detail: name ? ids : undefined,
       port: p.port,
-    };
-  });
-  items.push({
-    label: "$(globe) Debug station",
-    description: "tcp://bolt-station.local:5000",
-    port: "tcp://bolt-station.local:5000",
-  });
+    });
+  }
   items.push({ label: "$(edit) Enter manually…" });
 
   const pick = await vscode.window.showQuickPick(items, {

@@ -18,8 +18,9 @@ struct Args {
     #[arg(long)]
     list_ports: bool,
 
-    /// Serial device (live mode), e.g. /dev/ttyUSB0 - or tcp://host:port for
-    /// the debug station's UART-over-TCP bridge (baud is then the station's)
+    /// Byte source (live mode): tcp://host:port for the debug station's
+    /// UART-over-TCP bridge (the standard setup; baud is the station's), or
+    /// a local serial device like /dev/ttyUSB0
     #[arg(long)]
     port: Option<String>,
 

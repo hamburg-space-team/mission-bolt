@@ -25,7 +25,7 @@ the extension, re-run `npm run compile`, repackage with `vsce package`, and
 
 ```bash
 bolt-serial-bridge --list-ports
-bolt-serial-bridge --port /dev/ttyUSB0 --baud 38400 --raw captures/flight.raw
+bolt-serial-bridge --port tcp://bolt-station.local:5000 --raw captures/flight.raw
 ```
 
 **Post-flight** (same overview, later):
