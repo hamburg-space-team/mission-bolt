@@ -23,6 +23,13 @@ if build_needed "${1:-}"; then
     [ -d node_modules ] || npm install
     # gen-commands + tsc (host & webview) + vite build
     npm run compile
+    # the webview resolves its CSS through the vite manifest at runtime; a
+    # too-eager .vscodeignore once shipped a style-less build
+    if ! node node_modules/@vscode/vsce/vsce ls --no-dependencies \
+        | grep -q 'media/webview/.vite/manifest.json'; then
+        echo "FAIL: package would ship without the vite manifest (webview styles break)"
+        exit 1
+    fi
     # same invocation as package.json's "package" script
     node node_modules/@vscode/vsce/vsce package --no-dependencies -o bolt.vsix
 else

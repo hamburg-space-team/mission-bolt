@@ -9,5 +9,4 @@ vite.config.ts
 .gitignore
 package-lock.json
 scripts/**
-media/webview/.vite/**
 *.vsix
