@@ -34,7 +34,7 @@ shared/utils/crc16.hpp        the unit
 shared/utils/crc16.test.cpp   its tests
 ```
 
-`tests/CMakeLists.txt` globs `*.test.cpp` across `shared/` and the
+`flight-software/CMakeLists.txt` globs `*.test.cpp` across `shared/` and the
 four `*/app/` trees and builds one executable per file. The flight
 builds cannot pick them up: the cprojects list their sources
 explicitly, so a `.test.cpp` next to flight code is inert there.
@@ -95,4 +95,4 @@ Focus on test depth, not coverage numbers.
 
 - [Building the flight software](building-flight-software.md)
 - [Debugging with OpenOCD](debugging-with-openocd.md)
-- [`tests/CMakeLists.txt`](../../flight-software/tests/CMakeLists.txt)
+- [`flight-software/CMakeLists.txt`](../../flight-software/CMakeLists.txt)

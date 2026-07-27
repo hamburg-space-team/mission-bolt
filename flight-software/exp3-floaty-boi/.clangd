@@ -1,3 +1,9 @@
 CompileFlags:
   CompilationDatabase: ../out/exp3/exp3-floaty-boi/Debug
   Add: []
+
+---
+If:
+  PathMatch: '.*\.test\.cpp'
+CompileFlags:
+  CompilationDatabase: ../build/tests

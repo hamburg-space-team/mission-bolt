@@ -1,2 +1,8 @@
 CompileFlags:
   CompilationDatabase: ../out/btc/btc/Debug
+  
+---
+If:
+  PathMatch: '.*\.test\.cpp'
+CompileFlags:
+  CompilationDatabase: ../build/tests
