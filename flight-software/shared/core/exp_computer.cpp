@@ -43,6 +43,10 @@ void ExpComputer::on_init() {
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_TX_MAILBOX_EMPTY);
 
+    this->mode = this->boot.mode;
+    this->sync_mode = this->boot.mode;
+    BootState::save_mode(this->mode);
+
     init_storage();
     init_sensors();
     on_experiment_init();
@@ -107,6 +111,7 @@ void ExpComputer::on_sync_received(uint16_t can_tick, uint32_t now_ms, uint32_t 
     // the BTC owns the mode; a transition resets the experiment
     if (this->mode != this->sync_mode) {
         this->mode = this->sync_mode;
+        BootState::save_mode(this->mode);
         on_experiment_reset();
     }
     this->test_target = this->sync_test_target;
