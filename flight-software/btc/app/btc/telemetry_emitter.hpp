@@ -26,13 +26,19 @@ class TelemetryEmitter {
     void emit_timing(PacketProtocol::Tick tick, PacketProtocol::TimestampUs ts_us, PacketProtocol::PayloadType type,
                      const Wcet::Timing& timings) noexcept;
 
-    /// Generic path for the fixed-layout BTC payloads (env / status / imu).
+    /// Like emit(), but SD only: for decimated streams. The write is
+    /// never gated, the send is the knob
+    void emit_store_only(PacketProtocol::PayloadType type, PacketProtocol::Tick tick, PacketProtocol::TimestampUs ts_us,
+                         const void* payload, uint8_t len) noexcept;
+
+    /// Generic path for the fixed-layout BTC payloads (env / status / imu)
     void emit(PacketProtocol::PayloadType type, PacketProtocol::Tick tick, PacketProtocol::TimestampUs ts_us,
               const void* payload, uint8_t len) noexcept;
 
   private:
     //  on a successful build, send the framed packet
     void publish(const Result<uint8_t>& built) noexcept;
+    void publish(const Result<uint8_t>& built, bool to_downlink) noexcept;
 
     // Disable the BTC downlink for testing
     static constexpr bool DOWNLINK_ENABLED = true;

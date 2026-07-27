@@ -8,11 +8,17 @@ TelemetryEmitter::TelemetryEmitter(PacketProtocol::PacketBuilder& pkt_in, uint8_
 }
 
 void TelemetryEmitter::publish(const Result<uint8_t>& built) noexcept {
+    publish(built, true);
+}
+
+void TelemetryEmitter::publish(const Result<uint8_t>& built, bool to_downlink) noexcept {
     if (!built) {
         return;
     }
     if constexpr (DOWNLINK_ENABLED) {
-        downlink.send(this->tx_buf, *built);
+        if (to_downlink) {
+            downlink.send(this->tx_buf, *built);
+        }
     }
     (void)this->storage.write(this->tx_buf, *built);
 }
@@ -45,4 +51,9 @@ void TelemetryEmitter::emit_timing(PacketProtocol::Tick tick, PacketProtocol::Ti
 void TelemetryEmitter::emit(PacketProtocol::PayloadType type, PacketProtocol::Tick tick,
                             PacketProtocol::TimestampUs ts_us, const void* payload, uint8_t len) noexcept {
     publish(this->pkt.build(this->tx_buf, type, tick, ts_us, payload, len));
+}
+
+void TelemetryEmitter::emit_store_only(PacketProtocol::PayloadType type, PacketProtocol::Tick tick,
+                                       PacketProtocol::TimestampUs ts_us, const void* payload, uint8_t len) noexcept {
+    publish(this->pkt.build(this->tx_buf, type, tick, ts_us, payload, len), false);
 }
