@@ -70,6 +70,8 @@ class NodeComputer : public FlightComputer {
                                                                    uint32_t& data) noexcept;
     static std::optional<PacketProtocol::TestResult> step_baro_prom(NodeComputer& node, bool first,
                                                                     uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_sd_mounted(NodeComputer& node, bool first,
+                                                                     uint32_t& data) noexcept;
 
     /// Drain ring-buffered SD writes during the idle phase
     void on_drain(uint32_t deadline_ms) override;

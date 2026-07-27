@@ -2,6 +2,7 @@
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
 #include <bolt/wire/payloads.hpp>
+#include <bolt/wire/selftest.hpp>
 
 extern CAN_HandleTypeDef hcan1;
 
@@ -40,6 +41,7 @@ void Exp2Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
     PayloadExpStatus status{};
     status.uptime_s = platform.tick_ms() / 1000U;
     status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
+    status.mode = static_cast<MissionMode>(mission_mode());
 
     if (auto len = pkt.build(tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &status,
                              static_cast<uint8_t>(sizeof(status)))) {
@@ -49,11 +51,15 @@ void Exp2Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
 }
 
 std::span<const SelfTest::Step> Exp2Computer::self_test_steps() const noexcept {
-    // common sensors only - the Li-Fi front end is TODO, like the tick body
-    static constexpr std::array<SelfTest::Step, 3U> steps = {{
+    // Li-Fi front-end steps (TX LED write path, RX photodiode level) join
+    // here once their drivers exist - the tick body is TODO like them
+    static constexpr std::array<SelfTest::Step, 4U> steps = {{
         {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
         {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
+        {&NodeComputer::step_sd_mounted}, // 3: SD mounted
     }};
+    static_assert(steps.size() == PacketProtocol::EXP2_SELF_TEST_COUNT,
+                  "table drifted from the bolt/wire/selftest.hpp contract");
     return steps;
 }

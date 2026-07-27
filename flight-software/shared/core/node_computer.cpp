@@ -166,3 +166,11 @@ std::optional<PacketProtocol::TestResult> NodeComputer::step_baro_prom(NodeCompu
     data = *c1; // C1 pressure sensitivity, a per-device fingerprint
     return PacketProtocol::TestResult::PASS;
 }
+
+std::optional<PacketProtocol::TestResult> NodeComputer::step_sd_mounted(NodeComputer& node, bool /*first*/,
+                                                                        uint32_t& data) noexcept {
+    // liveness only; write-path health goes through the fault path
+    const bool mounted = node.storage.is_mounted();
+    data = mounted ? 1U : 0U;
+    return mounted ? PacketProtocol::TestResult::PASS : PacketProtocol::TestResult::FAIL;
+}

@@ -4,6 +4,7 @@
 #include "main.h" // IWYU pragma: keep
 #include "wcet.hpp"
 #include <bolt/wire/payloads.hpp>
+#include <bolt/wire/selftest.hpp>
 
 extern CAN_HandleTypeDef hcan1;
 
@@ -109,6 +110,7 @@ void Exp3Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
     using namespace PacketProtocol;
     PayloadExp3Status status{};
     status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
+    status.mode = static_cast<MissionMode>(mission_mode());
 
     if (auto len = pkt.build(tx_buf.data(), PayloadType::EXP3_STATUS, Tick{can_tick}, TimestampUs{timestamp_us},
                              &status, static_cast<uint8_t>(sizeof(status)))) {
@@ -130,12 +132,17 @@ std::optional<PacketProtocol::TestResult> Exp3Computer::step_imu_read(NodeComput
 }
 
 std::span<const SelfTest::Step> Exp3Computer::self_test_steps() const noexcept {
-    static constexpr std::array<SelfTest::Step, 5U> steps = {{
+    // stack-link steps (wired/wireless burst round-trip) join here once
+    // the burst pipeline exists
+    static constexpr std::array<SelfTest::Step, 6U> steps = {{
         {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
         {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
         {&Exp3Computer::step_imu_whoami}, // 3: ICM-42686 WHO_AM_I
         {&Exp3Computer::step_imu_read},   // 4: ICM-42686 accel/gyro Z
+        {&NodeComputer::step_sd_mounted}, // 5: SD mounted
     }};
+    static_assert(steps.size() == PacketProtocol::EXP3_SELF_TEST_COUNT,
+                  "table drifted from the bolt/wire/selftest.hpp contract");
     return steps;
 }
