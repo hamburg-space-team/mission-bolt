@@ -111,6 +111,13 @@ Result<void> LP5810::disable_all() {
     return {};
 }
 
+Result<void> LP5810::probe() {
+    if (this->bus == nullptr) {
+        return fail(ErrorCode::DISABLED, Step::LED_DISABLE_ALL, __LINE__);
+    }
+    return write_reg(REG_LED_EN, 0x00U);
+}
+
 // write_reg is a transparent pass-through to the bus (ADR-012).
 Result<void> LP5810::write_reg(uint8_t reg, uint8_t value) {
     return this->bus->write_reg8(this->addr, reg, value);

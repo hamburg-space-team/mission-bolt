@@ -202,6 +202,13 @@ Result<void> AS7265X::probe(CmsisI2CBus* bus_in, tick_fn tick_in, delay_fn delay
     return {};
 }
 
+Result<uint8_t> AS7265X::hw_version() {
+    if (this->bus == nullptr) {
+        return fail(ErrorCode::DISABLED, Step::SPEC_VREG_READ, __LINE__);
+    }
+    return read_virtual(VREG_HW_VERSION);
+}
+
 Result<uint8_t> AS7265X::read_virtual(uint8_t vreg) {
     if (auto status = hw_read_reg(REG_STATUS); status && ((*status & STATUS_RX_VALID) != 0U)) {
         (void)hw_read_reg(REG_READ);

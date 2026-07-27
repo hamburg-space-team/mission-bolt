@@ -61,7 +61,9 @@ class Exp1Computer final : public ExpComputer {
     // AS7265X analog gain.
     static constexpr AS7265XGain SPEC_GAIN = AS7265XGain::GAIN_37X;
     // LP5810C channel mask: OUT0=R, OUT1=G, OUT2=B
-    static constexpr uint8_t RGB_CHANNELS = 0x07U;
+    static constexpr uint8_t RED_CHANNEL = 0x01U;
+    static constexpr uint8_t GREEN_CHANNEL = 0x02U;
+    static constexpr uint8_t BLUE_CHANNEL = 0x04U;
     // LP5810D channel masks: OUT0=white, OUT1=IR 940nm, OUT2=UV 400nm
     static constexpr uint8_t WHITE_CHANNEL = 0x01U;
     static constexpr uint8_t IR_CHANNEL = 0x02U;
@@ -70,10 +72,9 @@ class Exp1Computer final : public ExpComputer {
     static constexpr uint32_t SPEC_BOOT_TIMEOUT_MS = 1500U;
     static constexpr uint32_t SPEC_BOOT_POLL_MS = 25U;
 
-    // Self-test config: 50 % PWM stays off the 16-bit ceiling at GAIN_37X;
-    // integration = init default (40 cycles ~ 224 ms ~ 6 ticks)
+    // 50 % PWM stays off the 16-bit ceiling at GAIN_37X. One measurement
+    // is ~6 ticks, so the seven-step sweep runs ~1.7 s
     static constexpr uint8_t SELF_TEST_PWM = 0x80U;
-    static constexpr uint8_t SELF_TEST_UVIR_CHANNELS = WHITE_CHANNEL | IR_CHANNEL | UV_CHANNEL;
 
     /// Ship the AS7265XResult in `result` as one atomic EXP1_SPECTRUM packet.
     /// matrix_idx = MATRIX row of the measurement (goes out as led_mask).
@@ -132,6 +133,7 @@ class Exp1Computer final : public ExpComputer {
     // Self-test state: phase + the all-LEDs-off reference sum
     SpecTestPhase spec_test_phase = SpecTestPhase::CONFIGURE;
     uint32_t spec_test_dark_sum = 0U;
+    bool spec_test_dark_valid = false; // else "brighter than 0" passes noise
 
     // Transient failure counters (saturating, since boot) - shipped in
     // every EXP1_STATUS via send_status_packet().
@@ -148,14 +150,21 @@ class Exp1Computer final : public ExpComputer {
     std::optional<PacketProtocol::TestResult> spec_test_configure(uint8_t rgb_mask, uint8_t uvir_mask);
     std::optional<PacketProtocol::TestResult> spec_test_collect(uint32_t& sum_out);
 
-    static std::optional<PacketProtocol::TestResult> step_led_rgb(NodeComputer& node, bool first,
-                                                                  uint32_t& data) noexcept;
-    static std::optional<PacketProtocol::TestResult> step_led_uvir(NodeComputer& node, bool first,
-                                                                   uint32_t& data) noexcept;
+    /// Drive the colour under test; a latched driver is left alone
+    [[nodiscard]] bool set_test_leds(uint8_t rgb_mask, uint8_t uvir_mask);
+
+    static std::optional<PacketProtocol::TestResult> step_spec_whoami(NodeComputer& node, bool first,
+                                                                      uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_led_rgb_probe(NodeComputer& node, bool first,
+                                                                        uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_led_uvir_probe(NodeComputer& node, bool first,
+                                                                         uint32_t& data) noexcept;
     static std::optional<PacketProtocol::TestResult> step_spec_dark(NodeComputer& node, bool first,
                                                                     uint32_t& data) noexcept;
-    static std::optional<PacketProtocol::TestResult> step_spec_lit_rgb(NodeComputer& node, bool first,
-                                                                       uint32_t& data) noexcept;
-    static std::optional<PacketProtocol::TestResult> step_spec_lit_uvir(NodeComputer& node, bool first,
-                                                                        uint32_t& data) noexcept;
+
+    /// One lit-vs-dark spectrum step, one LED per instantiation. Spread
+    /// over ticks like the flight rows, so it never blocks the test tick
+    template <uint8_t RgbMask, uint8_t UvirMask>
+    static std::optional<PacketProtocol::TestResult> step_spec_lit(NodeComputer& node, bool first,
+                                                                   uint32_t& data) noexcept;
 };

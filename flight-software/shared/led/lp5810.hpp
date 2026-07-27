@@ -29,6 +29,10 @@ class LP5810 : public DeviceBase {
     /// Turn off all channels (LED_EN = 0).
     [[nodiscard]] Result<void> disable_all();
 
+    /// Presence probe: a bare LED_EN = 0 write. The part is write-only
+    /// (ICD-005), so an ACK is all it offers. Bypasses the failed latch
+    [[nodiscard]] Result<void> probe();
+
   private:
     static constexpr uint8_t REG_CHIP_EN = 0x00U;
     static constexpr uint8_t REG_CFG0 = 0x01U;   // bit 0: max_current (0=25.5mA, 1=51mA)

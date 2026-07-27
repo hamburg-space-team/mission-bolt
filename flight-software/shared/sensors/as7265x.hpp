@@ -55,6 +55,10 @@ class AS7265X : public DeviceBase {
     /// Boot probe
     [[nodiscard]] Result<void> probe(CmsisI2CBus* bus, tick_fn tick, delay_fn delay);
 
+    /// HW version register: does the part answer? Ignores the failed
+    /// latch on purpose, since that is what one wants contradicted
+    [[nodiscard]] Result<uint8_t> hw_version();
+
     /// Trigger a one-shot measurement. Returns immediately; record the
     /// start timestamp right after.
     [[nodiscard]] Result<void> start_measurement();
