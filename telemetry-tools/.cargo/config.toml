@@ -1,0 +1,12 @@
+# Cross build for the debug station (Raspberry Pi, aarch64 Debian).
+# rusqlite's bundled SQLite is C, so the `cc` crate needs the same
+# cross gcc that links the binary.
+#   sudo apt-get install gcc-aarch64-linux-gnu
+#   rustup target add aarch64-unknown-linux-gnu
+#   scripts/build-station.sh
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+[env]
+CC_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-gcc"
+AR_aarch64_unknown_linux_gnu = "aarch64-linux-gnu-ar"

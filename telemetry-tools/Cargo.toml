@@ -4,6 +4,7 @@ members = [
     "crates/bolt-codec",
     "crates/bolt-serial-bridge",
     "crates/bolt-postflight",
+    "crates/bolt-station",
 ]
 
 [workspace.package]

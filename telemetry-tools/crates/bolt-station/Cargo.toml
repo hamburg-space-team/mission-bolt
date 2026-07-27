@@ -1,0 +1,27 @@
+[package]
+name = "bolt-station"
+description = "Debug-station daemon: owns the RXSM UART, re-serves the raw stream multi-client, records env/CRC/test runs and answers over HTTP"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "bolt-station"
+path = "src/main.rs"
+
+[features]
+default = ["serial"]
+serial = ["dep:serialport"]
+
+[dependencies]
+bolt-codec = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+rusqlite = { workspace = true }
+tiny_http = "0.12"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# no libudev: the station opens /dev/ttyRXSM by path and never enumerates
+# ports, and dropping it keeps the cross build free of arm64 system libs
+serialport = { version = "4", optional = true, default-features = false }
