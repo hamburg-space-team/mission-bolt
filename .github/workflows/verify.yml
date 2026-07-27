@@ -25,7 +25,7 @@ jobs:
           - leg: flight
             stages: flight-build host-tests coverage schema-drift iface-headers invariants provenance
           - leg: ground
-            stages: rust-build rust-tests rust-fmt rust-clippy ext-build
+            stages: rust-build rust-tests rust-fmt rust-clippy ext-build ui-build
           - leg: lint
             stages: lint-flight
     steps:
@@ -33,6 +33,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: ${{ matrix.leg == 'flight' && '0' || '1' }}
+          submodules: true
 
       - name: Restore tooling caches
         uses: actions/cache@v6
@@ -40,8 +41,9 @@ jobs:
           path: |
             telemetry-tools/target
             telemetry-tools/extension/node_modules
+            telemetry-tools/station-ui/node_modules
             flight-software/build/tests
-          key: tooling-${{ hashFiles('telemetry-tools/Cargo.lock', 'telemetry-tools/extension/package-lock.json') }}
+          key: tooling-${{ hashFiles('telemetry-tools/Cargo.lock', 'telemetry-tools/extension/package-lock.json', 'telemetry-tools/station-ui/package-lock.json') }}
           restore-keys: tooling-
 
       - name: Log in to GHCR
