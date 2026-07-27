@@ -5,7 +5,7 @@
         "context": "..",
         "cacheFrom": "ghcr.io/hamburg-space-team/mission-bolt/devcontainer"
     },
-    "runArgs": ["--add-host=bolt-station.local:host-gateway"],
+    "runArgs": ["--add-host=bolt-station.local:134.28.54.90"],
 
     "privileged": true,
     "mounts": [
