@@ -3,6 +3,7 @@
 #include "main.h" // IWYU pragma: keep
 #include "wcet.hpp"
 #include <bolt/wire/payloads.hpp>
+#include <bolt/wire/selftest.hpp>
 
 #include <array>
 
@@ -214,6 +215,7 @@ void Exp1Computer::send_status_packet(uint16_t can_tick, uint32_t timestamp_us) 
     status.led_write_fails = led_write_fails;
     status.spec_start_fails = spec_start_fails;
     status.data_ready_fails = data_ready_fails;
+    status.mode = static_cast<MissionMode>(mission_mode());
 
     if (auto len = pkt.build(tx_buf.data(), exp_status_type(), Tick{can_tick}, TimestampUs{timestamp_us}, &status,
                              static_cast<uint8_t>(sizeof(status)))) {
@@ -401,19 +403,27 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_measure(bool f
     return spec_test_collect(sum_out);
 }
 
+bool Exp1Computer::set_test_leds(uint8_t rgb_mask, uint8_t uvir_mask) {
+    const bool rgb_ok = lp5810_rgb.is_failed() ||
+                        ((rgb_mask != 0U) ? lp5810_rgb.set_channels(rgb_mask, SELF_TEST_PWM).has_value()
+                                          : lp5810_rgb.disable_all().has_value());
+    const bool uvir_ok = lp5810_uv_ir.is_failed() ||
+                         ((uvir_mask != 0U) ? lp5810_uv_ir.set_channels(uvir_mask, SELF_TEST_PWM).has_value()
+                                            : lp5810_uv_ir.disable_all().has_value());
+    return rgb_ok && uvir_ok;
+}
+
 std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_configure(uint8_t rgb_mask, uint8_t uvir_mask) {
     using PacketProtocol::TestResult;
 
-    // only meaningful if we control the light - latched driver or
-    // spectrometer voids the premise
-    if (spec.is_failed() || lp5810_rgb.is_failed() || lp5810_uv_ir.is_failed()) {
+    if (spec.is_failed()) {
         return TestResult::SKIPPED;
     }
-    const bool rgb_ok = (rgb_mask != 0U) ? lp5810_rgb.set_channels(rgb_mask, SELF_TEST_PWM).has_value()
-                                         : lp5810_rgb.disable_all().has_value();
-    const bool uvir_ok = (uvir_mask != 0U) ? lp5810_uv_ir.set_channels(uvir_mask, SELF_TEST_PWM).has_value()
-                                           : lp5810_uv_ir.disable_all().has_value();
-    if (!rgb_ok || !uvir_ok) {
+    // only the colours whose driver is latched are skipped
+    if (((rgb_mask != 0U) && lp5810_rgb.is_failed()) || ((uvir_mask != 0U) && lp5810_uv_ir.is_failed())) {
+        return TestResult::SKIPPED;
+    }
+    if (!set_test_leds(rgb_mask, uvir_mask)) {
         return TestResult::FAIL;
     }
     if (!spec.set_integration(AS7265X_INT_25_CYCLES) || !spec.start_measurement()) {
@@ -443,33 +453,36 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::spec_test_collect(uint32
     return TestResult::PASS;
 }
 
-std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb(NodeComputer& node, bool /*first*/,
-                                                                     uint32_t& data) noexcept {
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_whoami(NodeComputer& node, bool /*first*/,
+                                                                         uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
     auto& self = static_cast<Exp1Computer&>(node);
-    if (self.lp5810_rgb.is_failed()) {
-        return TestResult::SKIPPED;
+    // asked even when latched: the point is whether it answers now
+    const auto version = self.spec.hw_version();
+    if (!version) {
+        return TestResult::FAIL;
     }
-    // electrical check only - whether light comes out is the lit steps' call
-    const bool ok = self.lp5810_rgb.set_channels(RGB_CHANNELS, SELF_TEST_PWM).has_value() &&
-                    self.lp5810_rgb.disable_all().has_value();
-    data = RGB_CHANNELS;
-    return ok ? TestResult::PASS : TestResult::FAIL;
+    data = *version;
+    return TestResult::PASS;
 }
 
-std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir(NodeComputer& node, bool /*first*/,
-                                                                      uint32_t& data) noexcept {
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb_probe(NodeComputer& node, bool /*first*/,
+                                                                           uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
     auto& self = static_cast<Exp1Computer&>(node);
-    if (self.lp5810_uv_ir.is_failed()) {
-        return TestResult::SKIPPED;
-    }
-    const bool ok = self.lp5810_uv_ir.set_channels(SELF_TEST_UVIR_CHANNELS, SELF_TEST_PWM).has_value() &&
-                    self.lp5810_uv_ir.disable_all().has_value();
-    data = SELF_TEST_UVIR_CHANNELS;
-    return ok ? TestResult::PASS : TestResult::FAIL;
+    data = LP5810C_ADDR;
+    return self.lp5810_rgb.probe() ? TestResult::PASS : TestResult::FAIL;
+}
+
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir_probe(NodeComputer& node, bool /*first*/,
+                                                                            uint32_t& data) noexcept {
+    using PacketProtocol::TestResult;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
+    auto& self = static_cast<Exp1Computer&>(node);
+    data = LP5810D_ADDR;
+    return self.lp5810_uv_ir.probe() ? TestResult::PASS : TestResult::FAIL;
 }
 
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_dark(NodeComputer& node, bool first,
@@ -477,61 +490,62 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_dark(NodeCompu
     using PacketProtocol::TestResult;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
     auto& self = static_cast<Exp1Computer&>(node);
+    if (first) {
+        self.spec_test_dark_valid = false; // a stale reference judges nothing
+    }
     uint32_t sum = 0U;
     const auto verdict = self.spec_test_measure(first, 0U, 0U, sum);
     if (verdict == TestResult::PASS) {
-        // reference point for the lit steps
+        // reference point every lit step is judged against
         self.spec_test_dark_sum = sum;
+        self.spec_test_dark_valid = true;
         data = sum;
     }
     return verdict;
 }
 
-std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_rgb(NodeComputer& node, bool first,
-                                                                          uint32_t& data) noexcept {
+template <uint8_t RgbMask, uint8_t UvirMask>
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit(NodeComputer& node, bool first,
+                                                                      uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
     auto& self = static_cast<Exp1Computer&>(node);
-    const auto verdict = self.spec_test_measure(first, RGB_CHANNELS, 0U, data);
+    if (!self.spec_test_dark_valid) {
+        return TestResult::SKIPPED; // no reference, nothing to compare against
+    }
+    const auto verdict = self.spec_test_measure(first, RgbMask, UvirMask, data);
     if (!verdict) {
         return std::nullopt;
     }
-    (void)self.lp5810_rgb.disable_all();
-    if (*verdict != TestResult::PASS) {
-        return verdict;
-    }
-    // lit must read brighter than dark, or the optical path is dead
-    return (data > self.spec_test_dark_sum) ? TestResult::PASS : TestResult::FAIL;
-}
-
-std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit_uvir(NodeComputer& node, bool first,
-                                                                           uint32_t& data) noexcept {
-    using PacketProtocol::TestResult;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
-    auto& self = static_cast<Exp1Computer&>(node);
-    const auto verdict = self.spec_test_measure(first, 0U, SELF_TEST_UVIR_CHANNELS, data);
-    if (!verdict) {
-        return std::nullopt;
-    }
-    // last step: leave the payload dark, whatever the verdict
-    (void)self.lp5810_rgb.disable_all();
+    (void)self.lp5810_rgb.disable_all(); // the next colour drives its own
     (void)self.lp5810_uv_ir.disable_all();
     if (*verdict != TestResult::PASS) {
         return verdict;
     }
+    // brighter than dark, or this LED's optical path is dead
     return (data > self.spec_test_dark_sum) ? TestResult::PASS : TestResult::FAIL;
 }
 
 std::span<const SelfTest::Step> Exp1Computer::self_test_steps() const noexcept {
-    static constexpr std::array<SelfTest::Step, 8U> steps = {{
-        {&NodeComputer::step_tmp_whoami},    // 0: TMP117 device ID
-        {&NodeComputer::step_tmp_read},      // 1: TMP117 raw temperature
-        {&NodeComputer::step_baro_prom},     // 2: MS5611 PROM CRC + C1
-        {&Exp1Computer::step_led_rgb},       // 3: LP5810C write path (RGB)
-        {&Exp1Computer::step_led_uvir},      // 4: LP5810D write path (white/IR/UV)
-        {&Exp1Computer::step_spec_dark},     // 5: spectrum, all LEDs off (reference)
-        {&Exp1Computer::step_spec_lit_rgb},  // 6: spectrum, RGB lit vs. dark
-        {&Exp1Computer::step_spec_lit_uvir}, // 7: spectrum, white/IR/UV lit vs. dark
+    // presence first, then one lit measurement per LED, so a dead LED is
+    // named instead of failing the whole spectrometer
+    static constexpr std::array<SelfTest::Step, 14U> steps = {{
+        {&NodeComputer::step_tmp_whoami},     // 0: TMP117 device ID
+        {&NodeComputer::step_tmp_read},       // 1: TMP117 raw temperature
+        {&NodeComputer::step_baro_prom},      // 2: MS5611 PROM CRC + C1
+        {&Exp1Computer::step_spec_whoami},    // 3: AS7265x answers
+        {&Exp1Computer::step_led_rgb_probe},  // 4: LP5810C answers
+        {&Exp1Computer::step_led_uvir_probe}, // 5: LP5810D answers
+        {&Exp1Computer::step_spec_dark},      // 6: dark reference
+        {&Exp1Computer::step_spec_lit<RED_CHANNEL, 0U>},     // 7
+        {&Exp1Computer::step_spec_lit<GREEN_CHANNEL, 0U>},   // 8
+        {&Exp1Computer::step_spec_lit<BLUE_CHANNEL, 0U>},    // 9
+        {&Exp1Computer::step_spec_lit<0U, WHITE_CHANNEL>},   // 10
+        {&Exp1Computer::step_spec_lit<0U, IR_CHANNEL>},      // 11
+        {&Exp1Computer::step_spec_lit<0U, UV_CHANNEL>},      // 12
+        {&NodeComputer::step_sd_mounted},                    // 13: SD mounted
     }};
+    static_assert(steps.size() == PacketProtocol::EXP1_SELF_TEST_COUNT,
+                  "table drifted from the bolt/wire/selftest.hpp contract");
     return steps;
 }

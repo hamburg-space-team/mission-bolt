@@ -6,6 +6,7 @@
 #include "wcet.hpp"
 #include <bolt/wire/header.hpp>
 #include <bolt/wire/payloads.hpp>
+#include <bolt/wire/selftest.hpp>
 #include <bolt/wire/types.hpp>
 #include <bolt/wire/uplink.hpp>
 
@@ -44,11 +45,8 @@ void BtcComputer::notify_imu_drdy(uint32_t timestamp_us) noexcept {
 
 void BtcComputer::on_init() {
     sync_count = boot.tick_valid ? boot.recovered_tick : 0U;
-    // Cold start => TEST. A warm reset restores whatever the mission was in, so
-    // resetting after LO comes straight back up in FLIGHT
     mode = boot.mode;
-    // Restore the LO latch too: the line is still asserted mid-flight, and an
-    // un-latched tracker would re-fire the level fallback and zero the epoch
+
     if (boot.lo_latched) {
         lo.restore(boot.lo_rtc_s);
     }
@@ -65,12 +63,12 @@ void BtcComputer::on_init() {
 }
 
 void BtcComputer::send_gap_to_uart(uint16_t first_tick, uint8_t count, PacketProtocol::GapReason reason,
-                                   uint32_t timestamp_us) {
+                                   uint32_t timestamp_us, PacketProtocol::NodeId source) {
     PacketProtocol::PayloadGapMarker gap{};
     gap.first_missing_tick = first_tick;
     gap.count = count;
     gap.reason = reason;
-    gap.source_node = PacketProtocol::NodeId::BTC;
+    gap.source_node = source;
     emitter.emit_gap(PacketProtocol::Tick{first_tick}, PacketProtocol::TimestampUs{timestamp_us}, gap);
 }
 
@@ -90,12 +88,8 @@ void BtcComputer::set_mode(BootState::Mode next) {
         return;
     }
     mode = next;
-    // Persist every transition, not just LO's: .noinit is what a watchdog reset
-    // reads back, and it must agree with what we are broadcasting
     BootState::save_mode(next);
 
-    // entering FLIGHT kills any self-test run; the EXPs see the target
-    // clear on the next SYNC
     if (next == BootState::Mode::FLIGHT) {
         sequencer.abort();
         tester.abort();
@@ -178,8 +172,14 @@ void BtcComputer::send_imu_packet(uint32_t timestamp_us) {
     p.gyro_y_raw = sample->gyro_y;
     p.gyro_z_raw = sample->gyro_z;
 
-    emitter.emit(PayloadType::BTC_IMU, Tick{sync_count}, TimestampUs{timestamp_us}, &p,
-                 static_cast<uint8_t>(sizeof(p)));
+    if (IMU_DOWNLINK_EVERY_NTH != 0U && ++imu_downlink_nth >= IMU_DOWNLINK_EVERY_NTH) {
+        imu_downlink_nth = 0U;
+        emitter.emit(PayloadType::BTC_IMU, Tick{sync_count}, TimestampUs{timestamp_us}, &p,
+                     static_cast<uint8_t>(sizeof(p)));
+    } else {
+        emitter.emit_store_only(PayloadType::BTC_IMU, Tick{sync_count}, TimestampUs{timestamp_us}, &p,
+                                static_cast<uint8_t>(sizeof(p)));
+    }
 }
 
 std::optional<PacketProtocol::TestResult> BtcComputer::step_imu_whoami(NodeComputer& node, bool /*first*/,
@@ -195,13 +195,16 @@ std::optional<PacketProtocol::TestResult> BtcComputer::step_imu_read(NodeCompute
 }
 
 std::span<const SelfTest::Step> BtcComputer::self_test_steps() noexcept {
-    static constexpr std::array<SelfTest::Step, 5U> steps = {{
+    static constexpr std::array<SelfTest::Step, 6U> steps = {{
         {&NodeComputer::step_tmp_whoami}, // 0: TMP117 device ID
         {&NodeComputer::step_tmp_read},   // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},  // 2: MS5611 PROM CRC + C1
         {&BtcComputer::step_imu_whoami},  // 3: ICM-42686 WHO_AM_I
         {&BtcComputer::step_imu_read},    // 4: ICM-42686 accel/gyro Z
+        {&NodeComputer::step_sd_mounted}, // 5: SD mounted
     }};
+    static_assert(steps.size() == PacketProtocol::BTC_SELF_TEST_COUNT,
+                  "table drifted from the bolt/wire/selftest.hpp contract");
     return steps;
 }
 
@@ -219,6 +222,10 @@ void BtcComputer::send_test_packet(uint32_t timestamp_us, const SelfTest::Report
 }
 
 void BtcComputer::on_test_tick(uint32_t tick_start_us) {
+    // a dark EXP is skipped, not waited for, and the skip goes on the wire
+    if (const auto skipped = sequencer.on_tick()) {
+        send_gap_to_uart(sync_count, 0U, PacketProtocol::GapReason::SELF_TEST_SKIPPED, tick_start_us, *skipped);
+    }
     // housekeeping (env/status/IMU/timing/forwarding) runs in both modes
     if (!sequencer.btcs_turn()) {
         return; // idle, or an EXP's turn (driven from SYNC)
@@ -290,6 +297,7 @@ void BtcComputer::send_status_packet(uint32_t tick_start_us) {
     PayloadBtcStatus status{};
     status.uptime_s = platform.tick_ms() / 1000U;
     status.sd_status = static_cast<uint8_t>(storage.is_mounted() ? 0x01U : 0x00U);
+    status.mode = static_cast<MissionMode>(mode);
 
     if (lo.received()) {
         status.signal_mask |= 0x01U;
@@ -336,7 +344,8 @@ void BtcComputer::on_tick(uint32_t tick_start_us, uint16_t missed_periods) {
     }
 
     if (missed_periods > 0U) {
-        send_gap_to_uart(sync_count, missed_periods, PacketProtocol::GapReason::NO_DATA, tick_start_us);
+        send_gap_to_uart(sync_count, missed_periods, PacketProtocol::GapReason::NO_DATA, tick_start_us,
+                         PacketProtocol::NodeId::BTC);
         sync_count += missed_periods;
     }
 
