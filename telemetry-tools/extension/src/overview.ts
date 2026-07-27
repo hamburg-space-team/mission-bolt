@@ -55,6 +55,28 @@ export class OverviewProvider implements vscode.CustomReadonlyEditorProvider {
     panel.onDidDispose(() => subs.forEach((d) => d.dispose()));
   }
 
+  openSelfTest(): void {
+    this.attachSelfTest(this.newPanel("bolt.selftestLive", "Bolt · Self-Test"));
+  }
+
+  // Wire a self-test overview: needs only the live frame stream, and relays
+  // the panel's run button to the guarded uplink command (arm + confirm)
+  attachSelfTest(panel: vscode.WebviewPanel): void {
+    panel.title = "Bolt · Self-Test";
+    this.mount(panel.webview, panel.title, "selftest");
+    const subs: vscode.Disposable[] = [
+      this.session.onFrame((f: FrameMsg) => panel.webview.postMessage({ type: "frame", frame: f })),
+    ];
+    panel.webview.onDidReceiveMessage((m) => {
+      if (m?.type === "ready") {
+        panel.webview.postMessage({ type: "init", live: true, manifest: emptyManifest(this.session) });
+      } else if (m?.type === "runSelfTest") {
+        void vscode.commands.executeCommand("bolt.send.fullSystemTest");
+      }
+    });
+    panel.onDidDispose(() => subs.forEach((d) => d.dispose()));
+  }
+
   showPackets(name: string, records: PacketRecord[]): void {
     this.wirePackets(this.newPanel("bolt.packets", `${name} · ${records.length}`), name, records);
   }

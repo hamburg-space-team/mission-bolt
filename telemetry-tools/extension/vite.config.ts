@@ -19,6 +19,7 @@ export default defineConfig({
         overview: "webview/src/entries/overview.tsx",
         packets: "webview/src/entries/packets.tsx",
         experiment: "webview/src/entries/experiment.tsx",
+        selftest: "webview/src/entries/selftest.tsx",
       },
       output: {
         entryFileNames: "[name].js",

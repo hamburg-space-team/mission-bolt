@@ -110,6 +110,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   });
 
   reg("bolt.openOverview", () => overview.openLive());
+  reg("bolt.openSelfTest", () => overview.openSelfTest());
 
   reg("bolt.openExperiment", async (name?: unknown) => {
     // A toolbar/menu invocation passes a non-string context arg; ignore it.

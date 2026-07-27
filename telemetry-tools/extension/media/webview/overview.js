@@ -60,6 +60,7 @@ function Overview() {
 	const lo = stats?.lo ?? (manifest ? manifest.lo_rtc_s > 0 : false);
 	const soe = stats?.soe ?? false;
 	const sods = stats?.sods ?? false;
+	const missionMode = latest.btc?.status?.mode;
 	const sources = (0, import_react.useMemo)(() => {
 		const seen = /* @__PURE__ */ new Set([...Object.keys(latest), ...Object.keys(manifest?.packet_counts ?? {}).map((n) => n.split("_")[0])]);
 		return SOURCES.filter((s) => seen.has(s) || live);
@@ -84,6 +85,10 @@ function Overview() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Signal, {
 					on: soe,
 					label: "SOE"
+				}),
+				missionMode && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "pill",
+					children: missionMode.toUpperCase()
 				})
 			]
 		}),
@@ -107,7 +112,7 @@ function Overview() {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tile, {
 					n: live ? "live" : "post-flight",
-					label: "mode"
+					label: "session"
 				})
 			]
 		}),
@@ -116,8 +121,9 @@ function Overview() {
 			className: "tiles",
 			children: sources.map((src) => {
 				const env = latest[src]?.env;
-				const status = latest[src]?.status;
+				const status = latest[src]?.status ?? latest[src]?.exp3_status;
 				const metrics = [];
+				if (status?.mode != null) metrics.push(["mode", String(status.mode).toUpperCase()]);
 				if (env?.temp_c != null) metrics.push(["temp", `${Number(env.temp_c).toFixed(1)} °C`]);
 				if (env?.pressure_mbar != null) metrics.push(["pressure", `${Number(env.pressure_mbar).toFixed(1)} mbar`]);
 				if (status?.data_ready_fails != null) metrics.push(["dataRdy fails", fmtValue(status.data_ready_fails)]);

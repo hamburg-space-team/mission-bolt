@@ -28,4 +28,5 @@ export type ToWebview =
 export type FromWebview =
   | { type: "ready" }
   | { type: "reload" }
-  | { type: "showType"; name: string };
+  | { type: "showType"; name: string }
+  | { type: "runSelfTest" };

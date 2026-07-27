@@ -55,5 +55,14 @@
     "css": [
       "packets.css"
     ]
+  },
+  "webview/src/entries/selftest.tsx": {
+    "file": "selftest.js",
+    "name": "selftest",
+    "src": "webview/src/entries/selftest.tsx",
+    "isEntry": true,
+    "imports": [
+      "_chunk-19Q_QZ2X.js"
+    ]
   }
 }

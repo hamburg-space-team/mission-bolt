@@ -119,6 +119,11 @@
         "icon": "$(window)"
       },
       {
+        "command": "bolt.openSelfTest",
+        "title": "Bolt: Open Self-Test Overview",
+        "icon": "$(beaker)"
+      },
+      {
         "command": "bolt.openExperiment",
         "title": "Bolt: Open Experiment Window",
         "icon": "$(graph-line)"
