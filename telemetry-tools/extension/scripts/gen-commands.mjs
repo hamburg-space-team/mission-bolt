@@ -47,6 +47,23 @@ const sizeRows = (schema.types ?? [])
   .map((t) => `  ${JSON.stringify(snake(t.name))}: ${(sizeByLayout[t.layout] ?? 0) + OVERHEAD},`)
   .join("\n");
 
+// Per-node self-test tables: test_id is the enum value, the name its
+// .label annotation.
+const selfTestRows = [];
+for (const [node, enumName] of [
+  ["btc", "BtcSelfTest"],
+  ["exp1", "Exp1SelfTest"],
+  ["exp2", "Exp2SelfTest"],
+  ["exp3", "Exp3SelfTest"],
+]) {
+  const e = (schema.enums ?? []).find((x) => x.name === enumName);
+  if (!e) throw new Error(`${enumName} enum missing from ${schemaPath}`);
+  const labels = [...e.values]
+    .sort((a, b) => a.value - b.value)
+    .map((v) => (v.label && v.label.length > 0 ? v.label : v.name));
+  selfTestRows.push(`  ${node}: ${JSON.stringify(labels)},`);
+}
+
 const ts = `// @generated from interfaces/tools/generated/schema.json - do not edit.
 // Regenerate with: npm run gen:commands  (or tools/schemagen/run-schemagen.sh upstream).
 export const UPLINK_COMMANDS = [
@@ -57,7 +74,14 @@ ${rows}
 export const PACKET_WIRE_BYTES: Record<string, number> = {
 ${sizeRows}
 };
+
+// Per-node self-test step names, indexed by test_id (bolt/wire/selftest.hpp).
+export const SELF_TEST_STEPS: Record<string, string[]> = {
+${selfTestRows.join("\n")}
+};
 `;
 
 writeFileSync(outPath, ts);
-console.log(`wrote ${outPath} (${cmd.values.length} commands, ${(schema.types ?? []).length} packet sizes)`);
+console.log(
+  `wrote ${outPath} (${cmd.values.length} commands, ${(schema.types ?? []).length} packet sizes, 4 self-test tables)`,
+);

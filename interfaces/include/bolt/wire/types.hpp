@@ -57,6 +57,14 @@ namespace PacketProtocol {
         SOFT_RESET WIRE(.desc = "intentional software reset") = 0x03,
     };
 
+    /// Mission mode, in every *_STATUS packet. Boot lands in TEST, LO
+    /// switches to FLIGHT for good. boot_state.hpp mirrors these values
+    /// @ingroup comms
+    enum class MissionMode : uint8_t {
+        TEST WIRE(.desc = "bench / pre-flight: experiments idle, test tick runs") = 0x00,
+        FLIGHT WIRE(.desc = "LO seen: experiments run") = 0x01,
+    };
+
     /// Per CDR section 4.3.5 / ADR-005.
     /// @ingroup comms
     enum class GapReason : uint8_t {
@@ -64,6 +72,8 @@ namespace PacketProtocol {
         CAN_CRC_FAIL WIRE(.desc = "CAN frame received but failed CRC") = 0x02,
         LIFI_TIMEOUT WIRE(.desc = "no sample packets from an EXP3 stack in the interval") = 0x03,
         SENSOR_FAILED WIRE(.desc = "superseded by FAULT (ADR-012); wire-stable, no longer emitted") = 0x04,
+        SELF_TEST_SKIPPED WIRE(.desc = "full-system self-test: the targeted node never reported and was skipped") =
+            0x05,
     };
 
     /// Outcome of one self-test step

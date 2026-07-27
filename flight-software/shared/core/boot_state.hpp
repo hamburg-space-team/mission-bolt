@@ -18,6 +18,9 @@ namespace BootState {
         TEST = 0U,   ///< bench / pre-flight: experiments idle, test tick runs
         FLIGHT = 1U, ///< LO seen: experiments run
     };
+    static_assert(static_cast<uint8_t>(Mode::TEST) == static_cast<uint8_t>(PacketProtocol::MissionMode::TEST) &&
+                      static_cast<uint8_t>(Mode::FLIGHT) == static_cast<uint8_t>(PacketProtocol::MissionMode::FLIGHT),
+                  "Mode must mirror the wire MissionMode");
 
     struct State {
         PacketProtocol::BootReason reason;

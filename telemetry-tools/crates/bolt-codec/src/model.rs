@@ -88,6 +88,7 @@ pub enum Sample {
         #[serde(skip_serializing_if = "Option::is_none")]
         signal: Option<Signal>,
         sd: Sd,
+        mode: &'static str,
         #[serde(skip_serializing_if = "Option::is_none")]
         led_write_fails: Option<u8>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -120,6 +121,7 @@ pub enum Sample {
         latency_b_estimated_us: u32,
         wait_a_used_us: u32,
         sd: Sd,
+        mode: &'static str,
     },
     Gap {
         first_missing_tick: u16,
@@ -480,6 +482,7 @@ impl Sample {
                 latency_b_estimated_us,
                 wait_a_used_us,
                 sd,
+                ..
             } => vec![
                 ("latency_a_us", *latency_a_estimated_us as f64),
                 ("latency_b_us", *latency_b_estimated_us as f64),
@@ -652,6 +655,7 @@ fn exp_status_sample(
     led_write_fails: u8,
     spec_start_fails: u8,
     data_ready_fails: u8,
+    mode: u8,
 ) -> Sample {
     Sample::Status {
         source,
@@ -659,6 +663,7 @@ fn exp_status_sample(
         lo_rtc_s: None,
         signal: None,
         sd: Sd::from_status(sd_status),
+        mode: mission_mode(mode),
         led_write_fails: Some(led_write_fails),
         spec_start_fails: Some(spec_start_fails),
         data_ready_fails: Some(data_ready_fails),
@@ -819,6 +824,7 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             lo_rtc_s: Some(p.lo_rtc_s),
             signal: Some(Signal::from_mask(p.signal_mask)),
             sd: Sd::from_status(p.sd_status),
+            mode: mission_mode(p.mode),
             led_write_fails: None,
             spec_start_fails: None,
             data_ready_fails: None,
@@ -830,6 +836,7 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             p.led_write_fails,
             p.spec_start_fails,
             p.data_ready_fails,
+            p.mode,
         ),
         Payload::Exp2Status(p) => exp_status_sample(
             "exp2",
@@ -838,6 +845,7 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             p.led_write_fails,
             p.spec_start_fails,
             p.data_ready_fails,
+            p.mode,
         ),
         Payload::Exp2Ber(p) => Sample::Ber {
             rate_index: p.rate_index,
@@ -878,6 +886,7 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             latency_b_estimated_us: p.latency_b_estimated_us,
             wait_a_used_us: p.wait_a_used_us,
             sd: Sd::from_status(p.sd_status),
+            mode: mission_mode(p.mode),
         },
         Payload::GapMarker(p) => Sample::Gap {
             first_missing_tick: p.first_missing_tick,
@@ -1021,10 +1030,11 @@ mod tests {
         );
     }
 
-    // Real BTC_STATUS frame from the bench dump
+    // Real BTC_STATUS frame from the bench dump, extended by the mode byte
+    // (TEST) when the field joined the payload; CRC recomputed
     const STATUS: &[u8] = &[
-        0xb0, 0x17, 0x01, 0x11, 0x00, 0x0a, 0x00, 0x00, 0x23, 0x3b, 0x01, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x07, 0x61,
+        0xb0, 0x17, 0x01, 0x11, 0x00, 0x0b, 0x00, 0x00, 0x23, 0x3b, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0xe1, 0xd6,
     ];
 
     fn first_frame(bytes: &[u8]) -> Frame {
@@ -1043,6 +1053,7 @@ mod tests {
         let Sample::Status {
             signal: Some(sig),
             lo_rtc_s: Some(lo),
+            mode,
             ..
         } = sample
         else {
@@ -1051,6 +1062,7 @@ mod tests {
         assert!(!sig.lo, "LO must be false in the bench capture");
         assert!(sig.soe && sig.sods, "SOE + SODS active (mask 0x06)");
         assert_eq!(lo, 0);
+        assert_eq!(mode, "test");
     }
 
     #[test]

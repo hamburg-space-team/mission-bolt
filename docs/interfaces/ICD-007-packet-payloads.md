@@ -7,7 +7,7 @@
 | Document ID | ICD-007 |
 | Protocol version | 1 |
 | Status | Generated |
-| Generated at | 2026-07-25T23:29:08Z |
+| Generated at | 2026-07-27T20:47:47Z |
 | Source | `bolt/wire/payloads.hpp` + `bolt/wire/types.hpp` |
 
 ## Purpose
@@ -51,18 +51,18 @@ CRC-16/CCITT-FALSE (polynomial `0x1021`, init `0xFFFF`) over every byte after th
 | Type | Byte | Node | Rate Hz | Payload B | Wire B | Description |
 |---|--:|---|--:|--:|--:|---|
 | BtcEnv | 0x10 | BTC | 25 | 11 | 25 | common env sensors |
-| BtcStatus | 0x11 | BTC | 1 | 10 | 24 | system health |
+| BtcStatus | 0x11 | BTC | 1 | 11 | 25 | system health |
 | BtcImu | 0x12 | BTC | 200 | 12 | 26 | IMU sample per data-ready |
 | Exp1Spectrum | 0x20 | EXP1 | 2 | 44 | 58 | 18-channel spectrum (matrix) |
 | Exp1Env | 0x22 | EXP1 | 25 | 11 | 25 | common env sensors |
 | Exp2Env | 0x32 | EXP2 | 25 | 11 | 25 | common env sensors |
 | Exp3Env | 0x42 | EXP3 | 25 | 11 | 25 | common env sensors |
-| Exp1Status | 0x23 | EXP1 | 1 | 8 | 22 | system health |
-| Exp2Status | 0x31 | EXP2 | 1 | 8 | 22 | system health |
+| Exp1Status | 0x23 | EXP1 | 1 | 9 | 23 | system health |
+| Exp2Status | 0x31 | EXP2 | 1 | 9 | 23 | system health |
 | Exp2Ber | 0x30 | EXP2 | 25 | 16 | 30 | LiFi bit-error round |
 | Exp3StackA | 0x40 | EXP3 | 25 | 36 | 50 | wired stack sample |
 | Exp3StackB | 0x41 | EXP3 | 25 | 38 | 52 | wireless stack sample |
-| Exp3Status | 0x43 | EXP3 | 1 | 13 | 27 | control-loop diagnostics |
+| Exp3Status | 0x43 | EXP3 | 1 | 14 | 28 | control-loop diagnostics |
 | Exp3Imu | 0x44 | EXP3 | 25 | 12 | 26 | controller ICM sample |
 | GapMarker | 0xF0 | SYSTEM | 0 | 5 | 19 | gap notification |
 | Fault | 0xF1 | SYSTEM | 0 | 13 | 27 | latched fault + trace |
@@ -90,7 +90,7 @@ Emitter **BTC**, 25 Hz. common env sensors.
 | ms_pressure_raw | u32 | 3 | 4 | raw | 1 | valid_mask:0 | MS5611 D1 pressure ADC (compensate with D2 + PROM coeffs) |
 | ms_temperature_raw | u32 | 7 | 4 | raw | 1 | valid_mask:0 | MS5611 D2 temperature ADC (drives dT/TEMP for pressure comp) |
 
-### BtcStatus - `0x11` (10 B)
+### BtcStatus - `0x11` (11 B)
 
 Emitter **BTC**, 1 Hz. system health.
 
@@ -100,6 +100,7 @@ Emitter **BTC**, 1 Hz. system health.
 | lo_rtc_s | u32 | 4 | 4 | s | 1 |  | RTC s-since-midnight at LO (0=none); abs_time = lo_rtc_s + tick*0.04 |
 | sd_status | u8 | 8 | 1 |  | 1 |  | SD: 0=mounted, 1=failed |
 | signal_mask | u8 | 9 | 1 |  | 1 |  | REXUS: 0=LO latched, 1=SOE, 2=SODS |
+| mode | u8 | 10 | 1 |  | 1 |  | MissionMode: TEST / FLIGHT |
 
 ### BtcImu - `0x12` (12 B)
 
@@ -160,7 +161,7 @@ Emitter **EXP3**, 25 Hz. common env sensors.
 | ms_pressure_raw | u32 | 3 | 4 | raw | 1 | valid_mask:0 | MS5611 D1 pressure ADC (compensate with D2 + PROM coeffs) |
 | ms_temperature_raw | u32 | 7 | 4 | raw | 1 | valid_mask:0 | MS5611 D2 temperature ADC (drives dT/TEMP for pressure comp) |
 
-### Exp1Status - `0x23` (8 B)
+### Exp1Status - `0x23` (9 B)
 
 Emitter **EXP1**, 1 Hz. system health.
 
@@ -171,8 +172,9 @@ Emitter **EXP1**, 1 Hz. system health.
 | led_write_fails | u8 | 5 | 1 | count | 1 |  | LP5810 set_channels failures (saturating) |
 | spec_start_fails | u8 | 6 | 1 | count | 1 |  | set_integration/start_measurement failures (saturating) |
 | data_ready_fails | u8 | 7 | 1 | count | 1 |  | DATA_RDY not asserted at readout (saturating) |
+| mode | u8 | 8 | 1 |  | 1 |  | MissionMode: TEST / FLIGHT |
 
-### Exp2Status - `0x31` (8 B)
+### Exp2Status - `0x31` (9 B)
 
 Emitter **EXP2**, 1 Hz. system health.
 
@@ -183,6 +185,7 @@ Emitter **EXP2**, 1 Hz. system health.
 | led_write_fails | u8 | 5 | 1 | count | 1 |  | LP5810 set_channels failures (saturating) |
 | spec_start_fails | u8 | 6 | 1 | count | 1 |  | set_integration/start_measurement failures (saturating) |
 | data_ready_fails | u8 | 7 | 1 | count | 1 |  | DATA_RDY not asserted at readout (saturating) |
+| mode | u8 | 8 | 1 |  | 1 |  | MissionMode: TEST / FLIGHT |
 
 ### Exp2Ber - `0x30` (16 B)
 
@@ -242,7 +245,7 @@ Emitter **EXP3**, 25 Hz. wireless stack sample.
 | burst_index | u8 | 36 | 1 |  | 1 |  | sample position within the current burst |
 | valid_mask | u8 | 37 | 1 |  | 1 |  | valid: 0=mag, 1=imu, 2=tmp, 3=cap |
 
-### Exp3Status - `0x43` (13 B)
+### Exp3Status - `0x43` (14 B)
 
 Emitter **EXP3**, 1 Hz. control-loop diagnostics.
 
@@ -252,6 +255,7 @@ Emitter **EXP3**, 1 Hz. control-loop diagnostics.
 | latency_b_estimated_us | u32 | 4 | 4 | us | 1 |  | wireless-stack rolling-average latency estimate |
 | wait_a_used_us | u32 | 8 | 4 | us | 1 |  | sync delay applied this cycle |
 | sd_status | u8 | 12 | 1 |  | 1 |  | SD: 0=mounted, 1=failed |
+| mode | u8 | 13 | 1 |  | 1 |  | MissionMode: TEST / FLIGHT |
 
 ### Exp3Imu - `0x44` (12 B)
 
@@ -391,6 +395,13 @@ Emitter **EXP3**, event-driven. self-test step result.
 
 Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckStatus`), so a value on the wire never needs a look in the source. ⚠️ marks a dangerous/irreversible command (the ground UI gates these behind an arm + confirm step).
 
+### MissionMode (u8)
+
+| Value | Name | Description |
+|--:|---|---|
+| 0x00 | TEST | bench / pre-flight: experiments idle, test tick runs |
+| 0x01 | FLIGHT | LO seen: experiments run |
+
 ### GapReason (u8)
 
 | Value | Name | Description |
@@ -399,6 +410,7 @@ Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckSta
 | 0x02 | CAN_CRC_FAIL | CAN frame received but failed CRC |
 | 0x03 | LIFI_TIMEOUT | no sample packets from an EXP3 stack in the interval |
 | 0x04 | SENSOR_FAILED | superseded by FAULT (ADR-012); wire-stable, no longer emitted |
+| 0x05 | SELF_TEST_SKIPPED | full-system self-test: the targeted node never reported and was skipped |
 
 ### NodeId (u8)
 
@@ -442,3 +454,53 @@ Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckSta
 |--:|---|---|
 | 0x00 | ACCEPTED | known command received and executed (RESET_TICK/ACTIVATE_CAMERA: receipt only) |
 | 0x01 | UNKNOWN_OPCODE | opcode not recognised - nothing done |
+
+### BtcSelfTest (u8)
+
+| Value | Name | Description |
+|--:|---|---|
+| 0x00 | TMP_WHOAMI | TMP117 device ID register |
+| 0x01 | TMP_READ | TMP117 raw temperature over the flight read path |
+| 0x02 | BARO_PROM | MS5611 PROM CRC-4 + C1 fingerprint |
+| 0x03 | IMU_WHOAMI | ICM-42686 WHO_AM_I |
+| 0x04 | IMU_READ | ICM-42686 accel/gyro Z sample |
+| 0x05 | SD_MOUNTED | SD card mounted |
+
+### Exp1SelfTest (u8)
+
+| Value | Name | Description |
+|--:|---|---|
+| 0x00 | TMP_WHOAMI | TMP117 device ID register |
+| 0x01 | TMP_READ | TMP117 raw temperature over the flight read path |
+| 0x02 | BARO_PROM | MS5611 PROM CRC-4 + C1 fingerprint |
+| 0x03 | SPEC_WHOAMI | AS7265x answers its HW version virtual register |
+| 0x04 | LED_RGB_PROBE | LP5810C acknowledges a register write (write-only part) |
+| 0x05 | LED_UVIR_PROBE | LP5810D acknowledges a register write (write-only part) |
+| 0x06 | SPEC_DARK | AS7265x spectrum with all LEDs off; the reference for every lit step |
+| 0x07 | SPEC_RED | spectrum with the red LED lit, vs. dark |
+| 0x08 | SPEC_GREEN | spectrum with the green LED lit, vs. dark |
+| 0x09 | SPEC_BLUE | spectrum with the blue LED lit, vs. dark |
+| 0x0A | SPEC_WHITE | spectrum with the white LED lit, vs. dark |
+| 0x0B | SPEC_IR | spectrum with the IR 940 nm LED lit, vs. dark |
+| 0x0C | SPEC_UV | spectrum with the UV 400 nm LED lit, vs. dark |
+| 0x0D | SD_MOUNTED | SD card mounted |
+
+### Exp2SelfTest (u8)
+
+| Value | Name | Description |
+|--:|---|---|
+| 0x00 | TMP_WHOAMI | TMP117 device ID register |
+| 0x01 | TMP_READ | TMP117 raw temperature over the flight read path |
+| 0x02 | BARO_PROM | MS5611 PROM CRC-4 + C1 fingerprint |
+| 0x03 | SD_MOUNTED | SD card mounted |
+
+### Exp3SelfTest (u8)
+
+| Value | Name | Description |
+|--:|---|---|
+| 0x00 | TMP_WHOAMI | TMP117 device ID register |
+| 0x01 | TMP_READ | TMP117 raw temperature over the flight read path |
+| 0x02 | BARO_PROM | MS5611 PROM CRC-4 + C1 fingerprint |
+| 0x03 | IMU_WHOAMI | ICM-42686 WHO_AM_I |
+| 0x04 | IMU_READ | ICM-42686 accel/gyro Z sample |
+| 0x05 | SD_MOUNTED | SD card mounted |

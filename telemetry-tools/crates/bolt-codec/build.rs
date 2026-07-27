@@ -244,6 +244,7 @@ fn main() {
             "CommandOpcode" => "command_name",
             "CommandAckStatus" => "ack_status_name",
             "TestResult" => "test_result_name",
+            "MissionMode" => "mission_mode",
             _ => return None,
         })
     };
@@ -285,6 +286,34 @@ fn main() {
                 }
             }
         }
+
+        // Per-node self-test labels, indexed by test_id
+        eg.push_str("pub static SELF_TEST_STEPS: &[(&str, &[&str])] = &[\n");
+        for (node, ename) in [
+            ("btc", "BtcSelfTest"),
+            ("exp1", "Exp1SelfTest"),
+            ("exp2", "Exp2SelfTest"),
+            ("exp3", "Exp3SelfTest"),
+        ] {
+            let e = enums
+                .iter()
+                .find(|e| s(e, "name") == ename)
+                .unwrap_or_else(|| panic!("{ename} missing from schema.json"));
+            let mut vals: Vec<_> = e["values"].as_array().unwrap().iter().collect();
+            vals.sort_by_key(|v| u(v, "value"));
+            eg.push_str(&format!("    (\"{node}\", &[\n"));
+            for v in vals {
+                let label = s(v, "label");
+                let label = if label.is_empty() {
+                    s(v, "name")
+                } else {
+                    label
+                };
+                eg.push_str(&format!("        \"{}\",\n", label.replace('"', "\\\"")));
+            }
+            eg.push_str("    ]),\n");
+        }
+        eg.push_str("];\n");
     }
     fs::write(Path::new(&out_dir).join("enums_gen.rs"), eg).unwrap();
 }

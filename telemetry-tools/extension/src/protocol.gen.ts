@@ -11,18 +11,18 @@ export const UPLINK_COMMANDS = [
 // On-wire bytes per packet type (payload + 12 B header + 2 B CRC), by count name.
 export const PACKET_WIRE_BYTES: Record<string, number> = {
   "btc_env": 25,
-  "btc_status": 24,
+  "btc_status": 25,
   "btc_imu": 26,
   "exp1_spectrum": 58,
   "exp1_env": 25,
   "exp2_env": 25,
   "exp3_env": 25,
-  "exp1_status": 22,
-  "exp2_status": 22,
+  "exp1_status": 23,
+  "exp2_status": 23,
   "exp2_ber": 30,
   "exp3_stack_a": 50,
   "exp3_stack_b": 52,
-  "exp3_status": 27,
+  "exp3_status": 28,
   "exp3_imu": 26,
   "gap_marker": 19,
   "fault": 27,
@@ -36,4 +36,12 @@ export const PACKET_WIRE_BYTES: Record<string, number> = {
   "exp1_test": 21,
   "exp2_test": 21,
   "exp3_test": 21,
+};
+
+// Per-node self-test step names, indexed by test_id (bolt/wire/selftest.hpp).
+export const SELF_TEST_STEPS: Record<string, string[]> = {
+  btc: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","ICM-42686 WHO_AM_I","ICM-42686 read","SD mounted"],
+  exp1: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","AS7265x HW version","LP5810C responds","LP5810D responds","Spectrum dark","Spectrum red","Spectrum green","Spectrum blue","Spectrum white","Spectrum IR 940nm","Spectrum UV 400nm","SD mounted"],
+  exp2: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","SD mounted"],
+  exp3: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","ICM-42686 WHO_AM_I","ICM-42686 read","SD mounted"],
 };

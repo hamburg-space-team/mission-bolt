@@ -19,6 +19,7 @@
 // below (identifier_of / offset_of / annotations_of / extract / define_static_array).
 
 #include <bolt/wire/payloads.hpp>
+#include <bolt/wire/selftest.hpp>
 #include <bolt/wire/uplink.hpp>
 
 #include <algorithm>
@@ -132,6 +133,11 @@ consteval std::vector<sm::info> documented_enums() {
     std::vector<sm::info> e = used_enums();
     e.push_back(^^PacketProtocol::CommandOpcode);
     e.push_back(^^PacketProtocol::CommandAckStatus);
+    // per-node self-test tables: test_id -> meaning, ground reads the labels
+    e.push_back(^^PacketProtocol::BtcSelfTest);
+    e.push_back(^^PacketProtocol::Exp1SelfTest);
+    e.push_back(^^PacketProtocol::Exp2SelfTest);
+    e.push_back(^^PacketProtocol::Exp3SelfTest);
     return e;
 }
 

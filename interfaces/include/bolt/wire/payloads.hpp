@@ -54,6 +54,9 @@ namespace PacketProtocol {
 
         WIRE(.desc = "REXUS: 0=LO latched, 1=SOE, 2=SODS")
         uint8_t signal_mask;
+
+        WIRE(.desc = "MissionMode: TEST / FLIGHT")
+        MissionMode mode;
     };
     PACKET_TYPE_CHECK(PayloadBtcStatus);
 
@@ -175,6 +178,9 @@ namespace PacketProtocol {
         uint8_t spec_start_fails;
         WIRE(.unit = "count", .desc = "DATA_RDY not asserted at readout (saturating)")
         uint8_t data_ready_fails;
+
+        WIRE(.desc = "MissionMode: TEST / FLIGHT")
+        MissionMode mode;
     };
     PACKET_TYPE_CHECK(PayloadExp1Status);
 
@@ -190,6 +196,9 @@ namespace PacketProtocol {
         uint8_t spec_start_fails;
         WIRE(.unit = "count", .desc = "DATA_RDY not asserted at readout (saturating)")
         uint8_t data_ready_fails;
+
+        WIRE(.desc = "MissionMode: TEST / FLIGHT")
+        MissionMode mode;
     };
     PACKET_TYPE_CHECK(PayloadExp2Status);
     static_assert(sizeof(PayloadExp2Status) == sizeof(PayloadExp1Status), "EXP status layouts drifted");
@@ -337,6 +346,9 @@ namespace PacketProtocol {
 
         WIRE(.desc = "SD: 0=mounted, 1=failed")
         uint8_t sd_status;
+
+        WIRE(.desc = "MissionMode: TEST / FLIGHT")
+        MissionMode mode;
     };
     PACKET_TYPE_CHECK(PayloadExp3Status);
 
