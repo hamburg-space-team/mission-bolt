@@ -11,8 +11,11 @@ namespace {
         uint16_t reboot_count;
         uint8_t mode;       // BootState::Mode
         uint8_t lo_latched; // 1 = LO seen; restores the LoTracker latch
+        uint8_t reason;     // PacketProtocol::BootReason of this boot
+        uint8_t pad;
         uint32_t lo_rtc_s;
     };
+    static_assert(sizeof(PersistentState) == 16U, "the station decodes this layout by offset");
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     [[gnu::section(".noinit")]] PersistentState persist;
@@ -65,6 +68,9 @@ namespace BootState {
             persist.lo_latched = 0U;
             persist.lo_rtc_s = 0U;
         }
+
+        // both paths: the flags above are gone by now
+        persist.reason = static_cast<uint8_t>(state.reason);
 
         return state;
     }
