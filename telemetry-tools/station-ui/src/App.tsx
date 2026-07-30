@@ -145,7 +145,7 @@ function Side({ status, noinit }: { status: Status | null; noinit: NoInit | null
         </div>
         {/* at 100 % the link drops packets */}
         <div className="kv">
-          <span>of {link ? (link.budget_bps / 1000).toFixed(1) : "—"} kB/s budget</span>
+          <span>of {link ? (link.budget_bps / 1000).toFixed(1) : "—"} kB/s flight</span>
           <span className={`v ${load > 90 ? "bad" : "good"}`}>{load.toFixed(0)}%</span>
         </div>
         <div className={`bar ${load > 90 ? "bad" : ""}`}>
@@ -160,6 +160,13 @@ function Side({ status, noinit }: { status: Status | null; noinit: NoInit | null
           <span className="v">
             {link?.total_frames ?? "—"}
             <span className="unit"> pkt · {link?.total_crc_fails ?? "—"} bad</span>
+          </span>
+        </div>
+        <div className="kv">
+          <span>bench link</span>
+          <span className="v">
+            {link ? (link.link_bps / 1000).toFixed(0) : "—"}
+            <span className="unit"> kB/s @ {link ? link.baud / 1000 : "—"}k</span>
           </span>
         </div>
       </div>

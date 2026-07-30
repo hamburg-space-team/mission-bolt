@@ -1,7 +1,8 @@
 # BOLT Debug Station
 
-A Raspberry Pi with one ST-Link and the RXSM simulator's UART attached
-turns flashing, debugging and telemetry into network services. The
+A Raspberry Pi with one ST-Link V3 turns flashing, debugging and
+telemetry into network services - one cable carries all three, since the
+downlink rides the probe's virtual COM port. The
 devcontainer then needs no USB passthrough at all: `scripts/flash.sh`
 flashes over TCP, the `* @ station` launch configs debug over TCP, and
 the Bolt extension reads telemetry from `tcp://bolt-station.local:5000`.
@@ -13,9 +14,9 @@ the Bolt extension reads telemetry from `tcp://bolt-station.local:5000`.
   All four boards are STM32L476, so one OpenOCD config serves them all;
   **which board you flash or debug is decided by where the probe sits**,
   the software cannot check it.
-- 1x USB-UART adapter on the RXSM simulator's RS-422 telemetry output
-  (the sim itself stays wired exactly as before; only the PC side moves
-  to the network)
+- No separate UART adapter: the downlink rides the ST-Link V3's **virtual
+  COM port**, so one cable carries flash, debug and telemetry. udev names
+  it `/dev/ttySTLINK`.
 
 ## Install (on the Pi)
 
@@ -27,15 +28,12 @@ sudo mission-bolt/tools/debug-station/install.sh
 This sets up OpenOCD and, as a bootstrap, ser2net for the telemetry
 port; the bolt-station daemon below replaces the latter.
 
-Then give the RXSM UART adapter its stable name and restart:
-
-1. `/etc/udev/rules.d/99-bolt-station.rules` - the adapter's serial, so
-   it always appears as `/dev/ttyRXSM` no matter the USB port.
-   Find it with: `udevadm info -a -n /dev/ttyUSB0 | grep '{serial}'`
+The udev rule names the ST-Link's VCP `/dev/ttySTLINK` by vendor id, so
+nothing needs filling in for a single probe:
 
 ```sh
 sudo udevadm control --reload && sudo udevadm trigger
-sudo systemctl restart openocd-bolt ser2net
+ls -l /dev/ttySTLINK
 ```
 
 ## Port map (the contract every client uses)
@@ -45,7 +43,7 @@ sudo systemctl restart openocd-bolt ser2net
 | GDB (flash + debug, the one probe) | 3401 |
 | OpenOCD telnet | 4401 |
 | OpenOCD tcl (the station reads the probe through this) | 6601 |
-| RXSM telemetry (RS-422 downlink + uplink, 38400 8N1) | 5000 |
+| Downlink + uplink, ST-Link VCP at 230400 8N1 | 5000 |
 | HTTP API + kiosk dashboard | 8080 |
 
 `scripts/flash.sh`, the launch configs and the extension's debug-station
@@ -83,16 +81,19 @@ clients are allowed (cortex-debug opens a second one for live watch).
 
 ## bolt-station daemon (this is what runs; ser2net is disabled)
 
-`telemetry-tools/crates/bolt-station` owns the RXSM UART and re-serves
-the raw stream **multi-client** on port 5000, so no client kicks another
-any more. The same bytes feed an HTTP API on port 8080:
+`telemetry-tools/crates/bolt-station` owns the downlink UART - the
+ST-Link V3 virtual COM port at 230400 - and re-serves the raw stream
+**multi-client** on port 5000, so no client kicks another any more. The
+same bytes feed an HTTP API on port 8080. Both rates are options
+(`--port`, `--baud`, `--flight-baud`), so reading the RS-422 link
+directly is still one flag away.
 
 - `GET /api/status` - station IP and every interface with its CIDR and
   whether the address is DHCP or static, LO/SODS/SOE, which boards are
   sending (env/status freshness), current env values, mode per node, CRC
   quality all-time + 10-minute window, probe state
 - `POST /api/window/reset` - restart the 10-minute window (packets,
-  throughput and CRC fails are three views of it, so one reset clears all)
+  throughput and CRC fails are three views of it, so one reset clears all).
 - `GET /api/tests` / `GET /api/tests/<id>` - full-system-test runs with
   an id each: totals count pass/fail only, the detail URL lists every
   step with name (from the wire contract), board result, raw value,
@@ -113,7 +114,7 @@ any more. The same bytes feed an HTTP API on port 8080:
 Build it on your machine, not on the Pi - cross-compiling takes a minute
 where a native Pi 3 build takes many. The Pi runs 64-bit Debian, so the
 target is `aarch64-unknown-linux-gnu`; the station never enumerates
-serial ports (it opens `/dev/ttyRXSM` by path), so `serialport` drops
+serial ports (it opens `/dev/ttySTLINK` by path), so `serialport` drops
 `libudev` and the binary needs nothing but libc:
 
 ```sh

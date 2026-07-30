@@ -224,9 +224,11 @@ fn status(api: &Api) -> anyhow::Result<serde_json::Value> {
             "total_frames": live.total_frames,
             "total_crc_fails": live.total_crc_fail,
             "total_bytes": live.total_bytes,
-            // 8N1: ten line bits per byte
+            // 8N1: ten line bits per byte.
             "baud": api.cfg.baud,
-            "budget_bps": api.cfg.baud / 10,
+            "link_bps": api.cfg.baud / 10,
+            "budget_bps": api.cfg.flight_baud / 10,
+            "flight_baud": api.cfg.flight_baud,
             "window": {
                 "seconds": win_s,
                 "frames": win_frames,

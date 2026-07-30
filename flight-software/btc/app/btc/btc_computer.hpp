@@ -51,7 +51,7 @@ class BtcComputer final : public NodeComputer {
 
   private:
     static constexpr uint8_t SAVE_INTERVAL = 25U;
-    static constexpr uint32_t DOWNLINK_BAUD = 38400U;
+    static constexpr uint32_t DOWNLINK_BAUD = 230400U;
 
     Rs422Downlink downlink;
     CanReassembler reassembler;

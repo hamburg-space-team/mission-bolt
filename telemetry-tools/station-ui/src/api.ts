@@ -31,7 +31,9 @@ export interface Status {
     total_crc_fails: number;
     total_bytes: number;
     baud: number;
+    link_bps: number;
     budget_bps: number;
+    flight_baud: number;
     window: {
       seconds: number;
       frames: number;

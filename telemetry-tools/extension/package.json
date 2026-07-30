@@ -256,8 +256,8 @@
       "properties": {
         "bolt.baud": {
           "type": "number",
-          "default": 38400,
-          "markdownDescription": "RXSM downlink baud rate. The flight link is fixed **38400**; change only for a bench setup or a different UART."
+          "default": 230400,
+          "markdownDescription": "Downlink baud rate. The bench reads the ST-Link V3 virtual COM port at **230400**."
         },
         "bolt.mission": {
           "type": "string",

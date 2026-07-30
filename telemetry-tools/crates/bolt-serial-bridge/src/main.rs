@@ -24,8 +24,8 @@ struct Args {
     #[arg(long)]
     port: Option<String>,
 
-    /// Baud rate
-    #[arg(long, default_value_t = 38400)]
+    /// Baud rate. The bench downlink rides the ST-Link VCP at 230400
+    #[arg(long, default_value_t = 230_400)]
     baud: u32,
 
     /// Replay a recorded .raw instead of opening a serial port

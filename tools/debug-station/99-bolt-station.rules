@@ -1,5 +1,10 @@
-# Stable device name for the RXSM simulator's UART adapter, so ser2net
-# survives replugging into a different USB port. Fill in the adapter's
-# serial number, found with:
-#   udevadm info -a -n /dev/ttyUSB0 | grep '{serial}' | head -1
-SUBSYSTEM=="tty", ATTRS{serial}=="REPLACE-ME", SYMLINK+="ttyRXSM"
+# Stable name for the downlink UART. Telemetry rides the ST-Link V3's
+# virtual COM port now, so probe and downlink share one cable.
+# One probe on the bench, so ST's vendor id is enough; four probes will
+# need one rule per adapter serial:
+#   udevadm info -a -n /dev/ttyACM0 | grep '{serial}' | head -1
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", SYMLINK+="ttySTLINK"
+
+# Legacy path: the RXSM simulator's own USB-UART adapter, if the RS-422
+# link is ever read directly again.
+#SUBSYSTEM=="tty", ATTRS{serial}=="REPLACE-ME", SYMLINK+="ttyRXSM"
