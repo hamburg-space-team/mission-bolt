@@ -32,14 +32,15 @@ pub struct Config {
     #[arg(long, default_value = "/dev/ttySTLINK")]
     port: String,
 
-    /// Baud rate of the serial source. 230400 over the ST-Link VCP (just
-    /// under the TTL/CAN part's ~250 kBd); the RXSM link is 38400
+    /// Baud rate of the serial source, over the ST-Link VCP. The ceiling
+    /// is the TTL/CAN part at ~250 kBd, on the bench and in flight alike
     #[arg(long, default_value_t = 230_400)]
     pub baud: u32,
 
-    /// The rate the FLIGHT link runs at, for the load figure. The bench
-    /// link being faster must not hide how full the real downlink is
-    #[arg(long, default_value_t = 38400)]
+    /// The rate the FLIGHT link runs at, for the load figure. Same 230400
+    /// today; kept separate so a faster bench cable can never hide how
+    /// full the real downlink is
+    #[arg(long, default_value_t = 230_400)]
     pub flight_baud: u32,
 
     /// Raw re-serve listener (the ser2net replacement, multi-client)

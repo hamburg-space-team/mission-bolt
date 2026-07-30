@@ -257,7 +257,7 @@
         "bolt.baud": {
           "type": "number",
           "default": 230400,
-          "markdownDescription": "Downlink baud rate. The bench reads the ST-Link V3 virtual COM port at **230400**."
+          "markdownDescription": "Downlink baud rate. **230400** over the ST-Link V3 virtual COM port, bench and flight alike; the path tops out near 250 kBd."
         },
         "bolt.mission": {
           "type": "string",
@@ -297,7 +297,7 @@
         "bolt.rxsmDebugPort": {
           "type": "string",
           "default": "",
-          "description": "Serial device for the RXSM simulator's ASCII debug port (its D-SUB 9, 115200 8N1). This is NOT the 38.4 kBd RS-422 flight link."
+          "description": "Serial device for the RXSM simulator's ASCII debug port (its D-SUB 9, 115200 8N1). This is NOT the telemetry downlink."
         }
       }
     },

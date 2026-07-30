@@ -51,7 +51,7 @@ struct Args {
     rxsm_debug: Option<String>,
 
     /// Baud for --rxsm-debug. The simulator's debug port is fixed at 115.2 kBd
-    /// 8N1 (manual 3.5); this is not the 38.4 kBd flight link
+    /// 8N1 (manual 3.5); this is not the telemetry link
     #[arg(long, default_value_t = 115_200)]
     rxsm_baud: u32,
 }

@@ -94,6 +94,9 @@ directly is still one flag away.
   quality all-time + 10-minute window, probe state
 - `POST /api/window/reset` - restart the 10-minute window (packets,
   throughput and CRC fails are three views of it, so one reset clears all).
+  The load percentage is measured against `--flight-baud` (230400 today,
+  the same as the bench), so a faster bench cable can never hide how full
+  the real downlink is
 - `GET /api/tests` / `GET /api/tests/<id>` - full-system-test runs with
   an id each: totals count pass/fail only, the detail URL lists every
   step with name (from the wire contract), board result, raw value,
