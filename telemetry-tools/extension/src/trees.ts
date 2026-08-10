@@ -16,8 +16,9 @@ class Node extends vscode.TreeItem {
 abstract class BaseTree implements vscode.TreeDataProvider<Node> {
   private readonly _onDidChange = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this._onDidChange.event;
-  constructor(protected readonly session: SessionManager) {
+  constructor(protected readonly session: SessionManager, also?: vscode.Event<void>) {
     session.onChange(() => this._onDidChange.fire());
+    also?.(() => this._onDidChange.fire());
   }
   getTreeItem(el: Node): vscode.TreeItem {
     return el;
@@ -150,13 +151,21 @@ export class PacketsTree extends BaseTree {
 
 // Uplink view: command buttons + arm state
 export class UplinkTree extends BaseTree {
+  constructor(
+    session: SessionManager,
+    private readonly loSeen: () => string | undefined,
+    onStationChange?: vscode.Event<void>,
+  ) {
+    super(session, onStationChange);
+  }
+
   getChildren(): Node[] {
     const connected = this.session.state.connected;
     const armed = this.session.state.armed;
     // The RXSM kills the uplink the moment LO asserts and drops everything the
     // ground sends (ICD-001 / RXSM SIM manual 3.3). Commands are pad-only, so
     // say so instead of letting the operator click into the void
-    const flown = this.session.stats?.lo ?? false;
+    const flown = this.loSeen();
 
     // No standalone "Uplink: safe/ARMED" row - the arm state is shown by the
     // toolbar shield button (view/title) and the status bar, and the
@@ -172,8 +181,7 @@ export class UplinkTree extends BaseTree {
         n.iconPath = new vscode.ThemeIcon("rocket");
         n.description = "disabled — LO: uplink is dead";
         n.tooltip =
-          "The RXSM disables the uplink and drops all ground data once LO is asserted (ICD-001). " +
-          "Telecommands are pad-only — nothing sent now can reach the experiment.";
+          `${flown}. The RXSM disables the uplink and drops all ground data once LO is asserted `;
       } else if (c.dangerous && !armed) {
         // Dangerous + safe mode: shown, clearly disabled until armed
         n.iconPath = new vscode.ThemeIcon("lock");

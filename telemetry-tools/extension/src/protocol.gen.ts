@@ -41,7 +41,7 @@ export const PACKET_WIRE_BYTES: Record<string, number> = {
 // Per-node self-test step names, indexed by test_id (bolt/wire/selftest.hpp).
 export const SELF_TEST_STEPS: Record<string, string[]> = {
   btc: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","ICM-42686 WHO_AM_I","ICM-42686 read","SD mounted"],
-  exp1: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","AS7265x HW version","LP5810C responds","LP5810D responds","Spectrum dark","Spectrum red","Spectrum green","Spectrum blue","Spectrum white","Spectrum IR 940nm","Spectrum UV 400nm","SD mounted"],
+  exp1: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","AS7265x HW version","LP5810C configured","LP5810D configured","Spectrum dark","Spectrum red","Spectrum green","Spectrum blue","Spectrum white","Spectrum IR 940nm","Spectrum UV 400nm","SD mounted"],
   exp2: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","SD mounted"],
   exp3: ["TMP117 WHO_AM_I","TMP117 read","MS5611 PROM CRC","ICM-42686 WHO_AM_I","ICM-42686 read","SD mounted"],
 };

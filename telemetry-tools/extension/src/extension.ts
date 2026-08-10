@@ -5,6 +5,8 @@ import * as path from "path";
 import { SessionManager } from "./session";
 import { RxsmMonitor } from "./rxsm";
 import { RxsmTree } from "./rxsm_tree";
+import { StationClient } from "./station";
+import { StationTree } from "./station_tree";
 import { SessionTree, StatsTree, PacketsTree, UplinkTree, ExportTree } from "./trees";
 import { OverviewProvider, PacketRecord } from "./overview";
 import { PanelFeedProvider } from "./panel";
@@ -17,7 +19,9 @@ export function activate(ctx: vscode.ExtensionContext): void {
   const session = new SessionManager(log);
   // Ground equipment, own serial port + process: independent of the session
   const rxsm = new RxsmMonitor(log, session);
-  ctx.subscriptions.push(log, session, rxsm);
+  // Ground equipment too, over HTTP rather than a serial port
+  const station = new StationClient(log);
+  ctx.subscriptions.push(log, session, rxsm, station);
 
   // --- sidebar views ---
   const feed = new PanelFeedProvider(ctx, session);
@@ -27,8 +31,12 @@ export function activate(ctx: vscode.ExtensionContext): void {
     vscode.window.registerTreeDataProvider("bolt.session", new SessionTree(session)),
     vscode.window.registerTreeDataProvider("bolt.health", new StatsTree(session)),
     vscode.window.registerTreeDataProvider("bolt.rxsm", new RxsmTree(rxsm)),
+    stationView(station),
     vscode.window.registerTreeDataProvider("bolt.packets", new PacketsTree(session)),
-    vscode.window.registerTreeDataProvider("bolt.uplink", new UplinkTree(session)),
+    vscode.window.registerTreeDataProvider(
+      "bolt.uplink",
+      new UplinkTree(session, () => loSeen(session, station), station.onChange),
+    ),
     vscode.window.registerTreeDataProvider("bolt.export", new ExportTree(session)),
     vscode.window.registerWebviewViewProvider("bolt.feed", feed, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -57,9 +65,11 @@ export function activate(ctx: vscode.ExtensionContext): void {
     status.show();
     void vscode.commands.executeCommand("setContext", "bolt.connected", s.connected);
     void vscode.commands.executeCommand("setContext", "bolt.armed", s.armed);
+    // hides the inline send buttons; sendUplink refuses regardless
+    void vscode.commands.executeCommand("setContext", "bolt.loLatched", loSeen(session, station) !== undefined);
     void vscode.commands.executeCommand("setContext", "bolt.hasCapture", s.mode === "postflight" || !!session.manifest);
   };
-  ctx.subscriptions.push(session.onChange(refreshStatus));
+  ctx.subscriptions.push(session.onChange(refreshStatus), station.onChange(refreshStatus));
   refreshStatus();
 
   // Live -> Idle: once the session's cache DB is built, reload the whole
@@ -96,6 +106,18 @@ export function activate(ctx: vscode.ExtensionContext): void {
   reg("bolt.rxsm.pickPort", () => rxsm.connect(undefined, true));
   reg("bolt.rxsm.disconnect", () => rxsm.disconnect());
 
+  // Debug station: LO is faked on an ST-Link bridge GPIO (tools/debug-station)
+  reg("bolt.station.refresh", () => station.refresh());
+  reg("bolt.lo.release", () => station.setLo(false));
+  reg("bolt.lo.assert", async () => {
+    if (!(await confirmLo())) return;
+    await station.setLo(true);
+  });
+  reg("bolt.lo.toggle", async () => {
+    if (station.loAsserted === false && !(await confirmLo())) return;
+    await station.toggleLo();
+  });
+
   reg("bolt.openCapture", async () => {
     session.ensureTmp();
     const picks = await vscode.window.showOpenDialog({
@@ -131,7 +153,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   reg("bolt.uplink.arm", () => session.setArmed(!session.state.armed));
 
   for (const c of UPLINK_COMMANDS) {
-    reg(`bolt.send.${camel(c.id)}`, () => sendUplink(session, c.id, c.label, c.dangerous));
+    reg(`bolt.send.${camel(c.id)}`, () => sendUplink(session, station, c.id, c.label, c.dangerous));
   }
 
   reg("bolt.export.manifest", () => exportManifest(session));
@@ -235,12 +257,22 @@ async function findHandbook(name: string): Promise<vscode.Uri | undefined> {
 
 async function sendUplink(
   session: SessionManager,
+  station: StationClient,
   id: string,
   label: string,
   dangerous: boolean,
 ): Promise<void> {
   if (!session.state.connected) {
     void vscode.window.showWarningMessage("Bolt: not connected.");
+    return;
+  }
+  // Hard gate, not a greyed-out row: the palette and the inline buttons reach
+  // this function too, and after LO nothing sent can arrive
+  const flown = loSeen(session, station);
+  if (flown) {
+    void vscode.window.showWarningMessage(
+      `Bolt: uplink is dead — ${flown}. The RXSM drops all ground data once LO is asserted (ICD-001).`,
+    );
     return;
   }
   if (dangerous) {
@@ -345,6 +377,52 @@ async function exportHdf5(session: SessionManager): Promise<void> {
       "Bolt: HDF5 needs a build with `--features hdf5` (libhdf5). Manifest/CSV export work without it.",
     );
   }
+}
+
+/**
+ * Why the uplink is dead, or undefined while it still lives. The RXSM drops
+ * every byte the ground sends from lift-off on (ICD-001), so LO from any
+ * trustworthy source ends telecommanding - the station's own drive state
+ * included, since it leads the downlink by a tick or two.
+ */
+function loSeen(session: SessionManager, station: StationClient): string | undefined {
+  if (session.stats?.lo) return "the BTC reports LO latched";
+  if (station.state.signals?.lo) return "the station sees LO latched on the downlink";
+  if (station.loAsserted === true) return "the station is driving LO asserted";
+  return undefined;
+}
+
+/**
+ * Asserting LO is not a view toggle: the BTC latches it and persists the mode,
+ * so a reset does not undo it. Releasing needs no ceremony.
+ */
+async function confirmLo(): Promise<boolean> {
+  const go = "Assert LO";
+  const pick = await vscode.window.showWarningMessage(
+    "Assert LO on the boards?",
+    {
+      modal: true,
+      detail:
+        "The BTC enters FLIGHT, starts the experiment and latches the mode in .noinit — a reset will not undo it. " +
+        "Clear it with Stop Experiment (before LO) or by reflashing.",
+    },
+    go,
+  );
+  return pick === go;
+}
+
+/**
+ * The station view polls over the network, so it runs only while it is on
+ * screen - createTreeView (not registerTreeDataProvider) is what exposes that.
+ */
+function stationView(station: StationClient): vscode.Disposable {
+  const view = vscode.window.createTreeView("bolt.station", {
+    treeDataProvider: new StationTree(station),
+  });
+  const sync = () => (view.visible ? station.start() : station.stop());
+  view.onDidChangeVisibility(sync);
+  sync();
+  return view;
 }
 
 async function pickSerialPort(session: SessionManager): Promise<string | undefined> {

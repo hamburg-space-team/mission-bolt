@@ -55,6 +55,10 @@ export function TimeSeriesChart({
         xAxis: {
           type: "value",
           name: "t (s)",
+          // t is seconds since the board booted, so a session joined late
+          // starts at 1800 rather than 0. Without this echarts pads the axis
+          // down to zero and squeezes the data into the right-hand edge
+          scale: true,
           nameTextStyle: { color: fg },
           axisLine: { lineStyle: { color: border } },
           axisLabel: { color: fg, hideOverlap: true },

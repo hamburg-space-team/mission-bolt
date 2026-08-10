@@ -39639,6 +39639,7 @@ function TimeSeriesChart({ series, yLabel, height = 240, cursor }) {
 			xAxis: {
 				type: "value",
 				name: "t (s)",
+				scale: true,
 				nameTextStyle: { color: fg },
 				axisLine: { lineStyle: { color: border } },
 				axisLabel: {

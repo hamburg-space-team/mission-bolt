@@ -61,6 +61,11 @@
           "icon": "$(circuit-board)"
         },
         {
+          "id": "bolt.station",
+          "name": "Debug Station",
+          "icon": "$(server-environment)"
+        },
+        {
           "id": "bolt.packets",
           "name": "Packets",
           "icon": "$(package)"
@@ -196,6 +201,26 @@
         "command": "bolt.rxsm.pickPort",
         "title": "Bolt: Select RXSM Debug Port…",
         "icon": "$(plug)"
+      },
+      {
+        "command": "bolt.station.refresh",
+        "title": "Bolt: Refresh Debug Station",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bolt.lo.toggle",
+        "title": "Bolt: LO ▸ Toggle",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "bolt.lo.assert",
+        "title": "Bolt: LO ▸ Assert (liftoff)",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "bolt.lo.release",
+        "title": "Bolt: LO ▸ Release",
+        "icon": "$(circle-large-outline)"
       }
     ],
     "menus": {
@@ -229,17 +254,32 @@
           "command": "bolt.uplink.arm",
           "when": "view == bolt.uplink",
           "group": "navigation"
+        },
+        {
+          "command": "bolt.lo.toggle",
+          "when": "view == bolt.station",
+          "group": "navigation"
+        },
+        {
+          "command": "bolt.station.refresh",
+          "when": "view == bolt.station",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "bolt.send.resetTick",
-          "when": "viewItem == bolt.cmd.reset_tick",
+          "when": "viewItem == bolt.cmd.reset_tick && !bolt.loLatched",
           "group": "inline"
         },
         {
           "command": "bolt.export.csv",
           "when": "viewItem == bolt.export.csv",
+          "group": "inline"
+        },
+        {
+          "command": "bolt.lo.release",
+          "when": "viewItem == bolt.lo",
           "group": "inline"
         }
       ]
@@ -298,6 +338,16 @@
           "type": "string",
           "default": "",
           "description": "Serial device for the RXSM simulator's ASCII debug port (its D-SUB 9, 115200 8N1). This is NOT the telemetry downlink."
+        },
+        "bolt.stationUrl": {
+          "type": "string",
+          "default": "http://bolt-station.local:8080",
+          "description": "Debug-station HTTP API (board status, LO drive). The raw telemetry stream is a separate port, picked on connect."
+        },
+        "bolt.loActiveLow": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "LO is asserted by pulling the line **low**. Leave this off for the bench rig: the bridge GPIO drives a low-side switch, so a **high** turns the transistor on and pulls the 28 V REXUS line to GND. Turn it on only if the GPIO ever drives the LO input directly."
         }
       }
     },
