@@ -24,6 +24,8 @@ pub struct Api {
     pub cmd_seq: Arc<Mutex<u8>>,
     /// where the .noinit marker was last found, so the scan runs once
     pub noinit_at: Arc<Mutex<Option<u32>>>,
+    /// the LO line on the ST-Link's bridge GPIO, held across probe replugs
+    pub lo: Arc<crate::bridge::LoLine>,
 }
 
 /// Content type by extension; the dashboard ships html/js/css only.
@@ -166,6 +168,15 @@ fn route(api: &Api, method: &Method, path: &str, query: &str) -> anyhow::Result<
             let id: i64 = p["/api/tests/".len()..].parse()?;
             run_detail(api, id)
         }
+        (Method::Get, "/api/lo") => lo(api, None),
+        (Method::Post, "/api/lo") => {
+            // no level given means the one there is a reason to ask for
+            let want = query
+                .split('&')
+                .find_map(|kv| kv.strip_prefix("level="))
+                .unwrap_or("high");
+            lo(api, Some(want))
+        }
         (Method::Get, "/api/debugger") => debugger(api),
         (Method::Get, "/api/debugger/noinit") => noinit(api, query),
         (Method::Get, "/api/selftest/steps") => Ok(selftest_steps()),
@@ -303,6 +314,28 @@ fn send_command(api: &Api, name: &str) -> anyhow::Result<serde_json::Value> {
         "opcode": cmd.opcode(),
         "dangerous": cmd.is_dangerous(),
         "bytes": frame.len(),
+    }))
+}
+
+/// Read or drive the LO line on the ST-Link's bridge GPIO. `want` is None
+/// for a plain read. A level that was asked for is re-applied whenever the
+/// probe comes back, so it survives a replug.
+fn lo(api: &Api, want: Option<&str>) -> anyhow::Result<serde_json::Value> {
+    let high = match want {
+        None => None,
+        Some("high" | "1" | "on" | "true") => Some(true),
+        Some("low" | "0" | "off" | "false") => Some(false),
+        Some(other) => anyhow::bail!("level must be high or low, not '{other}'"),
+    };
+    let level = match high {
+        Some(h) => api.lo.set(h)?,
+        None => api.lo.get()?,
+    };
+    Ok(json!({
+        "gpio": api.lo.gpio(),
+        "level": if level { "high" } else { "low" },
+        "driven": high.is_some(),
+        "idle": api.cfg.lo_idle.map(|l| if l == crate::Level::High { "high" } else { "low" }),
     }))
 }
 

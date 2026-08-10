@@ -4,6 +4,7 @@
 //! the raw stream to any number of clients, relaying their uplink back
 //! out. The same bytes feed the HTTP API and the kiosk dashboard.
 
+mod bridge;
 mod http;
 mod probe;
 mod state;
@@ -70,6 +71,25 @@ pub struct Config {
     /// Kiosk dashboard root; served at / by the same port as the API
     #[arg(long, default_value = "/usr/local/share/bolt-station/ui")]
     pub ui_dir: String,
+
+    /// ST-Link V3 bridge GPIO wired to the REXUS LO line
+    #[arg(long, default_value_t = 0, value_parser = clap::value_parser!(u8).range(0..=i64::from(bridge::MAX_GPIO)))]
+    pub lo_gpio: u8,
+
+    /// Park the LO pin at this level from startup on, and put it back after
+    /// every probe replug. An unconfigured GPIO is not neutral - the
+    /// isolator drives the target side low, which the BTC reads as LO
+    /// asserted, so a bench rig left alone latches liftoff on every cold
+    /// start. Unset means the station never drives the line unasked, which
+    /// is what you want with a real harness on it
+    #[arg(long, value_enum)]
+    pub lo_idle: Option<Level>,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, clap::ValueEnum)]
+pub enum Level {
+    High,
+    Low,
 }
 
 fn parse_hex(s: &str) -> std::result::Result<u32, String> {
@@ -95,6 +115,13 @@ fn main() -> Result<()> {
     let tracker = Arc::new(Mutex::new(Tracker::new()));
     let clients: Clients = Arc::new(Mutex::new(Vec::new()));
     let uplink: Uplink = Arc::new(Mutex::new(None));
+    let lo = Arc::new(bridge::LoLine::new(
+        cfg.lo_gpio,
+        cfg.lo_idle.map(|l| l == Level::High),
+    ));
+    if cfg.lo_idle.is_some() {
+        lo_keeper(lo.clone(), cfg.lo_gpio);
+    }
 
     raw_server(&cfg.raw_listen, clients.clone(), uplink.clone())?;
 
@@ -107,6 +134,7 @@ fn main() -> Result<()> {
             uplink: uplink.clone(),
             cmd_seq: Arc::new(Mutex::new(0u8)),
             noinit_at: Arc::new(Mutex::new(None)),
+            lo: lo.clone(),
         };
         let listen = cfg.http.clone();
         std::thread::spawn(move || {
@@ -134,6 +162,29 @@ fn main() -> Result<()> {
     }
 }
 
+fn lo_keeper(lo: Arc<bridge::LoLine>, gpio: u8) {
+    std::thread::spawn(move || {
+        let mut complained = false;
+        loop {
+            match lo.hold() {
+                Ok(()) => {
+                    if complained {
+                        eprintln!("station: LO gpio{gpio} parked again");
+                        complained = false;
+                    }
+                }
+                Err(e) => {
+                    if !complained {
+                        eprintln!("station: cannot park LO gpio{gpio} ({e}) - retrying");
+                        complained = true;
+                    }
+                }
+            }
+            std::thread::sleep(Duration::from_secs(2));
+        }
+    });
+}
+
 /// Accept raw-stream clients; bytes from one are uplink for the serial port.
 fn raw_server(listen: &str, clients: Clients, uplink: Uplink) -> Result<()> {
     let listener = TcpListener::bind(listen).with_context(|| format!("raw listen {listen}"))?;
@@ -141,6 +192,10 @@ fn raw_server(listen: &str, clients: Clients, uplink: Uplink) -> Result<()> {
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
             let _ = stream.set_nodelay(true);
+            // A client that stops reading must not stall the pump: without
+            // a deadline write_all blocks forever and the serial buffer
+            // overruns. On timeout the write errors and broadcast drops it
+            let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
             if let Ok(reader) = stream.try_clone() {
                 let up = uplink.clone();
                 std::thread::spawn(move || client_uplink(reader, &up));

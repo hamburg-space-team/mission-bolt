@@ -111,6 +111,24 @@ directly is still one flag away.
   scan. "No state" is an answer, not an error: it reports `valid: false`
   and whether the probe was reachable at all
 - `GET /api/selftest/steps` - per-node step names from the wire contract
+- `GET|POST /api/lo` - the REXUS LO line, faked on the ST-Link V3's bridge
+  GPIO0 while the flight harness is not connected. `POST` drives it
+  (`?level=high`, the default, or `?level=low`), `GET` only reports it -
+  reading never starts driving the line. `--lo-gpio` moves it. The bridge
+  is a USB interface of its own, so this works while OpenOCD holds the
+  debug interface
+
+  **GPIO0 never touches the LO line directly.** REXUS LO is 28 V pulled to
+  GND, so the GPIO drives a low-side switch (N-FET or opto) that pulls the
+  line down exactly as the RXSM does - hence **gpio high = LO asserted**.
+  A pull-down on the gate is what makes an undriven pin safe: unplug the
+  probe, reboot the Pi or never start the station at all, and the
+  transistor stays off with LO released. Without it every cold start
+  latches a liftoff, because the BTC's level fallback needs only 3 ticks.
+  `--lo-idle low` (set in the unit file) covers the smaller case where the
+  station drove the pin and then lost the probe; it re-parks the line
+  within 2 s of the probe reappearing. Leave the flag off if a real RXSM
+  harness is ever on that line - the station must not drive against it
 - `POST /api/command/<name>` - encode an uplink command and send it,
   e.g. `full_system_test`
 

@@ -4,7 +4,7 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=/usr/local/bin/bolt-station
+ExecStart=/usr/local/bin/bolt-station --lo-idle low
 Restart=always
 RestartSec=2
 StateDirectory=bolt-station

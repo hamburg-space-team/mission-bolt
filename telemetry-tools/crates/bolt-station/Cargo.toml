@@ -25,3 +25,6 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 # no libudev: the station opens /dev/ttyRXSM by path and never enumerates
 # ports, and dropping it keeps the cross build free of arm64 system libs
 serialport = { version = "4", optional = true, default-features = false }
+# vendored: libusb is compiled in, so the arm64 build still needs no
+# system libraries beyond libc
+rusb = { version = "0.9", features = ["vendored"] }
