@@ -7,7 +7,7 @@ Result<void> LP5810::init(CmsisI2CBus* bus_in, uint8_t addr_in, uint8_t dc, dela
     this->max_current = high_current;
     this->delay_ms = delay;
 
-    if (auto r = configure(); !r) {
+    if (auto r = configure(true); !r) {
         const auto marked = mark(r.error(), Step::LED_INIT);
         disable(marked.error());
         return marked;
@@ -17,12 +17,27 @@ Result<void> LP5810::init(CmsisI2CBus* bus_in, uint8_t addr_in, uint8_t dc, dela
     return {};
 }
 
-// Full power-on register sequence. Used by init() and re-run from recover()
-// after a bus reset to restore the chip's state.
-Result<void> LP5810::configure() {
-    (void)write_reg(REG_RESET, CMD_RESET);
-    if (this->delay_ms != nullptr) {
-        this->delay_ms(RESET_BOOT_DELAY_MS);
+Result<void> LP5810::reconfigure() {
+    if (this->bus == nullptr) {
+        return fail(ErrorCode::DISABLED, Step::LED_CONFIGURE, __LINE__);
+    }
+
+    if (auto r = configure(false); !r) {
+        return r;
+    }
+
+    clear_failures();
+    return {};
+}
+
+// Full power-on register sequence. `reset_first` clears a chip that may be in
+// an unknown state; skip it to repair one non-destructively.
+Result<void> LP5810::configure(bool reset_first) {
+    if (reset_first) {
+        (void)write_reg(REG_RESET, CMD_RESET);
+        if (this->delay_ms != nullptr) {
+            this->delay_ms(RESET_BOOT_DELAY_MS);
+        }
     }
 
     if (auto r = enable_chip(); !r) {
@@ -73,7 +88,7 @@ Result<void> LP5810::set_channels(uint8_t mask, uint8_t pwm) {
     // LED_EN) is re-applied after the re-init - a partially applied
     // brightness must never be reported as success.
     (void)this->bus->reset();
-    Result<void> r = configure();
+    Result<void> r = configure(true);
     if (r) {
         r = apply_channels(mask, pwm);
     }
@@ -144,7 +159,7 @@ Result<void> LP5810::enable_chip() {
 // Run the full recovery path before giving up
 Result<void> LP5810::recover(uint8_t reg, uint8_t value) {
     (void)this->bus->reset();
-    Result<void> r = configure();
+    Result<void> r = configure(true);
     if (r) {
         r = write_reg(reg, value);
     }

@@ -33,6 +33,8 @@ class LP5810 : public DeviceBase {
     /// (ICD-005), so an ACK is all it offers. Bypasses the failed latch
     [[nodiscard]] Result<void> probe();
 
+    [[nodiscard]] Result<void> reconfigure();
+
   private:
     static constexpr uint8_t REG_CHIP_EN = 0x00U;
     static constexpr uint8_t REG_CFG0 = 0x01U;   // bit 0: max_current (0=25.5mA, 1=51mA)
@@ -61,9 +63,9 @@ class LP5810 : public DeviceBase {
     /// an ACK is the presence check; there is no readback (ICD-005).
     [[nodiscard]] Result<void> enable_chip();
 
-    /// Full power-on register sequence (reset, enable, config, pre-arm
-    /// channels). Shared by init() and recover().
-    [[nodiscard]] Result<void> configure();
+    /// Full power-on register sequence (optional reset, enable, config,
+    /// pre-arm channels). Shared by init(), recover() and reconfigure().
+    [[nodiscard]] Result<void> configure(bool reset_first);
 
     /// Full recovery for a failed runtime write: complete I2C bus reset, full
     /// chip re-init via configure(), then re-apply (reg,value). Clears the
