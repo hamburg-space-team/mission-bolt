@@ -7,7 +7,7 @@
 | Document ID | ICD-007 |
 | Protocol version | 1 |
 | Status | Generated |
-| Generated at | 2026-07-27T20:47:47Z |
+| Generated at | 2026-08-10T17:31:54Z |
 | Source | `bolt/wire/payloads.hpp` + `bolt/wire/types.hpp` |
 
 ## Purpose
@@ -474,8 +474,8 @@ Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckSta
 | 0x01 | TMP_READ | TMP117 raw temperature over the flight read path |
 | 0x02 | BARO_PROM | MS5611 PROM CRC-4 + C1 fingerprint |
 | 0x03 | SPEC_WHOAMI | AS7265x answers its HW version virtual register |
-| 0x04 | LED_RGB_PROBE | LP5810C acknowledges a register write (write-only part) |
-| 0x05 | LED_UVIR_PROBE | LP5810D acknowledges a register write (write-only part) |
+| 0x04 | LED_RGB_INIT | LP5810C accepts its power-on sequence; write-only part, so configuring it is the test |
+| 0x05 | LED_UVIR_INIT | LP5810D accepts its power-on sequence; write-only part, so configuring it is the test |
 | 0x06 | SPEC_DARK | AS7265x spectrum with all LEDs off; the reference for every lit step |
 | 0x07 | SPEC_RED | spectrum with the red LED lit, vs. dark |
 | 0x08 | SPEC_GREEN | spectrum with the green LED lit, vs. dark |

@@ -155,10 +155,10 @@ class Exp1Computer final : public ExpComputer {
 
     static std::optional<PacketProtocol::TestResult> step_spec_whoami(NodeComputer& node, bool first,
                                                                       uint32_t& data) noexcept;
-    static std::optional<PacketProtocol::TestResult> step_led_rgb_probe(NodeComputer& node, bool first,
+    static std::optional<PacketProtocol::TestResult> step_led_rgb_init(NodeComputer& node, bool first,
+                                                                       uint32_t& data) noexcept;
+    static std::optional<PacketProtocol::TestResult> step_led_uvir_init(NodeComputer& node, bool first,
                                                                         uint32_t& data) noexcept;
-    static std::optional<PacketProtocol::TestResult> step_led_uvir_probe(NodeComputer& node, bool first,
-                                                                         uint32_t& data) noexcept;
     static std::optional<PacketProtocol::TestResult> step_spec_dark(NodeComputer& node, bool first,
                                                                     uint32_t& data) noexcept;
 

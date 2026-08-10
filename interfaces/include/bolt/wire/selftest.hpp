@@ -40,10 +40,12 @@ namespace PacketProtocol {
         BARO_PROM WIRE(.desc = "MS5611 PROM CRC-4 + C1 fingerprint", .label = "MS5611 PROM CRC") = 0x02,
         SPEC_WHOAMI WIRE(.desc = "AS7265x answers its HW version virtual register",
                          .label = "AS7265x HW version") = 0x03,
-        LED_RGB_PROBE WIRE(.desc = "LP5810C acknowledges a register write (write-only part)",
-                           .label = "LP5810C responds") = 0x04,
-        LED_UVIR_PROBE WIRE(.desc = "LP5810D acknowledges a register write (write-only part)",
-                            .label = "LP5810D responds") = 0x05,
+        LED_RGB_INIT WIRE(.desc = "LP5810C accepts its power-on sequence; write-only part, so "
+                                  "configuring it is the test",
+                          .label = "LP5810C configured") = 0x04,
+        LED_UVIR_INIT WIRE(.desc = "LP5810D accepts its power-on sequence; write-only part, so "
+                                   "configuring it is the test",
+                           .label = "LP5810D configured") = 0x05,
         SPEC_DARK WIRE(.desc = "AS7265x spectrum with all LEDs off; the reference for every lit step",
                        .label = "Spectrum dark") = 0x06,
         SPEC_RED WIRE(.desc = "spectrum with the red LED lit, vs. dark", .label = "Spectrum red") = 0x07,

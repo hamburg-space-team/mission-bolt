@@ -1,6 +1,7 @@
 #include "exp1_computer.hpp"
 #include "can_protocol.hpp"
 #include "main.h" // IWYU pragma: keep
+#include "spec_verdict.hpp"
 #include "wcet.hpp"
 #include <bolt/wire/payloads.hpp>
 #include <bolt/wire/selftest.hpp>
@@ -234,6 +235,9 @@ void Exp1Computer::retry_led(LP5810& led, uint8_t addr, StatusLeds::Fault code) 
     }
     platform.kick_wdg();
 
+    // Latched device: a fresh object, so the failure latch does not survive
+    // and block the very writes that would prove it recovered. The reset in
+    // init() is wanted here - the chip may be in any state at all
     LP5810 fresh;
     if (fresh.init(&i2c, addr, LP5810_DOT_CURRENT, platform.delay_ms, LP5810_HIGH_CURRENT)) {
         led = fresh;
@@ -467,22 +471,28 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_whoami(NodeCom
     return TestResult::PASS;
 }
 
-std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb_probe(NodeComputer& node, bool /*first*/,
-                                                                           uint32_t& data) noexcept {
+// Re-apply the configuration rather than probe for an ACK. The LP5810 is
+// write-only: a chip that lost power comes back unconfigured and still
+// acknowledges every write while driving nothing, so an ACK proves only that
+// something is on the bus. reconfigure() is both the stronger test and the
+// repair - and it must NOT reset first, or the test would knock out the very
+// drivers the steps after it are about to light
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_rgb_init(NodeComputer& node, bool /*first*/,
+                                                                          uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
     auto& self = static_cast<Exp1Computer&>(node);
     data = LP5810C_ADDR;
-    return self.lp5810_rgb.probe() ? TestResult::PASS : TestResult::FAIL;
+    return self.lp5810_rgb.reconfigure() ? TestResult::PASS : TestResult::FAIL;
 }
 
-std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir_probe(NodeComputer& node, bool /*first*/,
-                                                                            uint32_t& data) noexcept {
+std::optional<PacketProtocol::TestResult> Exp1Computer::step_led_uvir_init(NodeComputer& node, bool /*first*/,
+                                                                           uint32_t& data) noexcept {
     using PacketProtocol::TestResult;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) - RTTI is off
     auto& self = static_cast<Exp1Computer&>(node);
     data = LP5810D_ADDR;
-    return self.lp5810_uv_ir.probe() ? TestResult::PASS : TestResult::FAIL;
+    return self.lp5810_uv_ir.reconfigure() ? TestResult::PASS : TestResult::FAIL;
 }
 
 std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_dark(NodeComputer& node, bool first,
@@ -522,8 +532,9 @@ std::optional<PacketProtocol::TestResult> Exp1Computer::step_spec_lit(NodeComput
     if (*verdict != TestResult::PASS) {
         return verdict;
     }
-    // brighter than dark, or this LED's optical path is dead
-    return (data > self.spec_test_dark_sum) ? TestResult::PASS : TestResult::FAIL;
+    // brighter than dark by more than the baseline drift, or this LED's
+    // optical path is dead
+    return SpecVerdict::lit(data, self.spec_test_dark_sum) ? TestResult::PASS : TestResult::FAIL;
 }
 
 std::span<const SelfTest::Step> Exp1Computer::self_test_steps() const noexcept {
@@ -534,8 +545,8 @@ std::span<const SelfTest::Step> Exp1Computer::self_test_steps() const noexcept {
         {&NodeComputer::step_tmp_read},       // 1: TMP117 raw temperature
         {&NodeComputer::step_baro_prom},      // 2: MS5611 PROM CRC + C1
         {&Exp1Computer::step_spec_whoami},    // 3: AS7265x answers
-        {&Exp1Computer::step_led_rgb_probe},  // 4: LP5810C answers
-        {&Exp1Computer::step_led_uvir_probe}, // 5: LP5810D answers
+        {&Exp1Computer::step_led_rgb_init},  // 4: LP5810C configured
+        {&Exp1Computer::step_led_uvir_init}, // 5: LP5810D configured
         {&Exp1Computer::step_spec_dark},      // 6: dark reference
         {&Exp1Computer::step_spec_lit<RED_CHANNEL, 0U>},     // 7
         {&Exp1Computer::step_spec_lit<GREEN_CHANNEL, 0U>},   // 8
