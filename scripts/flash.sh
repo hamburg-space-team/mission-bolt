@@ -82,7 +82,7 @@ flash_one() {
 
     "${GDB}" -batch -nx \
         -ex "target extended-remote ${HOST}:${port}" \
-        -ex "monitor reset halt" \
+        -ex "monitor reset init" \
         -ex "load" \
         "${clear_state[@]}" \
         -ex "compare-sections" \
