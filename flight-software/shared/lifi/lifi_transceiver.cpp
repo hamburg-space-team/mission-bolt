@@ -39,8 +39,8 @@ Result<void> LifiTransceiver::submit(std::span<const uint8_t> script, uint8_t ac
     this->chain_step = step;
     // the first ACK cannot come before the whole script has crossed the
     // host UART; the 20 ms reply budget starts after that
-    this->deadline_ms = now_ms() + LifiProtocol::frame_time_ms(static_cast<uint32_t>(script.size()),
-                                                               LifiProtocol::HOST_BAUD) +
+    this->deadline_ms = now_ms() +
+                        LifiProtocol::frame_time_ms(static_cast<uint32_t>(script.size()), LifiProtocol::HOST_BAUD) +
                         LifiProtocol::ACK_TIMEOUT_MS;
     return {};
 }
@@ -123,7 +123,10 @@ Result<void> LifiSender::configure(uint16_t block_len, uint32_t optical_baud) {
     }
     reset();
     LifiProtocol::Script<16U> script;
-    script.cmd(Cmd::POLLING).cmd(Cmd::RX_DISABLE).u32(Cmd::SET_OPTICAL_BAUD, optical_baud).u16(Cmd::SET_BUFFER, block_len);
+    script.cmd(Cmd::POLLING)
+        .cmd(Cmd::RX_DISABLE)
+        .u32(Cmd::SET_OPTICAL_BAUD, optical_baud)
+        .u16(Cmd::SET_BUFFER, block_len);
     if (auto r = submit(script.bytes(), CONFIGURE_ACKS, Step::LIFI_CONFIGURE); !r) {
         return r;
     }
@@ -194,8 +197,7 @@ bool LifiReceiver::stray_is_data() const noexcept {
     return true;
 }
 
-Result<void> LifiReceiver::configure(uint16_t block_len, uint32_t optical_baud, uint16_t threshold,
-                                     uint8_t cooldown) {
+Result<void> LifiReceiver::configure(uint16_t block_len, uint32_t optical_baud, uint16_t threshold, uint8_t cooldown) {
     if (auto r = check(block_len, optical_baud, Step::LIFI_CONFIGURE); !r) {
         return r;
     }

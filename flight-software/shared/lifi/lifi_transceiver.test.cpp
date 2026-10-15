@@ -175,8 +175,8 @@ TEST_CASE("Sender configure writes the ICD-008 sender script and waits for 4 ACK
     link.answer({0x48U, 0x65U, 0x6CU}); // boot banner fragment, must be flushed
 
     REQUIRE(tx.configure(64U, 115200U).has_value());
-    CHECK(tx_equals(link, {0x5CU, 0x50U, 0x5CU, 0x58U, 0x5CU, 0x66U, 0x00U, 0x01U, 0xC2U, 0x00U, 0x5CU, 0x4EU, 0x00U,
-                           0x40U}));
+    CHECK(tx_equals(
+        link, {0x5CU, 0x50U, 0x5CU, 0x58U, 0x5CU, 0x66U, 0x00U, 0x01U, 0xC2U, 0x00U, 0x5CU, 0x4EU, 0x00U, 0x40U}));
     CHECK(tx.pending());
     CHECK(link.rx.empty());
 
@@ -411,13 +411,13 @@ TEST_CASE("Receiver configure writes the ICD-008 receiver script, '\\R' last", "
     FakeUartLink link;
     LifiReceiver rx{link, fake_ms, fake_us};
     REQUIRE(rx.configure(64U, 460800U, 2500U, 5U).has_value());
-    CHECK(tx_equals(link, {0x5CU, 0x50U,                                 // \P
-                           0x5CU, 0x58U,                                 // \X
-                           0x5CU, 0x4EU, 0x00U, 0x40U,                   // \N 64
-                           0x5CU, 0x54U, 0x09U, 0xC4U,                   // \T 2500
-                           0x5CU, 0x66U, 0x00U, 0x07U, 0x08U, 0x00U,     // \f 460800
-                           0x5CU, 0x46U,                                 // \F
-                           0x5CU, 0x52U}));                              // \R
+    CHECK(tx_equals(link, {0x5CU, 0x50U,                             // \P
+                           0x5CU, 0x58U,                             // \X
+                           0x5CU, 0x4EU, 0x00U, 0x40U,               // \N 64
+                           0x5CU, 0x54U, 0x09U, 0xC4U,               // \T 2500
+                           0x5CU, 0x66U, 0x00U, 0x07U, 0x08U, 0x00U, // \f 460800
+                           0x5CU, 0x46U,                             // \F
+                           0x5CU, 0x52U}));                          // \R
     CHECK(rx.pending());
     CHECK_FALSE(rx.configure(64U, 115200U, 4096U, 5U).has_value()); // threshold range
 }
