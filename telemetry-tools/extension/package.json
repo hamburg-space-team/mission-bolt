@@ -208,6 +208,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "bolt.probe.assign",
+        "title": "Bolt: Assign Probe to Board",
+        "icon": "$(link)"
+      },
+      {
         "command": "bolt.lo.toggle",
         "title": "Bolt: LO ▸ Toggle",
         "icon": "$(rocket)"

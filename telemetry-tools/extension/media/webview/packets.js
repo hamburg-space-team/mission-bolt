@@ -17945,6 +17945,7 @@ var LIST = /* @__PURE__ */ new Set([
 	"measurement_valid",
 	"valid_mask",
 	"rate_index",
+	"threshold",
 	"sd_status",
 	"signal_mask"
 ]);
@@ -17960,7 +17961,8 @@ var NUM = /* @__PURE__ */ new Set([
 	"status",
 	"reboot_count",
 	"bit_errors",
-	"bits_sent"
+	"bits_sent",
+	"threshold"
 ]);
 var TITLE = {
 	seq: "#",

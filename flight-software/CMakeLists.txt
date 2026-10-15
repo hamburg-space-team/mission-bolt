@@ -33,6 +33,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 include(Catch)
 
+# Host-portable flight sources that tests link against: units with a
+# .cpp of their own and no HAL dependency. Anything that includes main.h
+# or a CMSIS-Driver header stays out (the flight build owns those)
+add_library(bolt-host STATIC
+    shared/utils/device_base.cpp
+    shared/lifi/lifi_transceiver.cpp)
+target_include_directories(bolt-host PUBLIC
+    ${CMAKE_SOURCE_DIR}/shared
+    ${CMAKE_SOURCE_DIR}/shared/comms
+    ${CMAKE_SOURCE_DIR}/shared/lifi
+    ${CMAKE_SOURCE_DIR}/shared/utils
+    ${CMAKE_SOURCE_DIR}/../interfaces/include)
+
 # Unit tests live next to the code they test: shared/utils/crc16.test.cpp
 # checks shared/utils/crc16.hpp. One executable per file, re-globbed on
 # build, so adding a test needs no CMake edit. The flight builds cannot
@@ -54,7 +67,7 @@ foreach(src IN LISTS BOLT_UNIT_TESTS)
         ${CMAKE_SOURCE_DIR}/shared
         ${CMAKE_SOURCE_DIR}/shared/comms
         ${CMAKE_SOURCE_DIR}/../interfaces/include)
-    target_link_libraries(${tgt} PRIVATE Catch2::Catch2WithMain)
+    target_link_libraries(${tgt} PRIVATE Catch2::Catch2WithMain bolt-host)
     catch_discover_tests(${tgt})
 endforeach()
 

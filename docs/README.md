@@ -50,6 +50,7 @@ For the mission overview start at the top-level
 | [005](interfaces/ICD-005-i2c-sensor-bus.md) | I2C sensor bus |
 | [006](interfaces/ICD-006-downlink-packet-format.md) | Downlink packet format |
 | [007](interfaces/ICD-007-packet-payloads.md) | Downlink packet payloads |
+| [008](interfaces/ICD-008-lifi-transceiver.md) | UART command protocol of the LiFi transceiver |
 
 ## Guides
 

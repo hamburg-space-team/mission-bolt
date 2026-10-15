@@ -98,11 +98,29 @@ pub enum Sample {
     },
     Ber {
         rate_index: u8,
+        /// receiver comparator threshold, 12-bit DAC counts
+        threshold: u16,
         bits_sent: u16,
         bit_errors: u16,
         ber: f32,
         latency_us: u32,
         measurement_valid: bool,
+        /// links this round's Rx chunks
+        round_seq: u16,
+        /// ICD-003 pattern code; with seed it rebuilds the sent block
+        pattern: u8,
+        seed: u16,
+        /// start of the best-matching 64-byte window in the received bytes
+        block_offset: u16,
+        rx_count: u16,
+    },
+    /// One chunk of the bytes the EXP2 LiFi receiver returned in a round
+    Rx {
+        round_seq: u16,
+        chunk_index: u8,
+        chunk_count: u8,
+        /// the valid bytes of the chunk only
+        data: Vec<u8>,
     },
     Stack {
         which: char,
@@ -177,6 +195,13 @@ pub enum Sample {
         data: u32,
     },
 }
+
+/// CSV column names of the 40 EXP2_RX data bytes
+const RX_BYTE: [&str; 40] = [
+    "b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b11", "b12", "b13", "b14",
+    "b15", "b16", "b17", "b18", "b19", "b20", "b21", "b22", "b23", "b24", "b25", "b26", "b27",
+    "b28", "b29", "b30", "b31", "b32", "b33", "b34", "b35", "b36", "b37", "b38", "b39",
+];
 
 impl Sample {
     /// Origin node carried *inside* the payload, for the generic payload types
@@ -266,11 +291,13 @@ impl Sample {
                 ber,
                 bit_errors,
                 latency_us,
+                threshold,
                 ..
             } => vec![
                 ("ber", *ber as f64),
                 ("bit_errors", *bit_errors as f64),
                 ("latency_us", *latency_us as f64),
+                ("threshold", *threshold as f64),
             ],
             Sample::Stack {
                 mag_ut,
@@ -316,6 +343,7 @@ impl Sample {
                 ("store_us", *store_us as f64),
             ],
             Sample::Gap { .. }
+            | Sample::Rx { .. }
             | Sample::Fault { .. }
             | Sample::Boot { .. }
             | Sample::CmdAck { .. }
@@ -441,19 +469,52 @@ impl Sample {
             }
             Sample::Ber {
                 rate_index,
+                threshold,
                 bits_sent,
                 bit_errors,
                 ber,
                 latency_us,
                 measurement_valid,
+                round_seq,
+                pattern,
+                seed,
+                block_offset,
+                rx_count,
             } => vec![
                 ("rate_index", *rate_index as f64),
+                ("threshold", *threshold as f64),
                 ("bits_sent", *bits_sent as f64),
                 ("bit_errors", *bit_errors as f64),
                 ("ber", *ber as f64),
                 ("latency_us", *latency_us as f64),
                 ("measurement_valid", bit(*measurement_valid)),
+                ("round_seq", *round_seq as f64),
+                ("pattern", *pattern as f64),
+                ("seed", *seed as f64),
+                ("block_offset", *block_offset as f64),
+                ("rx_count", *rx_count as f64),
             ],
+            Sample::Rx {
+                round_seq,
+                chunk_index,
+                chunk_count,
+                data,
+            } => {
+                let mut o = vec![
+                    ("round_seq", *round_seq as f64),
+                    ("chunk_index", *chunk_index as f64),
+                    ("chunk_count", *chunk_count as f64),
+                    ("length", data.len() as f64),
+                ];
+                // fixed columns; bytes past the chunk's length are absent, not 0
+                o.extend(
+                    RX_BYTE
+                        .iter()
+                        .enumerate()
+                        .map(|(i, n)| (*n, data.get(i).map_or(f64::NAN, |b| *b as f64))),
+                );
+                o
+            }
             Sample::Stack {
                 mag_ut,
                 accel_ms2,
@@ -849,6 +910,7 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
         ),
         Payload::Exp2Ber(p) => Sample::Ber {
             rate_index: p.rate_index,
+            threshold: p.threshold,
             bits_sent: p.bits_sent,
             bit_errors: p.bit_errors,
             ber: if p.bits_sent == 0 {
@@ -858,6 +920,17 @@ pub fn normalize(payload: &Payload, spec: &MissionSpec) -> Sample {
             },
             latency_us: p.timestamp_recv_us.wrapping_sub(p.timestamp_send_us),
             measurement_valid: p.measurement_valid != 0,
+            round_seq: p.round_seq,
+            pattern: p.pattern,
+            seed: p.seed,
+            block_offset: p.block_offset,
+            rx_count: p.rx_count,
+        },
+        Payload::Exp2Rx(p) => Sample::Rx {
+            round_seq: p.round_seq,
+            chunk_index: p.chunk_index,
+            chunk_count: p.chunk_count,
+            data: p.data[..(p.length as usize).min(p.data.len())].to_vec(),
         },
         Payload::Exp3StackA(p) => Sample::Stack {
             which: 'A',

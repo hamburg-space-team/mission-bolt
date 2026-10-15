@@ -29,6 +29,7 @@ namespace PacketProtocol {
         EXP2_ENV = 0x32,
         EXP2_TIMING = 0x33,
         EXP2_TEST = 0x34,
+        EXP2_RX = 0x35,
 
         // EXP3 - Floaty Boi
         EXP3_STACK_A = 0x40,

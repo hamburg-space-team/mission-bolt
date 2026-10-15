@@ -56,6 +56,22 @@ TEST_CASE("us_between is exact across the counter wrap") {
     uninstall_fake();
 }
 
+TEST_CASE("us_elapsed is exact across the divided-clock wrap") {
+    ErrorClock::cycles_per_us = CPU;
+
+    // the us clock (cycles / CPU) wraps at 2^32 / 80 = 53'687'091 us
+    const uint32_t start_us = (0xFFFFFFFFU - 1799U) / CPU; // 1800 cycles below the wrap
+    const uint32_t end_us = 200U / CPU;                    // 200 cycles past it
+    CHECK(end_us - start_us > 4'000'000'000U);             // plain subtraction: the bug
+    const uint32_t d = ErrorClock::us_elapsed(start_us, end_us);
+    CHECK(d >= 24U);
+    CHECK(d <= 25U); // the rounded-down period costs at most 1 us
+
+    // no wrap: plain difference
+    CHECK(ErrorClock::us_elapsed(100U, 350U) == 250U);
+    CHECK(ErrorClock::us_elapsed(7U, 7U) == 0U);
+}
+
 TEST_CASE("Wcet::Scope spanning the wrap records the true duration") {
     Wcet::Timing table{};
 

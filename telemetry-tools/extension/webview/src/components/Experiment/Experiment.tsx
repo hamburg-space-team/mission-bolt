@@ -3,6 +3,8 @@ import { useMessages, saveState } from "../../utils/api";
 import { Spectrometer } from "./Spectrometer";
 import { TimeSeriesChart, type Series } from "./TimeSeriesChart";
 import { RocketAttitude } from "./RocketAttitude";
+import { LifiPanel } from "./Lifi";
+import { LifiState } from "../../utils/lifi";
 
 type Sample = Record<string, unknown>;
 type Pt = [number, number];
@@ -51,6 +53,7 @@ export function Experiment() {
   const [speed, setSpeed] = useState(1);
   const [spec, setSpec] = useState<Sample>();
   const buf = useRef<Buf>(emptyBuf());
+  const lifi = useRef(new LifiState());
   const lastRender = useRef(0);
   const lastImu = useRef<{ accel: number[]; gyro: number[] } | null>(null);
   const ground = useRef<number | null>(null);
@@ -110,12 +113,17 @@ export function Experiment() {
         push(buf.current.press, [t, pr], cap);
       }
     } else if (s.kind === "ber") {
-      push(buf.current.ber, [t, Number(s.ber) * 100], cap);
+      lifi.current.addBer(s, tick);
+      // an invalid round has no BER; plotting its 0 would read as a perfect link
+      if (s.measurement_valid === true) push(buf.current.ber, [t, Number(s.ber) * 100], cap);
+    } else if (s.kind === "rx") {
+      lifi.current.addRx(s);
     } else if (name.endsWith("spectrum")) setSpec(s);
   };
 
   const reset = () => {
     clearBuffers();
+    lifi.current.reset();
     setSpec(undefined);
     setMode("live");
     setPlaying(false);
@@ -235,9 +243,11 @@ export function Experiment() {
         </>
       )}
 
+      {source === "exp2" && <LifiPanel state={lifi.current} rev={rev} />}
+
       {b.ber.length > 0 && (
         <>
-          <h2>Bit error rate (%)</h2>
+          <h2>Bit error rate (%) over time</h2>
           <TimeSeriesChart series={s.ber} yLabel="%" cursor={cursor} />
         </>
       )}
@@ -259,7 +269,7 @@ export function Experiment() {
         </>
       )}
 
-      {!hasImu && !hasEnv && b.ber.length === 0 && source !== "exp1" && <div className="muted">no data yet</div>}
+      {!hasImu && !hasEnv && b.ber.length === 0 && source !== "exp1" && source !== "exp2" && <div className="muted">no data yet</div>}
     </>
   );
 }

@@ -40,6 +40,8 @@ Codes 1–5 are the same on every board; 6 and up are board-specific.
 | 8 | AS7265X spectrometer | EXP1 | Won't boot (normal until ~1 s after reset), I²C dead |
 | 9 | RGB LED driver (LP5810C) | EXP1 | Init/runtime latch after 3 failed recoveries |
 | 10 | UV/IR LED driver (LP5810D) | EXP1 | Same as code 9 |
+| 11 | LiFi sender transceiver | EXP2 | Three bad replies on its host UART in a row (NAK, stray byte, silence); check the UART4 harness and the transceiver's power |
+| 12 | LiFi receiver transceiver | EXP2 | Same as code 11 on USART2, or no block arrived for 15 rounds across three link resets (optics misaligned, receiver front end off) |
 
 ### How to read it
 

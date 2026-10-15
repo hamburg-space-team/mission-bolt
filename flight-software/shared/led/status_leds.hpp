@@ -37,6 +37,8 @@
 ///   8  SPEC      AS7265X spectrometer failed       (EXP1)
 ///   9  LED_RGB   LP5810C RGB driver failed         (EXP1)
 ///  10  LED_UVIR  LP5810D UV/IR driver failed       (EXP1)
+///  11  LIFI_TX   LiFi sender transceiver failed    (EXP2)
+///  12  LIFI_RX   LiFi receiver transceiver failed  (EXP2)
 ///
 /// @ingroup led
 class StatusLeds {
@@ -55,8 +57,10 @@ class StatusLeds {
         SPEC = 8,
         LED_RGB = 9,
         LED_UVIR = 10,
+        LIFI_TX = 11,
+        LIFI_RX = 12,
     };
-    static constexpr uint8_t FAULT_COUNT = 10U;
+    static constexpr uint8_t FAULT_COUNT = 12U;
 
     constexpr StatusLeds() noexcept = default;
     constexpr StatusLeds(Led can_led, Led err_led) noexcept : can(can_led), err(err_led) {

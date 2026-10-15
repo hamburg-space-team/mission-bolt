@@ -58,16 +58,23 @@ namespace PacketProtocol {
     };
     inline constexpr uint8_t EXP1_SELF_TEST_COUNT = 14U;
 
-    /// EXP2 "Bouncy Castle" self-test steps, in run order. Li-Fi front-end
-    /// steps append here once their drivers exist
+    /// EXP2 "Bouncy Castle" self-test steps, in run order. The LiFi steps
+    /// probe each transceiver's host UART with the polling-mode command
+    /// (ICD-008); data = ticks until the ACK
     /// @ingroup comms
     enum class Exp2SelfTest : uint8_t {
         TMP_WHOAMI WIRE(.desc = "TMP117 device ID register", .label = "TMP117 WHO_AM_I") = 0x00,
         TMP_READ WIRE(.desc = "TMP117 raw temperature over the flight read path", .label = "TMP117 read") = 0x01,
         BARO_PROM WIRE(.desc = "MS5611 PROM CRC-4 + C1 fingerprint", .label = "MS5611 PROM CRC") = 0x02,
         SD_MOUNTED WIRE(.desc = "SD card mounted", .label = "SD mounted") = 0x03,
+        LIFI_TX_ACK WIRE(.desc = "sender transceiver ACKs the polling-mode command; data = ticks to reply",
+                         .label = "LiFi TX answers") = 0x04,
+        LIFI_RX_ACK WIRE(.desc = "receiver transceiver ACKs the polling-mode command; data = ticks to reply",
+                         .label = "LiFi RX answers") = 0x05,
+        LIFI_LOOPBACK WIRE(.desc = "polling-mode bench-script replica, threshold sweep; data=(thr<<20)|(count<<10)|bit_errors",
+                           .label = "LiFi loopback") = 0x06,
     };
-    inline constexpr uint8_t EXP2_SELF_TEST_COUNT = 4U;
+    inline constexpr uint8_t EXP2_SELF_TEST_COUNT = 7U;
 
     /// EXP3 "Floaty Boi" self-test steps, in run order. Stack-link steps
     /// append here once the burst pipeline exists

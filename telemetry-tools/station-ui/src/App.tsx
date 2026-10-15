@@ -12,6 +12,7 @@ import {
   type RunDetail,
   type RunSummary,
   type Status,
+  assignProbe,
 } from "./api";
 
 /** Poll `fn` every `ms`, keeping the last good value when a request fails. */
@@ -51,7 +52,7 @@ const ago = (iso: string | null) => {
 };
 
 function Header({ status }: { status: Status | null }) {
-  const probeBoard = status?.probe?.target?.board ?? null;
+  const probeBoards = new Set((status?.probe?.probes ?? []).map((p) => p.board).filter(Boolean));
   const mode = NODES.map((n) => status?.boards?.[n]?.mode).find((m) => m != null) ?? null;
   return (
     <header>
@@ -59,12 +60,21 @@ function Header({ status }: { status: Status | null }) {
         {NODES.map((n) => {
           const sending = !!status?.boards?.[n]?.sending;
           const boot = status?.boards?.[n]?.boot;
-          const probe = probeBoard === n;
-          // green: sending and the probe sits on it. yellow: sending, no
+          const probe = probeBoards.has(n);
+          // green: sending and a probe sits on it. yellow: sending, no
           // probe. dark: nothing arriving at all
           const cls = !sending ? "dead" : probe ? "ok" : "warn";
           return (
-            <div className={`board ${cls}`} key={n}>
+            <div
+              className={`board ${cls}`}
+              key={n}
+              onClick={() => {
+                // an unmapped probe is the only thing worth a tap here: tell
+                // the station this board is the one it is looking at
+                const orphan = (status?.probe?.probes ?? []).find((p) => p.reachable && !p.board);
+                if (orphan) void assignProbe(orphan.id, n);
+              }}
+            >
               <div className="name">{n.toUpperCase()}</div>
               <div className="meta">
                 <i className="dot" />
@@ -77,7 +87,11 @@ function Header({ status }: { status: Status | null }) {
                   "dark"
                 )}
               </div>
-              {probe && <span className="dbg">DBG</span>}
+              {probe && (
+                <span className="dbg">
+                  DBG{(status?.probe?.probes ?? []).filter((p) => p.board === n).map((p) => p.id).join("")}
+                </span>
+              )}
             </div>
           );
         })}
@@ -92,12 +106,17 @@ function Header({ status }: { status: Status | null }) {
   );
 }
 
-function Side({ status, noinit }: { status: Status | null; noinit: NoInit | null }) {
+function Side({
+  status,
+  noinits,
+}: {
+  status: Status | null;
+  noinits: Record<string, NoInit | null>;
+}) {
   const env = NODES.map((n) => [n, status?.boards?.[n]?.env] as const).filter(
     ([, e]) => e != null,
   );
   const link = status?.link;
-  const d = noinit?.decoded;
   const win = link?.window;
   const clean = (win?.crc_fails ?? 0) === 0;
   // share of the link budget in use
@@ -171,56 +190,64 @@ function Side({ status, noinit }: { status: Status | null; noinit: NoInit | null
         </div>
       </div>
 
-      <div className="card grow">
-        <div className="cardhead">
-          <span className="label">.noinit</span>
-          <span className="unit">{noinit?.address ?? ""}</span>
-        </div>
-        {d ? (
-          <>
-            <div className="kv">
-              <span>tick</span>
-              <span className="v">{d.tick}</span>
-            </div>
-            <div className="kv">
-              <span>reboots</span>
-              <span className={`v ${d.reboot_count > 0 ? "bad" : "good"}`}>
-                {d.reboot_count}
+      {(status?.probe?.probes ?? []).map((pr) => {
+        const ni = noinits[pr.id] ?? null;
+        const d = ni?.decoded;
+        return (
+          <div className="card" key={pr.id}>
+            <div className="cardhead">
+              <span className="label">
+                .noinit · {pr.board ?? `probe ${pr.id}`}
               </span>
+              <span className="unit">{ni?.address ?? ""}</span>
             </div>
-            <div className="kv">
-              <span>reason</span>
-              <span className={`v ${d.reason_name === "watchdog" ? "bad" : ""}`}>
-                {d.reason_name}
-              </span>
-            </div>
-            <div className="kv">
-              <span>mode</span>
-              <span className="v">{d.mode}</span>
-            </div>
-            <div className="kv">
-              <span>LO latch</span>
-              <span className={`v ${d.lo_latched ? "bad" : ""}`}>
-                {d.lo_latched ? "set" : "clear"}
-              </span>
-            </div>
-            <div className="kv">
-              <span>LO rtc</span>
-              <span className="v">{d.lo_rtc_s || "—"}</span>
-            </div>
-          </>
-        ) : (
-          <div className="kv">
-            <span>
-              {!noinit
-                ? "unreachable"
-                : noinit.probe_reachable === false
-                  ? "no probe"
-                  : "cold - no state"}
-            </span>
+            {d ? (
+              <>
+                <div className="kv">
+                  <span>tick</span>
+                  <span className="v">{d.tick}</span>
+                </div>
+                <div className="kv">
+                  <span>reboots</span>
+                  <span className={`v ${d.reboot_count > 0 ? "bad" : "good"}`}>
+                    {d.reboot_count}
+                  </span>
+                </div>
+                <div className="kv">
+                  <span>reason</span>
+                  <span className={`v ${d.reason_name === "watchdog" ? "bad" : ""}`}>
+                    {d.reason_name}
+                  </span>
+                </div>
+                <div className="kv">
+                  <span>mode</span>
+                  <span className="v">{d.mode}</span>
+                </div>
+                <div className="kv">
+                  <span>LO latch</span>
+                  <span className={`v ${d.lo_latched ? "bad" : ""}`}>
+                    {d.lo_latched ? "set" : "clear"}
+                  </span>
+                </div>
+                <div className="kv">
+                  <span>LO rtc</span>
+                  <span className="v">{d.lo_rtc_s || "—"}</span>
+                </div>
+              </>
+            ) : (
+              <div className="kv">
+                <span>
+                  {!ni
+                    ? "unreachable"
+                    : ni.probe_reachable === false
+                      ? "no target"
+                      : "cold - no state"}
+                </span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -352,7 +379,27 @@ export default function App() {
 
   const status = usePoll<Status>(getStatus, 1000);
   const runs = usePoll(getRuns, 2000);
-  const noinit = usePoll<NoInit>(getNoInit, 5000);
+  // one read per probe: they sit on different boards, so one answer would
+  // silently be whichever probe happened to come first
+  const probeIds = (status?.probe?.probes ?? []).map((p) => p.id).join(",");
+  const [noinits, setNoinits] = useState<Record<string, NoInit | null>>({});
+  useEffect(() => {
+    const ids = probeIds ? probeIds.split(",") : [];
+    if (!ids.length) return;
+    let alive = true;
+    const tick = async () => {
+      const pairs = await Promise.all(
+        ids.map(async (id) => [id, await getNoInit(id).catch(() => null)] as const),
+      );
+      if (alive) setNoinits(Object.fromEntries(pairs));
+    };
+    void tick();
+    const t = setInterval(() => void tick(), 5000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [probeIds]);
   const steps = usePoll<Record<string, string[]>>(getSteps, 60000);
 
   // flagged dangerous in the contract, so a stray touch must not fire it
@@ -386,7 +433,7 @@ export default function App() {
               activeRun={runs?.active_run ?? null}
               onOpen={setOpenRun}
             />
-            <Side status={status} noinit={noinit} />
+            <Side status={status} noinits={noinits} />
           </>
         ) : (
           <Detail id={openRun} steps={steps} onBack={() => setOpenRun(null)} />

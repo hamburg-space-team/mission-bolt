@@ -118,6 +118,89 @@ pub fn entry_for_uid<'m>(map: &'m [BoardEntry], uid: &str) -> Option<&'m BoardEn
     map.iter().find(|e| e.uid == uid)
 }
 
+/// One debug probe: an OpenOCD instance and the gdb port it serves.
+#[derive(Debug, Clone)]
+pub struct ProbeCfg {
+    pub id: String,
+    pub tcl: String,
+    pub gdb_port: u16,
+}
+
+/// probes.conf: `<id> <tcl host:port> <gdb port>` per line, '#' comments.
+/// Missing or empty falls back to the single-probe bench, so a station that
+/// never grew a second adapter needs no file at all.
+pub fn load_probes(path: &str) -> Vec<ProbeCfg> {
+    let text = std::fs::read_to_string(path).unwrap_or_default();
+    let list: Vec<ProbeCfg> = text
+        .lines()
+        .filter_map(|l| {
+            let l = l.split('#').next().unwrap_or("").trim();
+            let mut f = l.split_whitespace();
+            let id = f.next()?.to_string();
+            let tcl = f.next()?.to_string();
+            let gdb_port = f.next()?.parse().ok()?;
+            Some(ProbeCfg { id, tcl, gdb_port })
+        })
+        .collect();
+    if list.is_empty() {
+        return vec![ProbeCfg {
+            id: "1".into(),
+            tcl: "127.0.0.1:6601".into(),
+            gdb_port: 3401,
+        }];
+    }
+    list
+}
+
+/// The chip UID a probe currently reaches, or None when it reaches nothing.
+pub fn probe_uid(tcl_addr: &str) -> Option<String> {
+    read_words(tcl_addr, UID_ADDR, 3)
+        .ok()
+        .map(|w| uid_string(&w))
+}
+
+/// Append or update `<uid> <board>` in uids.conf, preserving comments and
+/// any .noinit column already on the line. Returns what the file now says.
+///
+/// The bench moves probes between boards constantly, so this is the one
+/// piece of state a human would otherwise keep re-typing over ssh.
+pub fn assign_board(path: &str, uid: &str, board: &str) -> Result<String> {
+    let uid = uid.to_lowercase();
+    let board = board.to_lowercase();
+    let text = std::fs::read_to_string(path).unwrap_or_default();
+
+    let mut out: Vec<String> = Vec::new();
+    let mut replaced = false;
+    for line in text.lines() {
+        let body = line.split('#').next().unwrap_or("");
+        let mut f = body.split_whitespace();
+        match (f.next(), f.next()) {
+            // same chip, new board: rewrite in place, keeping the .noinit
+            // column and whatever note the line carried
+            (Some(u), Some(_)) if u.to_lowercase() == uid => {
+                let addr = f.next().map(|a| format!(" {a}")).unwrap_or_default();
+                let note = line
+                    .split_once('#')
+                    .map(|(_, c)| format!("   #{c}"))
+                    .unwrap_or_default();
+                out.push(format!("{uid}  {board}{addr}{note}"));
+                replaced = true;
+            }
+            // a different chip claiming this board would make the lookup
+            // ambiguous in the other direction - drop the stale claim
+            (Some(_), Some(b)) if b.to_lowercase() == board => {}
+            _ => out.push(line.to_string()),
+        }
+    }
+    if !replaced {
+        out.push(format!("{uid}  {board}"));
+    }
+    let mut body = out.join("\n");
+    body.push('\n');
+    std::fs::write(path, &body).with_context(|| format!("write {path}"))?;
+    Ok(body)
+}
+
 /// BootState::MAGIC_WORD - the marker flash.sh zeroes to force a cold boot.
 pub const MAGIC_WORD: u32 = 0xB017_FEED;
 /// PersistentState is 16 bytes.

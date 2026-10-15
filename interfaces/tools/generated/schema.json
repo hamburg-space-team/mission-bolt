@@ -10,6 +10,7 @@
     {"name": "Exp1Status", "value": 35, "node": "EXP1", "rate_hz": 1, "layout": "PayloadExp1Status", "desc": "system health"},
     {"name": "Exp2Status", "value": 49, "node": "EXP2", "rate_hz": 1, "layout": "PayloadExp2Status", "desc": "system health"},
     {"name": "Exp2Ber", "value": 48, "node": "EXP2", "rate_hz": 25, "layout": "PayloadExp2Ber", "desc": "LiFi bit-error round"},
+    {"name": "Exp2Rx", "value": 53, "node": "EXP2", "rate_hz": 50, "layout": "PayloadExp2Rx", "desc": "LiFi received bytes, one chunk"},
     {"name": "Exp3StackA", "value": 64, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3StackA", "desc": "wired stack sample"},
     {"name": "Exp3StackB", "value": 65, "node": "EXP3", "rate_hz": 25, "layout": "PayloadExp3StackB", "desc": "wireless stack sample"},
     {"name": "Exp3Status", "value": 67, "node": "EXP3", "rate_hz": 1, "layout": "PayloadExp3Status", "desc": "control-loop diagnostics"},
@@ -129,16 +130,33 @@
     },
     {
       "name": "PayloadExp2Ber",
-      "size": 16,
+      "size": 27,
       "fields": [
         {"name":"rate_index","ctype":"unsigned char","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"LiFi RATE_TABLE index for this round"},
-        {"name":"timestamp_send_us","ctype":"unsigned int","byte_offset":1,"count":1,"unit":"us","scale":1,"offset":0,"gate":"measurement_valid","desc":"SEND command sent, us since LO"},
-        {"name":"timestamp_recv_us","ctype":"unsigned int","byte_offset":5,"count":1,"unit":"us","scale":1,"offset":0,"gate":"measurement_valid","desc":"response fully received, us since LO"},
+        {"name":"timestamp_send_us","ctype":"unsigned int","byte_offset":1,"count":1,"unit":"us","scale":1,"offset":0,"gate":"measurement_valid","desc":"SEND handed to the sender UART; DWT us stamp, wraps at 2^32/MHz"},
+        {"name":"timestamp_recv_us","ctype":"unsigned int","byte_offset":5,"count":1,"unit":"us","scale":1,"offset":0,"gate":"measurement_valid","desc":"send + interval to the sender's ACK of SEND; recv - send = command latency"},
         {"name":"bits_sent","ctype":"unsigned short","byte_offset":9,"count":1,"unit":"count","scale":1,"offset":0,"gate":"measurement_valid","desc":"bits transmitted this round"},
         {"name":"bit_errors","ctype":"unsigned short","byte_offset":11,"count":1,"unit":"count","scale":1,"offset":0,"gate":"measurement_valid","desc":"bit errors detected this round"},
         {"name":"first_error_byte","ctype":"unsigned char","byte_offset":13,"count":1,"unit":"","scale":1,"offset":0,"gate":"measurement_valid","desc":"first errored byte (0xFF = none)"},
         {"name":"last_error_byte","ctype":"unsigned char","byte_offset":14,"count":1,"unit":"","scale":1,"offset":0,"gate":"measurement_valid","desc":"last errored byte (0xFF = none)"},
-        {"name":"measurement_valid","ctype":"unsigned char","byte_offset":15,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = round valid; 0 = ignore other fields"}
+        {"name":"measurement_valid","ctype":"unsigned char","byte_offset":15,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"1 = round valid; 0 = ignore other fields"},
+        {"name":"threshold","ctype":"unsigned short","byte_offset":16,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"receiver comparator threshold this round, 12-bit DAC (4095 = VDDA)"},
+        {"name":"round_seq","ctype":"unsigned short","byte_offset":18,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"round number; the EXP2_RX chunks of this round carry the same value"},
+        {"name":"pattern","ctype":"unsigned char","byte_offset":20,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"ICD-003 test pattern code of the block (0x01 = PRBS-15)"},
+        {"name":"seed","ctype":"unsigned short","byte_offset":21,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"PRBS-15 start state (15 bit); pattern + seed rebuild the sent block"},
+        {"name":"block_offset","ctype":"unsigned short","byte_offset":23,"count":1,"unit":"count","scale":1,"offset":0,"gate":"measurement_valid","desc":"first byte of the best-matching 64 B window in the received bytes"},
+        {"name":"rx_count","ctype":"unsigned short","byte_offset":25,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"bytes the receiver returned; EXP2_RX carries the first 512"}
+      ]
+    },
+    {
+      "name": "PayloadExp2Rx",
+      "size": 45,
+      "fields": [
+        {"name":"round_seq","ctype":"unsigned short","byte_offset":0,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"round number, matches EXP2_BER round_seq"},
+        {"name":"chunk_index","ctype":"unsigned char","byte_offset":2,"count":1,"unit":"","scale":1,"offset":0,"gate":"","desc":"chunk position, 0-based; data starts at received byte chunk_index * 40"},
+        {"name":"chunk_count","ctype":"unsigned char","byte_offset":3,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"chunks this round sends"},
+        {"name":"length","ctype":"unsigned char","byte_offset":4,"count":1,"unit":"count","scale":1,"offset":0,"gate":"","desc":"valid bytes in data; 40 except in the last chunk"},
+        {"name":"data","ctype":"unsigned char[40]","byte_offset":5,"count":40,"unit":"","scale":1,"offset":0,"gate":"","desc":"received bytes in arrival order"}
       ]
     },
     {
@@ -325,7 +343,7 @@
     {"name": "CommandAckStatus", "underlying": "u8", "values": [{"name": "ACCEPTED", "value": 0, "desc": "known command received and executed (RESET_TICK/ACTIVATE_CAMERA: receipt only)", "label": "", "danger": false}, {"name": "UNKNOWN_OPCODE", "value": 1, "desc": "opcode not recognised - nothing done", "label": "", "danger": false}]},
     {"name": "BtcSelfTest", "underlying": "u8", "values": [{"name": "TMP_WHOAMI", "value": 0, "desc": "TMP117 device ID register", "label": "TMP117 WHO_AM_I", "danger": false}, {"name": "TMP_READ", "value": 1, "desc": "TMP117 raw temperature over the flight read path", "label": "TMP117 read", "danger": false}, {"name": "BARO_PROM", "value": 2, "desc": "MS5611 PROM CRC-4 + C1 fingerprint", "label": "MS5611 PROM CRC", "danger": false}, {"name": "IMU_WHOAMI", "value": 3, "desc": "ICM-42686 WHO_AM_I", "label": "ICM-42686 WHO_AM_I", "danger": false}, {"name": "IMU_READ", "value": 4, "desc": "ICM-42686 accel/gyro Z sample", "label": "ICM-42686 read", "danger": false}, {"name": "SD_MOUNTED", "value": 5, "desc": "SD card mounted", "label": "SD mounted", "danger": false}]},
     {"name": "Exp1SelfTest", "underlying": "u8", "values": [{"name": "TMP_WHOAMI", "value": 0, "desc": "TMP117 device ID register", "label": "TMP117 WHO_AM_I", "danger": false}, {"name": "TMP_READ", "value": 1, "desc": "TMP117 raw temperature over the flight read path", "label": "TMP117 read", "danger": false}, {"name": "BARO_PROM", "value": 2, "desc": "MS5611 PROM CRC-4 + C1 fingerprint", "label": "MS5611 PROM CRC", "danger": false}, {"name": "SPEC_WHOAMI", "value": 3, "desc": "AS7265x answers its HW version virtual register", "label": "AS7265x HW version", "danger": false}, {"name": "LED_RGB_INIT", "value": 4, "desc": "LP5810C accepts its power-on sequence; write-only part, so configuring it is the test", "label": "LP5810C configured", "danger": false}, {"name": "LED_UVIR_INIT", "value": 5, "desc": "LP5810D accepts its power-on sequence; write-only part, so configuring it is the test", "label": "LP5810D configured", "danger": false}, {"name": "SPEC_DARK", "value": 6, "desc": "AS7265x spectrum with all LEDs off; the reference for every lit step", "label": "Spectrum dark", "danger": false}, {"name": "SPEC_RED", "value": 7, "desc": "spectrum with the red LED lit, vs. dark", "label": "Spectrum red", "danger": false}, {"name": "SPEC_GREEN", "value": 8, "desc": "spectrum with the green LED lit, vs. dark", "label": "Spectrum green", "danger": false}, {"name": "SPEC_BLUE", "value": 9, "desc": "spectrum with the blue LED lit, vs. dark", "label": "Spectrum blue", "danger": false}, {"name": "SPEC_WHITE", "value": 10, "desc": "spectrum with the white LED lit, vs. dark", "label": "Spectrum white", "danger": false}, {"name": "SPEC_IR", "value": 11, "desc": "spectrum with the IR 940 nm LED lit, vs. dark", "label": "Spectrum IR 940nm", "danger": false}, {"name": "SPEC_UV", "value": 12, "desc": "spectrum with the UV 400 nm LED lit, vs. dark", "label": "Spectrum UV 400nm", "danger": false}, {"name": "SD_MOUNTED", "value": 13, "desc": "SD card mounted", "label": "SD mounted", "danger": false}]},
-    {"name": "Exp2SelfTest", "underlying": "u8", "values": [{"name": "TMP_WHOAMI", "value": 0, "desc": "TMP117 device ID register", "label": "TMP117 WHO_AM_I", "danger": false}, {"name": "TMP_READ", "value": 1, "desc": "TMP117 raw temperature over the flight read path", "label": "TMP117 read", "danger": false}, {"name": "BARO_PROM", "value": 2, "desc": "MS5611 PROM CRC-4 + C1 fingerprint", "label": "MS5611 PROM CRC", "danger": false}, {"name": "SD_MOUNTED", "value": 3, "desc": "SD card mounted", "label": "SD mounted", "danger": false}]},
+    {"name": "Exp2SelfTest", "underlying": "u8", "values": [{"name": "TMP_WHOAMI", "value": 0, "desc": "TMP117 device ID register", "label": "TMP117 WHO_AM_I", "danger": false}, {"name": "TMP_READ", "value": 1, "desc": "TMP117 raw temperature over the flight read path", "label": "TMP117 read", "danger": false}, {"name": "BARO_PROM", "value": 2, "desc": "MS5611 PROM CRC-4 + C1 fingerprint", "label": "MS5611 PROM CRC", "danger": false}, {"name": "SD_MOUNTED", "value": 3, "desc": "SD card mounted", "label": "SD mounted", "danger": false}, {"name": "LIFI_TX_ACK", "value": 4, "desc": "sender transceiver ACKs the polling-mode command; data = ticks to reply", "label": "LiFi TX answers", "danger": false}, {"name": "LIFI_RX_ACK", "value": 5, "desc": "receiver transceiver ACKs the polling-mode command; data = ticks to reply", "label": "LiFi RX answers", "danger": false}, {"name": "LIFI_LOOPBACK", "value": 6, "desc": "polling-mode bench-script replica, threshold sweep; data=(thr<<20)|(count<<10)|bit_errors", "label": "LiFi loopback", "danger": false}]},
     {"name": "Exp3SelfTest", "underlying": "u8", "values": [{"name": "TMP_WHOAMI", "value": 0, "desc": "TMP117 device ID register", "label": "TMP117 WHO_AM_I", "danger": false}, {"name": "TMP_READ", "value": 1, "desc": "TMP117 raw temperature over the flight read path", "label": "TMP117 read", "danger": false}, {"name": "BARO_PROM", "value": 2, "desc": "MS5611 PROM CRC-4 + C1 fingerprint", "label": "MS5611 PROM CRC", "danger": false}, {"name": "IMU_WHOAMI", "value": 3, "desc": "ICM-42686 WHO_AM_I", "label": "ICM-42686 WHO_AM_I", "danger": false}, {"name": "IMU_READ", "value": 4, "desc": "ICM-42686 accel/gyro Z sample", "label": "ICM-42686 read", "danger": false}, {"name": "SD_MOUNTED", "value": 5, "desc": "SD card mounted", "label": "SD mounted", "danger": false}]}
   ]
 }

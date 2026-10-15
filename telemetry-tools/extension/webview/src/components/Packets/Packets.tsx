@@ -7,9 +7,9 @@ import type { PacketRecord } from "../../../../src/messages";
 const LIST = new Set([
   "source", "node", "reason", "command", "result", "device", "error", "crc", "valid",
   "fault_code", "error_code", "opcode", "status", "gain", "led_mask", "measurement_valid",
-  "valid_mask", "rate_index", "sd_status", "signal_mask",
+  "valid_mask", "rate_index", "threshold", "sd_status", "signal_mask",
 ]);
-const NUM = new Set(["seq", "tick", "timestamp_us", "fault_code", "error_code", "line", "depth", "opcode", "status", "reboot_count", "bit_errors", "bits_sent"]);
+const NUM = new Set(["seq", "tick", "timestamp_us", "fault_code", "error_code", "line", "depth", "opcode", "status", "reboot_count", "bit_errors", "bits_sent", "threshold"]);
 const TITLE: Record<string, string> = { seq: "#", timestamp_us: "t (µs)" };
 const FIXED = ["seq", "tick", "timestamp_us", "source", "crc", "valid"];
 

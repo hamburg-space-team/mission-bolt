@@ -214,10 +214,12 @@ namespace PacketProtocol {
         WIRE(.desc = "LiFi RATE_TABLE index for this round")
         uint8_t rate_index;
 
-        WIRE(.unit = "us", .gate = "measurement_valid", .desc = "SEND command sent, us since LO")
+        WIRE(.unit = "us", .gate = "measurement_valid",
+             .desc = "SEND handed to the sender UART; DWT us stamp, wraps at 2^32/MHz")
         uint32_t timestamp_send_us;
 
-        WIRE(.unit = "us", .gate = "measurement_valid", .desc = "response fully received, us since LO")
+        WIRE(.unit = "us", .gate = "measurement_valid",
+             .desc = "send + interval to the sender's ACK of SEND; recv - send = command latency")
         uint32_t timestamp_recv_us;
 
         WIRE(.unit = "count", .gate = "measurement_valid", .desc = "bits transmitted this round")
@@ -234,8 +236,52 @@ namespace PacketProtocol {
 
         WIRE(.desc = "1 = round valid; 0 = ignore other fields")
         uint8_t measurement_valid;
+
+        WIRE(.unit = "count", .desc = "receiver comparator threshold this round, 12-bit DAC (4095 = VDDA)")
+        uint16_t threshold;
+
+        WIRE(.desc = "round number; the EXP2_RX chunks of this round carry the same value")
+        uint16_t round_seq;
+
+        WIRE(.desc = "ICD-003 test pattern code of the block (0x01 = PRBS-15)")
+        uint8_t pattern;
+
+        WIRE(.desc = "PRBS-15 start state (15 bit); pattern + seed rebuild the sent block")
+        uint16_t seed;
+
+        WIRE(.unit = "count", .gate = "measurement_valid",
+             .desc = "first byte of the best-matching 64 B window in the received bytes")
+        uint16_t block_offset;
+
+        WIRE(.unit = "count", .desc = "bytes the receiver returned; EXP2_RX carries the first 512")
+        uint16_t rx_count;
     };
     PACKET_TYPE_CHECK(PayloadExp2Ber);
+
+    /// EXP2_RX - the bytes the LiFi receiver returned in one round, in
+    /// chunks. With EXP2_BER's pattern, seed and block_offset the ground
+    /// rebuilds every bit error position and sees the bytes around the
+    /// block. A round with rx_count 0 sends no chunk.
+    ///
+    /// @ingroup comms
+    struct __attribute__((packed)) PACKET(.type = PayloadType::EXP2_RX, .node = "EXP2", .rate_hz = 50,
+                                          .desc = "LiFi received bytes, one chunk") PayloadExp2Rx {
+        WIRE(.desc = "round number, matches EXP2_BER round_seq")
+        uint16_t round_seq;
+
+        WIRE(.desc = "chunk position, 0-based; data starts at received byte chunk_index * 40")
+        uint8_t chunk_index;
+
+        WIRE(.unit = "count", .desc = "chunks this round sends")
+        uint8_t chunk_count;
+
+        WIRE(.unit = "count", .desc = "valid bytes in data; 40 except in the last chunk")
+        uint8_t length;
+
+        WIRE(.desc = "received bytes in arrival order")
+        uint8_t data[40]; // NOLINT(modernize-avoid-c-arrays)
+    };
+    PACKET_TYPE_CHECK(PayloadExp2Rx);
 
     /// EXP3_STACK_A - one sample from the WIRED stack (STM32U0 + Molex
     /// cable + LiFi A). Ground reconstructs each burst from burst_index.

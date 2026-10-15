@@ -43,7 +43,8 @@ enum class ErrorCode : uint8_t {
 /// the module's range (or start a new range).
 ///
 /// Ranges: 0x1x I2C bus, 0x2x MS5611, 0x3x TMP117, 0x4x AS7265X,
-/// 0x5x LP5810, 0x6x ICM4268x, 0x7x storage, 0x8x comms.
+/// 0x5x LP5810, 0x6x ICM4268x, 0x7x storage, 0x8x comms, 0x9x LiFi
+/// transceiver.
 ///
 /// @ingroup utils
 enum class Step : uint8_t {
@@ -111,6 +112,15 @@ enum class Step : uint8_t {
     PKT_BUILD = 0x80,    ///< PacketBuilder::build(): payload too large
     CAN_TX_RING = 0x81,  ///< CAN TX frame ring latched (never drains)
     UART_TX_RING = 0x82, ///< RS-422 TX byte ring latched (never drains)
+
+    // LiFi transceiver host driver (ICD-008)
+    LIFI_LINK_WRITE = 0x90, ///< submit(): host UART TX ring refused the script
+    LIFI_REPLY = 0x91,      ///< poll(): NAK (PROTOCOL_ERROR), stray byte (BUS_ERROR), no reply in time (TIMEOUT)
+    LIFI_CONFIGURE = 0x92,  ///< configure(): role setup script
+    LIFI_SET_RATE = 0x93,   ///< set_rate(): optical baud change
+    LIFI_LOAD_SEND = 0x94,  ///< load_and_send(): '\s' block '\S'
+    LIFI_PING = 0x95,       ///< ping(): '\P' probe (self-test)
+    LIFI_ROUND = 0x96,      ///< EXP2 measurement: BER rounds in a row ended in a NAK or a missing ACK
 };
 
 /// Trace depth: fixed so the error path stays no-alloc and WCET-safe.
@@ -140,6 +150,18 @@ struct ErrorClock {
     /// so differences of us_now() values are wrong across a wrap
     static uint32_t us_between(uint32_t cyc_start, uint32_t cyc_end) noexcept {
         return (cyc_end - cyc_start) / cycles_per_us;
+    }
+
+    /// us between two now_us() stamps, for when only the divided clock was
+    /// sampled (a UART interrupt stamps its bytes that way). Correct across
+    /// one wrap of that clock, whose period 2^32/cycles_per_us is rounded
+    /// down here, so a wrapped interval reads at most 1 us short
+    static uint32_t us_elapsed(uint32_t us_start, uint32_t us_end) noexcept {
+        if (us_end >= us_start) {
+            return us_end - us_start;
+        }
+        const auto period = static_cast<uint32_t>((uint64_t{1} << 32U) / cycles_per_us);
+        return (period - us_start) + us_end;
     }
 };
 

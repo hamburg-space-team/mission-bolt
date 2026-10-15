@@ -44,7 +44,10 @@ export interface Status {
     };
   };
   boards: Record<string, Board>;
-  probe: { stlink_on_usb: boolean; target: { uid: string; board: string | null } | null };
+  probe: {
+    stlink_on_usb: boolean;
+    probes: { id: string; tcl: string; gdb_port: number; reachable: boolean; uid: string | null; board: string | null }[];
+  };
   active_run: number | null;
 }
 
@@ -106,7 +109,9 @@ async function get<T>(path: string): Promise<T | null> {
 export const getStatus = () => get<Status>("/api/status");
 export const getRuns = () => get<{ active_run: number | null; runs: RunSummary[] }>("/api/tests");
 export const getRun = (id: number) => get<RunDetail>(`/api/tests/${id}`);
-export const getNoInit = () => get<NoInit>("/api/debugger/noinit");
+/** Per probe: each debugger sits on a different board and has its own state. */
+export const getNoInit = (probe?: string) =>
+  get<NoInit>(`/api/debugger/noinit${probe ? `?probe=${probe}` : ""}`);
 export const getSteps = () => get<Record<string, string[]>>("/api/selftest/steps");
 
 /** Clears packets, CRC fails and throughput together - one window. */
@@ -126,4 +131,10 @@ export async function runSelfTest(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Record which board a probe sits on; the station reads the chip UID
+ *  through it and writes uids.conf itself. */
+export async function assignProbe(id: string, board: string): Promise<void> {
+  await fetch(`/api/debugger/assign?probe=${id}&board=${board}`, { method: "POST" });
 }

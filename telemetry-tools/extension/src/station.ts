@@ -13,6 +13,13 @@ import * as vscode from "vscode";
 /** The REXUS LO line is faked on an ST-Link bridge GPIO the station drives. */
 export type Level = "high" | "low";
 
+export interface StationProbe {
+  id: string;
+  board?: string;
+  gdbPort: number;
+  reachable: boolean;
+}
+
 export interface StationBoard {
   name: string;
   sending: boolean;
@@ -30,8 +37,9 @@ export interface StationState {
   /** LO/SODS/SOE as the boards report them in their status packets */
   signals?: { lo: boolean; sods: boolean; soe: boolean };
   boards: StationBoard[];
+  /** one entry per OpenOCD instance the station serves */
+  probes: StationProbe[];
   probePresent: boolean;
-  probeBoard?: string;
 }
 
 const POLL_MS = 2000;
@@ -60,6 +68,7 @@ export class StationClient {
     url: "",
     reachable: false,
     boards: [],
+    probes: [],
     probePresent: false,
   };
   private timer?: NodeJS.Timeout;
@@ -124,7 +133,12 @@ export class StationClient {
         mode: b.mode ?? undefined,
       }));
       this.state.probePresent = Boolean(status.probe?.stlink_on_usb);
-      this.state.probeBoard = status.probe?.target?.board ?? undefined;
+      this.state.probes = (status.probe?.probes ?? []).map((p: any) => ({
+        id: String(p.id),
+        board: p.board ?? undefined,
+        gdbPort: Number(p.gdb_port),
+        reachable: Boolean(p.reachable),
+      }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       // only log the transition; a station that is simply off would otherwise
@@ -138,7 +152,7 @@ export class StationClient {
       this.state.signals = undefined;
       this.state.boards = [];
       this.state.probePresent = false;
-      this.state.probeBoard = undefined;
+      this.state.probes = [];
     } finally {
       this.inFlight = false;
       this._onChange.fire();
@@ -161,6 +175,20 @@ export class StationClient {
       void vscode.window.showErrorMessage(`Bolt: could not drive LO — ${msg}`);
       this.log.error(`station: LO drive failed (${msg})`);
       await this.refresh();
+    }
+  }
+
+  /** Tell the station which board a probe is on; it reads the chip UID
+   *  through that probe and writes uids.conf itself. */
+  async assignProbe(id: string, board: string): Promise<void> {
+    try {
+      const body = await callJson(`${this.baseUrl()}/api/debugger/assign?probe=${id}&board=${board}`, "POST");
+      this.log.info(`station: probe ${id} -> ${board} (uid ${body.uid})`);
+      void vscode.window.showInformationMessage(`Bolt: probe ${id} is on ${board} (${body.uid}).`);
+      await this.refresh();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      void vscode.window.showErrorMessage(`Bolt: could not assign probe ${id} — ${msg}`);
     }
   }
 

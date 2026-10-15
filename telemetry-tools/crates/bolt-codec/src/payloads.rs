@@ -44,6 +44,14 @@ fn arr_u16<const N: usize>(b: &[u8], off: usize) -> [u16; N] {
 }
 
 // Structs BtcEnv/BtcStatus/BtcImu/Exp1Spectrum/ExpEnv/... each with `fn decode(b)`.
+/// Arrays longer than 32 (serde's derive limit) serialize as a plain sequence
+fn ser_array<S: serde::Serializer, T: Serialize, const N: usize>(
+    v: &[T; N],
+    s: S,
+) -> Result<S::Ok, S::Error> {
+    s.collect_seq(v.iter())
+}
+
 include!(concat!(env!("OUT_DIR"), "/payloads_gen.rs"));
 
 // One decoded payload, still in raw register units.
@@ -60,6 +68,7 @@ pub enum Payload {
     Exp1Status(Exp1Status),
     Exp2Status(Exp2Status),
     Exp2Ber(Exp2Ber),
+    Exp2Rx(Exp2Rx),
     Exp3StackA(Exp3StackA),
     Exp3StackB(Exp3StackB),
     Exp3Imu(Exp3Imu),
@@ -120,6 +129,7 @@ pub fn decode_payload(ty_byte: u8, b: &[u8]) -> Result<Payload, DecodeError> {
         T::Exp1Status => Payload::Exp1Status(Exp1Status::decode(b)),
         T::Exp2Status => Payload::Exp2Status(Exp2Status::decode(b)),
         T::Exp2Ber => Payload::Exp2Ber(Exp2Ber::decode(b)),
+        T::Exp2Rx => Payload::Exp2Rx(Exp2Rx::decode(b)),
         T::Exp3StackA => Payload::Exp3StackA(Exp3StackA::decode(b)),
         T::Exp3StackB => Payload::Exp3StackB(Exp3StackB::decode(b)),
         T::Exp3Status => Payload::Exp3Status(Exp3Status::decode(b)),

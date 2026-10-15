@@ -247,13 +247,25 @@ main {
   margin-bottom: 4px;
 }
 
+/* One .noinit card per probe, so the column outgrows the panel. It scrolls
+   like the run list - no scrollbar drawn, the page itself still never does */
 .side {
   flex: 0 0 200px;
   padding: 5px 5px 4px;
   display: flex;
   flex-direction: column;
   gap: 5px;
-  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.side::-webkit-scrollbar {
+  display: none;
+}
+/* cards must keep their height while scrolling, not squash to fit */
+.side > .card {
+  flex: 0 0 auto;
 }
 
 .card {

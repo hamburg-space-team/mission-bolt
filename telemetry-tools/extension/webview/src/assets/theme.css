@@ -58,3 +58,29 @@ tr.bad td { color: var(--vscode-errorForeground); }
 .rocket-readout { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .rocket-readout div { display: flex; flex-direction: column; }
 .rocket-readout b { font-size: 18px; font-weight: 600; }
+
+/* EXP2 LiFi panel. Status colors are fixed (never themed); ok bits recede */
+.lifi-bitmap { display: grid; grid-template-columns: repeat(64, 1fr); gap: 1px; background: var(--vscode-editorWidget-background); border-radius: 8px; padding: 8px; }
+.lifi-bit { aspect-ratio: 1; border-radius: 2px; display: inline-block; min-width: 4px; }
+.lifi-bit.ok { background: var(--vscode-widget-border, #8884); opacity: .45; }
+.lifi-bit.error { background: #d03b3b; }
+.lifi-bit.missing { background: repeating-linear-gradient(45deg, #898781 0 2px, transparent 2px 4px); }
+.lifi-legend .lifi-bit { width: 10px; height: 10px; vertical-align: -1px; }
+.lifi-axis { display: flex; justify-content: space-between; font-size: 10px; opacity: .7; padding: 2px 8px 0; }
+.lifi-legend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 11px; margin-top: 6px; }
+.lifi-hex-wrap { background: var(--vscode-editorWidget-background); border-radius: 8px; padding: 8px; overflow-x: auto; font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; font-variant-numeric: tabular-nums; }
+.lifi-hexrow { display: flex; gap: 4px; white-space: nowrap; }
+.lifi-hexaddr { opacity: .5; margin-right: 6px; }
+.lifi-hex { padding: 0 1px; border-radius: 2px; opacity: .55; }
+.lifi-hex.in { opacity: 1; box-shadow: inset 0 -2px 0 #2a78d6; }
+.lifi-hex.bad { color: #ffffff; background: #d03b3b; box-shadow: none; }
+.lifi-hex-key { display: inline-block; width: 14px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+.lifi-hex-key.in { box-shadow: inset 0 -2px 0 #2a78d6; background: var(--vscode-editorWidget-background); }
+.lifi-hex-key.bad { background: #d03b3b; }
+.lifi-heat { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; }
+.lifi-heat th { font-weight: 500; font-size: 11px; opacity: .8; padding: 2px 8px; text-align: right; }
+.lifi-heat td { min-width: 84px; padding: 6px 8px; border-radius: 4px; text-align: center; }
+.lifi-heat td b { display: block; font-size: 13px; }
+.lifi-heat-n { font-size: 10px; opacity: .85; }
+.lifi-heat-empty { background: repeating-linear-gradient(45deg, #8882 0 3px, transparent 3px 6px); opacity: .8; }
+.lifi-swatch { display: inline-block; width: 12px; height: 10px; border-radius: 2px; vertical-align: -1px; }

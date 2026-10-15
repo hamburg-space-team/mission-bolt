@@ -113,6 +113,16 @@ export function activate(ctx: vscode.ExtensionContext): void {
     if (!(await confirmLo())) return;
     await station.setLo(true);
   });
+  reg("bolt.probe.assign", async (id?: unknown) => {
+    const probe = typeof id === "string" ? id : undefined;
+    if (!probe) return;
+    const board = await vscode.window.showQuickPick(["btc", "exp1", "exp2", "exp3"], {
+      title: `Which board is probe ${probe} sitting on?`,
+      placeHolder: "the station reads the chip UID through it and records the answer",
+    });
+    if (board) await station.assignProbe(probe, board);
+  });
+
   reg("bolt.lo.toggle", async () => {
     if (station.loAsserted === false && !(await confirmLo())) return;
     await station.toggleLo();

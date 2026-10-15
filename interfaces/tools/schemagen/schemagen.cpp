@@ -47,6 +47,7 @@ constexpr auto PAYLOADS = std::array{
     ^^PacketProtocol::PayloadExp1Status,
     ^^PacketProtocol::PayloadExp2Status,
     ^^PacketProtocol::PayloadExp2Ber,
+    ^^PacketProtocol::PayloadExp2Rx,
     ^^PacketProtocol::PayloadExp3StackA,
     ^^PacketProtocol::PayloadExp3StackB,
     ^^PacketProtocol::PayloadExp3Status,

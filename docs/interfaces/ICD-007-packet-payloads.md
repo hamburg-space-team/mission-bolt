@@ -7,7 +7,7 @@
 | Document ID | ICD-007 |
 | Protocol version | 1 |
 | Status | Generated |
-| Generated at | 2026-08-10T17:31:54Z |
+| Generated at | 2026-10-06T15:43:24Z |
 | Source | `bolt/wire/payloads.hpp` + `bolt/wire/types.hpp` |
 
 ## Purpose
@@ -59,7 +59,8 @@ CRC-16/CCITT-FALSE (polynomial `0x1021`, init `0xFFFF`) over every byte after th
 | Exp3Env | 0x42 | EXP3 | 25 | 11 | 25 | common env sensors |
 | Exp1Status | 0x23 | EXP1 | 1 | 9 | 23 | system health |
 | Exp2Status | 0x31 | EXP2 | 1 | 9 | 23 | system health |
-| Exp2Ber | 0x30 | EXP2 | 25 | 16 | 30 | LiFi bit-error round |
+| Exp2Ber | 0x30 | EXP2 | 25 | 27 | 41 | LiFi bit-error round |
+| Exp2Rx | 0x35 | EXP2 | 50 | 45 | 59 | LiFi received bytes, one chunk |
 | Exp3StackA | 0x40 | EXP3 | 25 | 36 | 50 | wired stack sample |
 | Exp3StackB | 0x41 | EXP3 | 25 | 38 | 52 | wireless stack sample |
 | Exp3Status | 0x43 | EXP3 | 1 | 14 | 28 | control-loop diagnostics |
@@ -187,20 +188,38 @@ Emitter **EXP2**, 1 Hz. system health.
 | data_ready_fails | u8 | 7 | 1 | count | 1 |  | DATA_RDY not asserted at readout (saturating) |
 | mode | u8 | 8 | 1 |  | 1 |  | MissionMode: TEST / FLIGHT |
 
-### Exp2Ber - `0x30` (16 B)
+### Exp2Ber - `0x30` (27 B)
 
 Emitter **EXP2**, 25 Hz. LiFi bit-error round.
 
 | Field | Type | Off | Size | Unit | Scale | Gate | Description |
 |---|---|--:|--:|---|--:|---|---|
 | rate_index | u8 | 0 | 1 |  | 1 |  | LiFi RATE_TABLE index for this round |
-| timestamp_send_us | u32 | 1 | 4 | us | 1 | measurement_valid | SEND command sent, us since LO |
-| timestamp_recv_us | u32 | 5 | 4 | us | 1 | measurement_valid | response fully received, us since LO |
+| timestamp_send_us | u32 | 1 | 4 | us | 1 | measurement_valid | SEND handed to the sender UART; DWT us stamp, wraps at 2^32/MHz |
+| timestamp_recv_us | u32 | 5 | 4 | us | 1 | measurement_valid | send + interval to the sender's ACK of SEND; recv - send = command latency |
 | bits_sent | u16 | 9 | 2 | count | 1 | measurement_valid | bits transmitted this round |
 | bit_errors | u16 | 11 | 2 | count | 1 | measurement_valid | bit errors detected this round |
 | first_error_byte | u8 | 13 | 1 |  | 1 | measurement_valid | first errored byte (0xFF = none) |
 | last_error_byte | u8 | 14 | 1 |  | 1 | measurement_valid | last errored byte (0xFF = none) |
 | measurement_valid | u8 | 15 | 1 |  | 1 |  | 1 = round valid; 0 = ignore other fields |
+| threshold | u16 | 16 | 2 | count | 1 |  | receiver comparator threshold this round, 12-bit DAC (4095 = VDDA) |
+| round_seq | u16 | 18 | 2 |  | 1 |  | round number; the EXP2_RX chunks of this round carry the same value |
+| pattern | u8 | 20 | 1 |  | 1 |  | ICD-003 test pattern code of the block (0x01 = PRBS-15) |
+| seed | u16 | 21 | 2 |  | 1 |  | PRBS-15 start state (15 bit); pattern + seed rebuild the sent block |
+| block_offset | u16 | 23 | 2 | count | 1 | measurement_valid | first byte of the best-matching 64 B window in the received bytes |
+| rx_count | u16 | 25 | 2 | count | 1 |  | bytes the receiver returned; EXP2_RX carries the first 512 |
+
+### Exp2Rx - `0x35` (45 B)
+
+Emitter **EXP2**, 50 Hz. LiFi received bytes, one chunk.
+
+| Field | Type | Off | Size | Unit | Scale | Gate | Description |
+|---|---|--:|--:|---|--:|---|---|
+| round_seq | u16 | 0 | 2 |  | 1 |  | round number, matches EXP2_BER round_seq |
+| chunk_index | u8 | 2 | 1 |  | 1 |  | chunk position, 0-based; data starts at received byte chunk_index * 40 |
+| chunk_count | u8 | 3 | 1 | count | 1 |  | chunks this round sends |
+| length | u8 | 4 | 1 | count | 1 |  | valid bytes in data; 40 except in the last chunk |
+| data | u8[40] | 5 | 40 |  | 1 |  | received bytes in arrival order |
 
 ### Exp3StackA - `0x40` (36 B)
 
@@ -493,6 +512,9 @@ Downlink field enums plus the uplink command set (`CommandOpcode`/`CommandAckSta
 | 0x01 | TMP_READ | TMP117 raw temperature over the flight read path |
 | 0x02 | BARO_PROM | MS5611 PROM CRC-4 + C1 fingerprint |
 | 0x03 | SD_MOUNTED | SD card mounted |
+| 0x04 | LIFI_TX_ACK | sender transceiver ACKs the polling-mode command; data = ticks to reply |
+| 0x05 | LIFI_RX_ACK | receiver transceiver ACKs the polling-mode command; data = ticks to reply |
+| 0x06 | LIFI_LOOPBACK | polling-mode bench-script replica, threshold sweep; data=(thr<<20)|(count<<10)|bit_errors |
 
 ### Exp3SelfTest (u8)
 

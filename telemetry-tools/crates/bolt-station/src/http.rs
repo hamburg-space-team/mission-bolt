@@ -22,8 +22,10 @@ pub struct Api {
     pub uplink: crate::Uplink,
     /// per-type sequence counter the wire header carries
     pub cmd_seq: Arc<Mutex<u8>>,
-    /// where the .noinit marker was last found, so the scan runs once
-    pub noinit_at: Arc<Mutex<Option<u32>>>,
+    /// where the .noinit marker was last found, per probe, so the scan runs
+    /// once each. Not one shared address: every board runs a different image,
+    /// so .noinit lands somewhere else on each
+    pub noinit_at: Arc<Mutex<std::collections::HashMap<String, u32>>>,
     /// the LO line on the ST-Link's bridge GPIO, held across probe replugs
     pub lo: Arc<crate::bridge::LoLine>,
 }
@@ -179,6 +181,7 @@ fn route(api: &Api, method: &Method, path: &str, query: &str) -> anyhow::Result<
         }
         (Method::Get, "/api/debugger") => debugger(api),
         (Method::Get, "/api/debugger/noinit") => noinit(api, query),
+        (Method::Post, "/api/debugger/assign") => assign(api, query),
         (Method::Get, "/api/selftest/steps") => Ok(selftest_steps()),
         (Method::Post, p) if p.starts_with("/api/command/") => {
             send_command(api, &p["/api/command/".len()..])
@@ -256,33 +259,77 @@ fn status(api: &Api) -> anyhow::Result<serde_json::Value> {
 }
 
 fn probe_summary(api: &Api) -> serde_json::Value {
-    let usb = probe::stlink_on_usb();
-    // board identity only when the probe answers; a dead target is not an error
-    let board = if usb {
-        probe::read_words(&api.cfg.openocd_tcl, probe::UID_ADDR, 3)
-            .ok()
-            .map(|w| {
-                let uid = probe::uid_string(&w);
-                let map = probe::load_uid_map(&api.cfg.uid_map);
-                let entry = probe::entry_for_uid(&map, &uid);
-                json!({
-                    "uid": uid,
-                    "board": entry.map(|e| e.board.clone()),
-                })
+    let map = probe::load_uid_map(&api.cfg.uid_map);
+    let probes: Vec<serde_json::Value> = probe::load_probes(&api.cfg.probes)
+        .iter()
+        .map(|p| {
+            // a probe that reaches nothing is a normal state, not an error:
+            // it is unplugged, or sitting on an unpowered board
+            let uid = probe::probe_uid(&p.tcl);
+            let board = uid
+                .as_deref()
+                .and_then(|u| probe::entry_for_uid(&map, u))
+                .map(|e| e.board.clone());
+            json!({
+                "id": p.id,
+                "tcl": p.tcl,
+                "gdb_port": p.gdb_port,
+                "reachable": uid.is_some(),
+                "uid": uid,
+                "board": board,
             })
-    } else {
-        None
-    };
-    json!({ "stlink_on_usb": usb, "target": board })
+        })
+        .collect();
+    json!({ "stlink_on_usb": probe::stlink_on_usb(), "probes": probes })
 }
 
-/// The board the probe currently sits on, and its .noinit address if
-/// uids.conf carries one.
-fn probe_board(api: &Api) -> Option<probe::BoardEntry> {
-    let w = probe::read_words(&api.cfg.openocd_tcl, probe::UID_ADDR, 3).ok()?;
-    let uid = probe::uid_string(&w);
+/// The uids.conf entry a given probe currently reaches. `want` selects by
+/// probe id; without it the first probe that reaches anything wins.
+fn probe_entry(api: &Api, want: Option<&str>) -> Option<(probe::ProbeCfg, probe::BoardEntry)> {
     let map = probe::load_uid_map(&api.cfg.uid_map);
-    probe::entry_for_uid(&map, &uid).cloned()
+    for p in probe::load_probes(&api.cfg.probes) {
+        if want.is_some_and(|w| w != p.id) {
+            continue;
+        }
+        if let Some(uid) = probe::probe_uid(&p.tcl) {
+            if let Some(e) = probe::entry_for_uid(&map, &uid) {
+                return Some((p, e.clone()));
+            }
+        }
+    }
+    None
+}
+
+/// Record which board a probe is sitting on, by reading the chip's UID
+/// through it. Replaces the ssh-and-append-a-line step.
+fn assign(api: &Api, query: &str) -> anyhow::Result<serde_json::Value> {
+    let arg = |k: &str| {
+        query
+            .split('&')
+            .find_map(|kv| kv.strip_prefix(&format!("{k}=")))
+    };
+    let Some(board) = arg("board") else {
+        anyhow::bail!("board= is required, e.g. ?probe=2&board=exp1");
+    };
+    if !NODES.contains(&board) {
+        anyhow::bail!(
+            "unknown board '{board}' (expected one of {})",
+            NODES.join(", ")
+        );
+    }
+    let probes = probe::load_probes(&api.cfg.probes);
+    let want = arg("probe");
+    let Some(p) = probes.iter().find(|p| want.is_none_or(|w| w == p.id)) else {
+        anyhow::bail!("no probe '{}' in {}", want.unwrap_or("?"), api.cfg.probes);
+    };
+    let Some(uid) = probe::probe_uid(&p.tcl) else {
+        anyhow::bail!(
+            "probe {} reaches no target - unplugged, or the board is off",
+            p.id
+        );
+    };
+    probe::assign_board(&api.cfg.uid_map, &uid, board)?;
+    Ok(json!({ "probe": p.id, "uid": uid, "board": board, "file": api.cfg.uid_map }))
 }
 
 /// Per-node self-test step names from the wire contract, so no consumer
@@ -354,15 +401,21 @@ fn debugger(api: &Api) -> anyhow::Result<serde_json::Value> {
     }
     Ok(json!({
         "probe": probe_summary(api),
-        "openocd_tcl": api.cfg.openocd_tcl,
+        "probes_file": api.cfg.probes,
         "uid_map_file": api.cfg.uid_map,
         "mapped": map.iter().map(|e| json!({"uid": e.uid, "board": e.board})).collect::<Vec<_>>(),
         "config_warnings": warnings,
-        "hint": "map a new board: put the probe on it, read uid here, append '<uid> <board>'",
+        "hint": "map a new board: put a probe on it, then POST /api/debugger/assign?probe=<id>&board=<name>",
     }))
 }
 
 fn noinit(api: &Api, query: &str) -> anyhow::Result<serde_json::Value> {
+    // ?probe= picks which adapter to read through; without it the first
+    // one that reaches a target answers
+    let sel = query.split('&').find_map(|kv| kv.strip_prefix("probe="));
+    let tcl = probe_entry(api, sel)
+        .map(|(p, _)| p.tcl)
+        .unwrap_or_else(|| probe::load_probes(&api.cfg.probes)[0].tcl.clone());
     // ?addr= wins, then uids.conf, then config, then the scan. "no state"
     // is an answer, not an error: it differs from "no probe"
     let explicit = query
@@ -370,17 +423,18 @@ fn noinit(api: &Api, query: &str) -> anyhow::Result<serde_json::Value> {
         .find_map(|kv| kv.strip_prefix("addr="))
         .map(|v| u32::from_str_radix(v.trim_start_matches("0x"), 16))
         .transpose()?
-        .or_else(|| probe_board(api).and_then(|e| e.noinit))
+        .or_else(|| probe_entry(api, sel).and_then(|(_, e)| e.noinit))
         .or(api.cfg.noinit_addr);
 
-    // remember what the scan found
-    let cached = *api.noinit_at.lock().unwrap();
+    // remember what the scan found, keyed by the probe it was found through
+    let key = tcl.clone();
+    let cached = api.noinit_at.lock().unwrap().get(&key).copied();
     let addr = match explicit.or(cached) {
         Some(a) => Some(a),
         None => {
-            let found = probe::find_noinit(&api.cfg.openocd_tcl);
+            let found = probe::find_noinit(&tcl);
             if let Some(a) = found {
-                *api.noinit_at.lock().unwrap() = Some(a);
+                api.noinit_at.lock().unwrap().insert(key.clone(), a);
             }
             found
         }
@@ -389,17 +443,17 @@ fn noinit(api: &Api, query: &str) -> anyhow::Result<serde_json::Value> {
     let Some(addr) = addr else {
         return Ok(json!({
             "valid": false,
-            "probe_reachable": probe::read_words(&api.cfg.openocd_tcl, probe::UID_ADDR, 1).is_ok(),
+            "probe_reachable": probe::read_words(&tcl, probe::UID_ADDR, 1).is_ok(),
             "note": "no BootState magic anywhere in the scanned SRAM - the board cold-booted \
                      (flash.sh clears it), or the probe cannot reach it",
         }));
     };
 
-    let words = probe::read_words(&api.cfg.openocd_tcl, addr, probe::NOINIT_WORDS)?;
+    let words = probe::read_words(&tcl, addr, probe::NOINIT_WORDS)?;
     let decoded = probe::decode_noinit(addr, &words);
     // a moved image invalidates the remembered address; rescan next call
     if decoded["valid"] == json!(false) {
-        *api.noinit_at.lock().unwrap() = None;
+        api.noinit_at.lock().unwrap().remove(&key);
     }
     Ok(decoded)
 }

@@ -29,7 +29,10 @@ var SELF_TEST_STEPS = {
 		"TMP117 WHO_AM_I",
 		"TMP117 read",
 		"MS5611 PROM CRC",
-		"SD mounted"
+		"SD mounted",
+		"LiFi TX answers",
+		"LiFi RX answers",
+		"LiFi loopback"
 	],
 	exp3: [
 		"TMP117 WHO_AM_I",

@@ -1464,8 +1464,8 @@ var Point = function() {
 }();
 //#endregion
 //#region node_modules/zrender/lib/core/BoundingRect.js
-var mathMin$6 = Math.min;
-var mathMax$6 = Math.max;
+var mathMin$7 = Math.min;
+var mathMax$7 = Math.max;
 var mathAbs$4 = Math.abs;
 var XY$2 = ["x", "y"];
 var WH$2 = ["width", "height"];
@@ -1497,11 +1497,11 @@ var BoundingRect = function() {
 		return target;
 	};
 	BoundingRect.prototype.union = function(other) {
-		var x = mathMin$6(other.x, this.x);
-		var y = mathMin$6(other.y, this.y);
-		if (isFinite(this.x) && isFinite(this.width)) this.width = mathMax$6(other.x + other.width, this.x + this.width) - x;
+		var x = mathMin$7(other.x, this.x);
+		var y = mathMin$7(other.y, this.y);
+		if (isFinite(this.x) && isFinite(this.width)) this.width = mathMax$7(other.x + other.width, this.x + this.width) - x;
 		else this.width = other.width;
-		if (isFinite(this.y) && isFinite(this.height)) this.height = mathMax$6(other.y + other.height, this.y + this.height) - y;
+		if (isFinite(this.y) && isFinite(this.height)) this.height = mathMax$7(other.y + other.height, this.y + this.height) - y;
 		else this.height = other.height;
 		this.x = x;
 		this.y = y;
@@ -1613,10 +1613,10 @@ var BoundingRect = function() {
 		rt.transform(m);
 		rb.transform(m);
 		lb.transform(m);
-		target.x = mathMin$6(lt.x, rb.x, lb.x, rt.x);
-		target.y = mathMin$6(lt.y, rb.y, lb.y, rt.y);
-		var maxX = mathMax$6(lt.x, rb.x, lb.x, rt.x);
-		var maxY = mathMax$6(lt.y, rb.y, lb.y, rt.y);
+		target.x = mathMin$7(lt.x, rb.x, lb.x, rt.x);
+		target.y = mathMin$7(lt.y, rb.y, lb.y, rt.y);
+		var maxX = mathMax$7(lt.x, rb.x, lb.x, rt.x);
+		var maxY = mathMax$7(lt.y, rb.y, lb.y, rt.y);
 		target.width = maxX - target.x;
 		target.height = maxY - target.y;
 	};
@@ -1643,7 +1643,7 @@ var _tmpCalcTrans = [];
 function intersectOneDim(a0, a1, b0, b1, updateDimIdx, useMTV, outIntersectRect, clamp) {
 	var d0 = mathAbs$4(a1 - b0);
 	var d1 = mathAbs$4(b1 - a0);
-	var d01min = mathMin$6(d0, d1);
+	var d01min = mathMin$7(d0, d1);
 	var updateDim = XY$2[updateDimIdx];
 	var zeroDim = XY$2[1 - updateDimIdx];
 	var wh = WH$2[updateDimIdx];
@@ -1662,12 +1662,12 @@ function intersectOneDim(a0, a1, b0, b1, updateDimIdx, useMTV, outIntersectRect,
 	}
 	else {
 		if (outIntersectRect) {
-			outIntersectRect[updateDim] = mathMax$6(a0, b0);
-			outIntersectRect[wh] = mathMin$6(a1, b1) - outIntersectRect[updateDim];
+			outIntersectRect[updateDim] = mathMax$7(a0, b0);
+			outIntersectRect[wh] = mathMin$7(a1, b1) - outIntersectRect[updateDim];
 		}
 		if (useMTV) {
 			if (d01min < _lenMinMax[0] || _intersectCtx$1.useDir) {
-				_lenMinMax[0] = mathMin$6(d01min, _lenMinMax[0]);
+				_lenMinMax[0] = mathMin$7(d01min, _lenMinMax[0]);
 				if (d0 < d1 || !_intersectCtx$1.bidirectional) {
 					_minTv$1[updateDim] = d0;
 					_minTv$1[zeroDim] = 0;
@@ -1696,7 +1696,7 @@ function createIntersectContext() {
 		negativeSize: false,
 		reset: function(opt, useMTV) {
 			_ctx.touchThreshold = 0;
-			if (opt && opt.touchThreshold != null) _ctx.touchThreshold = mathMax$6(0, opt.touchThreshold);
+			if (opt && opt.touchThreshold != null) _ctx.touchThreshold = mathMax$7(0, opt.touchThreshold);
 			_ctx.negativeSize = false;
 			if (!useMTV) return;
 			_ctx.minTv.set(Infinity, Infinity);
@@ -6722,8 +6722,8 @@ var TO_FIXED_SUPPORTED_PRECISION_MAX = 20;
 function _trim(str) {
 	return str.replace(/^\s+|\s+$/g, "");
 }
-var mathMin$5 = Math.min;
-var mathMax$5 = Math.max;
+var mathMin$6 = Math.min;
+var mathMax$6 = Math.max;
 var mathAbs$3 = Math.abs;
 var mathRound = Math.round;
 var mathFloor = Math.floor;
@@ -6804,7 +6804,7 @@ function isOptionStringPercent(option) {
 }
 function round$1(x, precision, returnStr) {
 	if (isNaN(precision)) return returnStr ? "" + x : +x;
-	precision = mathMin$5(mathMax$5(0, precision), TO_FIXED_SUPPORTED_PRECISION_MAX);
+	precision = mathMin$6(mathMax$6(0, precision), TO_FIXED_SUPPORTED_PRECISION_MAX);
 	x = (+x).toFixed(precision);
 	return returnStr ? x : +x;
 }
@@ -6843,7 +6843,7 @@ function getPrecisionSafe(val) {
 	var exp = eIndex > 0 ? +str.slice(eIndex + 1) : 0;
 	var significandPartLen = eIndex > 0 ? eIndex : str.length;
 	var dotIndex = str.indexOf(".");
-	return mathMax$5(0, (dotIndex < 0 ? 0 : significandPartLen - 1 - dotIndex) - exp);
+	return mathMax$6(0, (dotIndex < 0 ? 0 : significandPartLen - 1 - dotIndex) - exp);
 }
 /**
 * This method chooses a reasonable "data" precision that can be used in `round` method.
@@ -6865,7 +6865,7 @@ function getAcceptableTickPrecision(dataExtent, pxSpan, pxDiffAcceptable) {
 	if (!isFinite(dataSpan) || dataSpan === 0) return NaN;
 	var dataExp2 = mathLog(2 * mathAbs$3(pxDiffAcceptable || 1) * mathAbs$3(dataSpan)) / mathLN10;
 	var pxExp = mathLog(mathAbs$3(pxSpan)) / mathLN10;
-	var precision = mathMax$5(0, mathCeil(-dataExp2 + pxExp));
+	var precision = mathMax$6(0, mathCeil(-dataExp2 + pxExp));
 	if (!isFinite(precision)) precision = NaN;
 	return precision;
 }
@@ -6874,7 +6874,7 @@ function getAcceptableTickPrecision(dataExtent, pxSpan, pxDiffAcceptable) {
 * See <http://0.30000000000000004.com/>
 */
 function addSafe(val0, val1) {
-	var maxPrecision = mathMax$5(getPrecision(val0), getPrecision(val1));
+	var maxPrecision = mathMax$6(getPrecision(val0), getPrecision(val1));
 	var sum = val0 + val1;
 	return maxPrecision > TO_FIXED_SUPPORTED_PRECISION_MAX ? sum : round$1(sum, maxPrecision);
 }
@@ -7684,6 +7684,9 @@ function removeDuplicatesGetKeyFromValueProp(item) {
 }
 function removeDuplicatesGetKeyFromItemItself(item) {
 	return item + "";
+}
+function getIncrementalId(seriesModel, useIncremental) {
+	return retrieve2(useIncremental, true) ? seriesModel.seriesIndex + 2 : 0;
 }
 function preparePipelineContext(seriesModel, view, pipeline) {
 	var dataLen = seriesModel.getData().count();
@@ -8688,8 +8691,8 @@ function isDisplayableCulled(el, width, height) {
 }
 //#endregion
 //#region node_modules/zrender/lib/core/bbox.js
-var mathMin$4 = Math.min;
-var mathMax$4 = Math.max;
+var mathMin$5 = Math.min;
+var mathMax$5 = Math.max;
 var mathSin$3 = Math.sin;
 var mathCos$3 = Math.cos;
 var PI2$5 = Math.PI * 2;
@@ -8697,10 +8700,10 @@ var start = create$1();
 var end = create$1();
 var extremity = create$1();
 function fromLine(x0, y0, x1, y1, min, max) {
-	min[0] = mathMin$4(x0, x1);
-	min[1] = mathMin$4(y0, y1);
-	max[0] = mathMax$4(x0, x1);
-	max[1] = mathMax$4(y0, y1);
+	min[0] = mathMin$5(x0, x1);
+	min[1] = mathMin$5(y0, y1);
+	max[0] = mathMax$5(x0, x1);
+	max[1] = mathMax$5(y0, y1);
 }
 var xDim = [];
 var yDim = [];
@@ -8714,35 +8717,35 @@ function fromCubic(x0, y0, x1, y1, x2, y2, x3, y3, min, max) {
 	max[1] = -Infinity;
 	for (var i = 0; i < n; i++) {
 		var x = cubicAt$1(x0, x1, x2, x3, xDim[i]);
-		min[0] = mathMin$4(x, min[0]);
-		max[0] = mathMax$4(x, max[0]);
+		min[0] = mathMin$5(x, min[0]);
+		max[0] = mathMax$5(x, max[0]);
 	}
 	n = cubicExtrema$1(y0, y1, y2, y3, yDim);
 	for (var i = 0; i < n; i++) {
 		var y = cubicAt$1(y0, y1, y2, y3, yDim[i]);
-		min[1] = mathMin$4(y, min[1]);
-		max[1] = mathMax$4(y, max[1]);
+		min[1] = mathMin$5(y, min[1]);
+		max[1] = mathMax$5(y, max[1]);
 	}
-	min[0] = mathMin$4(x0, min[0]);
-	max[0] = mathMax$4(x0, max[0]);
-	min[0] = mathMin$4(x3, min[0]);
-	max[0] = mathMax$4(x3, max[0]);
-	min[1] = mathMin$4(y0, min[1]);
-	max[1] = mathMax$4(y0, max[1]);
-	min[1] = mathMin$4(y3, min[1]);
-	max[1] = mathMax$4(y3, max[1]);
+	min[0] = mathMin$5(x0, min[0]);
+	max[0] = mathMax$5(x0, max[0]);
+	min[0] = mathMin$5(x3, min[0]);
+	max[0] = mathMax$5(x3, max[0]);
+	min[1] = mathMin$5(y0, min[1]);
+	max[1] = mathMax$5(y0, max[1]);
+	min[1] = mathMin$5(y3, min[1]);
+	max[1] = mathMax$5(y3, max[1]);
 }
 function fromQuadratic(x0, y0, x1, y1, x2, y2, min, max) {
 	var quadraticExtremum$1 = quadraticExtremum;
 	var quadraticAt$1 = quadraticAt;
-	var tx = mathMax$4(mathMin$4(quadraticExtremum$1(x0, x1, x2), 1), 0);
-	var ty = mathMax$4(mathMin$4(quadraticExtremum$1(y0, y1, y2), 1), 0);
+	var tx = mathMax$5(mathMin$5(quadraticExtremum$1(x0, x1, x2), 1), 0);
+	var ty = mathMax$5(mathMin$5(quadraticExtremum$1(y0, y1, y2), 1), 0);
 	var x = quadraticAt$1(x0, x1, x2, tx);
 	var y = quadraticAt$1(y0, y1, y2, ty);
-	min[0] = mathMin$4(x0, x2, x);
-	min[1] = mathMin$4(y0, y2, y);
-	max[0] = mathMax$4(x0, x2, x);
-	max[1] = mathMax$4(y0, y2, y);
+	min[0] = mathMin$5(x0, x2, x);
+	min[1] = mathMin$5(y0, y2, y);
+	max[0] = mathMax$5(x0, x2, x);
+	max[1] = mathMax$5(y0, y2, y);
 }
 function fromArc(x, y, rx, ry, startAngle, endAngle, anticlockwise, min, max) {
 	var vec2Min = min$1;
@@ -8796,8 +8799,8 @@ var min = [];
 var max = [];
 var min2 = [];
 var max2 = [];
-var mathMin$3 = Math.min;
-var mathMax$3 = Math.max;
+var mathMin$4 = Math.min;
+var mathMax$4 = Math.max;
 var mathCos$2 = Math.cos;
 var mathSin$2 = Math.sin;
 var mathAbs$2 = Math.abs;
@@ -9165,7 +9168,7 @@ var PathProxy = function() {
 						x0 = mathCos$2(startAngle) * rx + cx;
 						y0 = mathSin$2(startAngle) * ry + cy;
 					}
-					l = mathMax$3(rx, ry) * mathMin$3(PI2$4, Math.abs(delta));
+					l = mathMax$4(rx, ry) * mathMin$4(PI2$4, Math.abs(delta));
 					xi = mathCos$2(endAngle) * rx + cx;
 					yi = mathSin$2(endAngle) * ry + cy;
 					break;
@@ -9351,13 +9354,13 @@ var PathProxy = function() {
 						if (accumLength + l > displayedLength) {
 							var d_1 = displayedLength - accumLength;
 							ctx.moveTo(x, y);
-							ctx.lineTo(x + mathMin$3(d_1, width), y);
+							ctx.lineTo(x + mathMin$4(d_1, width), y);
 							d_1 -= width;
-							if (d_1 > 0) ctx.lineTo(x + width, y + mathMin$3(d_1, height));
+							if (d_1 > 0) ctx.lineTo(x + width, y + mathMin$4(d_1, height));
 							d_1 -= height;
-							if (d_1 > 0) ctx.lineTo(x + mathMax$3(width - d_1, 0), y + height);
+							if (d_1 > 0) ctx.lineTo(x + mathMax$4(width - d_1, 0), y + height);
 							d_1 -= width;
-							if (d_1 > 0) ctx.lineTo(x, y + mathMax$3(height - d_1, 0));
+							if (d_1 > 0) ctx.lineTo(x, y + mathMax$4(height - d_1, 0));
 							break lo;
 						}
 						accumLength += l;
@@ -11721,8 +11724,8 @@ var mathACos = Math.acos;
 var mathATan2 = Math.atan2;
 var mathAbs$1 = Math.abs;
 var mathSqrt = Math.sqrt;
-var mathMax$2 = Math.max;
-var mathMin$2 = Math.min;
+var mathMax$3 = Math.max;
+var mathMin$3 = Math.min;
 var e = 1e-4;
 function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
 	var dx10 = x1 - x0;
@@ -11751,7 +11754,7 @@ function computeCornerTangents(x0, y0, x1, y1, radius, cr, clockwise) {
 	var d2 = dx * dx + dy * dy;
 	var r = radius - cr;
 	var s = x11 * y10 - x10 * y11;
-	var d = (dy < 0 ? -1 : 1) * mathSqrt(mathMax$2(0, r * r * d2 - s * s));
+	var d = (dy < 0 ? -1 : 1) * mathSqrt(mathMax$3(0, r * r * d2 - s * s));
 	var cx0 = (s * dy - dx * d) / d2;
 	var cy0 = (-s * dx - dy * d) / d2;
 	var cx1 = (s * dy + dx * d) / d2;
@@ -11802,8 +11805,8 @@ function normalizeCornerRadius(cr) {
 }
 function buildPath$1(ctx, shape) {
 	var _a;
-	var radius = mathMax$2(shape.r, 0);
-	var innerRadius = mathMax$2(shape.r0 || 0, 0);
+	var radius = mathMax$3(shape.r, 0);
+	var innerRadius = mathMax$3(shape.r0 || 0, 0);
 	var hasRadius = radius > 0;
 	if (!hasRadius && !(innerRadius > 0)) return;
 	if (!hasRadius) {
@@ -11856,12 +11859,12 @@ function buildPath$1(ctx, shape) {
 			var cornerRadius = shape.cornerRadius;
 			if (cornerRadius) _a = normalizeCornerRadius(cornerRadius), icrStart = _a[0], icrEnd = _a[1], ocrStart = _a[2], ocrEnd = _a[3];
 			var halfRd = mathAbs$1(radius - innerRadius) / 2;
-			ocrs = mathMin$2(halfRd, ocrStart);
-			ocre = mathMin$2(halfRd, ocrEnd);
-			icrs = mathMin$2(halfRd, icrStart);
-			icre = mathMin$2(halfRd, icrEnd);
-			limitedOcrMax = ocrMax = mathMax$2(ocrs, ocre);
-			limitedIcrMax = icrMax = mathMax$2(icrs, icre);
+			ocrs = mathMin$3(halfRd, ocrStart);
+			ocre = mathMin$3(halfRd, ocrEnd);
+			icrs = mathMin$3(halfRd, icrStart);
+			icre = mathMin$3(halfRd, icrEnd);
+			limitedOcrMax = ocrMax = mathMax$3(ocrs, ocre);
+			limitedIcrMax = icrMax = mathMax$3(icrs, icre);
 			if (ocrMax > e || icrMax > e) {
 				xre = radius * mathCos(endAngle);
 				yre = radius * mathSin(endAngle);
@@ -11876,16 +11879,16 @@ function buildPath$1(ctx, shape) {
 						var y1 = yre - it_1[1];
 						var a = 1 / mathSin(mathACos((x0 * x1 + y0 * y1) / (mathSqrt(x0 * x0 + y0 * y0) * mathSqrt(x1 * x1 + y1 * y1))) / 2);
 						var b = mathSqrt(it_1[0] * it_1[0] + it_1[1] * it_1[1]);
-						limitedOcrMax = mathMin$2(ocrMax, (radius - b) / (a + 1));
-						limitedIcrMax = mathMin$2(icrMax, (innerRadius - b) / (a - 1));
+						limitedOcrMax = mathMin$3(ocrMax, (radius - b) / (a + 1));
+						limitedIcrMax = mathMin$3(icrMax, (innerRadius - b) / (a - 1));
 					}
 				}
 			}
 		}
 		if (!hasArc) ctx.moveTo(cx + xrs, cy + yrs);
 		else if (limitedOcrMax > e) {
-			var crStart = mathMin$2(ocrStart, limitedOcrMax);
-			var crEnd = mathMin$2(ocrEnd, limitedOcrMax);
+			var crStart = mathMin$3(ocrStart, limitedOcrMax);
+			var crEnd = mathMin$3(ocrEnd, limitedOcrMax);
 			var ct0 = computeCornerTangents(xirs, yirs, xrs, yrs, radius, crStart, clockwise);
 			var ct1 = computeCornerTangents(xre, yre, xire, yire, radius, crEnd, clockwise);
 			ctx.moveTo(cx + ct0.cx + ct0.x0, cy + ct0.cy + ct0.y0);
@@ -11901,8 +11904,8 @@ function buildPath$1(ctx, shape) {
 		}
 		if (!(innerRadius > e) || !hasArc) ctx.lineTo(cx + xire, cy + yire);
 		else if (limitedIcrMax > e) {
-			var crStart = mathMin$2(icrStart, limitedIcrMax);
-			var crEnd = mathMin$2(icrEnd, limitedIcrMax);
+			var crStart = mathMin$3(icrStart, limitedIcrMax);
+			var crEnd = mathMin$3(icrEnd, limitedIcrMax);
 			var ct0 = computeCornerTangents(xire, yire, xre, yre, innerRadius, -crEnd, clockwise);
 			var ct1 = computeCornerTangents(xrs, yrs, xirs, yirs, innerRadius, -crStart, clockwise);
 			ctx.lineTo(cx + ct0.cx + ct0.x0, cy + ct0.cy + ct0.y0);
@@ -12386,8 +12389,8 @@ var RadialGradient = function(_super) {
 }(Gradient);
 //#endregion
 //#region node_modules/zrender/lib/core/OrientedBoundingRect.js
-var mathMin$1 = Math.min;
-var mathMax$1 = Math.max;
+var mathMin$2 = Math.min;
+var mathMax$2 = Math.max;
 var mathAbs = Math.abs;
 var _extent = [0, 0];
 var _extent2 = [0, 0];
@@ -12448,12 +12451,12 @@ var OrientedBoundingRect = function() {
 				if (_intersectCtx.negativeSize || noMtv) return overlapped;
 				var dist0 = mathAbs(_extent2[0] - _extent[1]);
 				var dist1 = mathAbs(_extent[0] - _extent2[1]);
-				if (mathMin$1(dist0, dist1) > _maxTv.len()) if (dist0 < dist1) Point.scale(_maxTv, axis, -dist0 * inverse);
+				if (mathMin$2(dist0, dist1) > _maxTv.len()) if (dist0 < dist1) Point.scale(_maxTv, axis, -dist0 * inverse);
 				else Point.scale(_maxTv, axis, dist1 * inverse);
 			} else if (!noMtv) {
 				var dist0 = mathAbs(_extent2[0] - _extent[1]);
 				var dist1 = mathAbs(_extent[0] - _extent2[1]);
-				if (_intersectCtx.useDir || mathMin$1(dist0, dist1) < _minTv.len()) {
+				if (_intersectCtx.useDir || mathMin$2(dist0, dist1) < _minTv.len()) {
 					if (dist0 < dist1 || !_intersectCtx.bidirectional) {
 						Point.scale(_minTv, axis, dist0 * inverse);
 						if (_intersectCtx.useDir) _intersectCtx.calcDirMTV();
@@ -12475,8 +12478,8 @@ var OrientedBoundingRect = function() {
 		var max = proj;
 		for (var i = 1; i < corners.length; i++) {
 			var proj_1 = corners[i].dot(axis) + origin[dim];
-			min = mathMin$1(proj_1, min);
-			max = mathMax$1(proj_1, max);
+			min = mathMin$2(proj_1, min);
+			max = mathMax$2(proj_1, max);
 		}
 		out[0] = min + _intersectCtx.touchThreshold;
 		out[1] = max - _intersectCtx.touchThreshold;
@@ -13048,11 +13051,11 @@ function groupTransition(g1, g2, animatableModel) {
 function clipPointsByRect(points, rect) {
 	return map$1(points, function(point) {
 		var x = point[0];
-		x = mathMax$5(x, rect.x);
-		x = mathMin$5(x, rect.x + rect.width);
+		x = mathMax$6(x, rect.x);
+		x = mathMin$6(x, rect.x + rect.width);
 		var y = point[1];
-		y = mathMax$5(y, rect.y);
-		y = mathMin$5(y, rect.y + rect.height);
+		y = mathMax$6(y, rect.y);
+		y = mathMin$6(y, rect.y + rect.height);
 		return [x, y];
 	});
 }
@@ -13060,10 +13063,10 @@ function clipPointsByRect(points, rect) {
 * Return a new clipped rect. If rect size are negative, return undefined.
 */
 function clipRectByRect(targetRect, rect) {
-	var x = mathMax$5(targetRect.x, rect.x);
-	var x2 = mathMin$5(targetRect.x + targetRect.width, rect.x + rect.width);
-	var y = mathMax$5(targetRect.y, rect.y);
-	var y2 = mathMin$5(targetRect.y + targetRect.height, rect.y + rect.height);
+	var x = mathMax$6(targetRect.x, rect.x);
+	var x2 = mathMin$6(targetRect.x + targetRect.width, rect.x + rect.width);
+	var y = mathMax$6(targetRect.y, rect.y);
+	var y2 = mathMin$6(targetRect.y + targetRect.height, rect.y + rect.height);
 	if (x2 >= x && y2 >= y) return {
 		x,
 		y,
@@ -13161,10 +13164,10 @@ function expandOrShrinkRect(rect, delta, shrinkOrExpand, noNegative, minSize) {
 		_tmpExpandRectDelta[3] = delta[3];
 	}
 	if (noNegative) {
-		_tmpExpandRectDelta[0] = mathMax$5(0, _tmpExpandRectDelta[0]);
-		_tmpExpandRectDelta[1] = mathMax$5(0, _tmpExpandRectDelta[1]);
-		_tmpExpandRectDelta[2] = mathMax$5(0, _tmpExpandRectDelta[2]);
-		_tmpExpandRectDelta[3] = mathMax$5(0, _tmpExpandRectDelta[3]);
+		_tmpExpandRectDelta[0] = mathMax$6(0, _tmpExpandRectDelta[0]);
+		_tmpExpandRectDelta[1] = mathMax$6(0, _tmpExpandRectDelta[1]);
+		_tmpExpandRectDelta[2] = mathMax$6(0, _tmpExpandRectDelta[2]);
+		_tmpExpandRectDelta[3] = mathMax$6(0, _tmpExpandRectDelta[3]);
 	}
 	if (shrinkOrExpand) {
 		_tmpExpandRectDelta[0] = -_tmpExpandRectDelta[0];
@@ -13186,7 +13189,7 @@ function expandRectOnOneDimension(rect, delta, xy, wh, ltIdx, rbIdx, minSize) {
 	var deltaSum = delta[rbIdx] + delta[ltIdx];
 	var oldSize = rect[wh];
 	rect[wh] += deltaSum;
-	minSize = mathMax$5(0, mathMin$5(minSize, oldSize));
+	minSize = mathMax$6(0, mathMin$6(minSize, oldSize));
 	if (rect[wh] < minSize) {
 		rect[wh] = minSize;
 		rect[xy] += delta[ltIdx] >= 0 ? -delta[ltIdx] : delta[rbIdx] >= 0 ? oldSize + delta[rbIdx] : mathAbs$3(deltaSum) > 1e-8 ? (oldSize - minSize) * delta[ltIdx] / deltaSum : 0;
@@ -13306,11 +13309,11 @@ function doUpdateZ(el, z, zlevel, maxZ2) {
 	var labelLine = el.getTextGuideLine();
 	if (el.isGroup) {
 		var children = el.childrenRef();
-		for (var i = 0; i < children.length; i++) maxZ2 = mathMax$5(doUpdateZ(children[i], z, zlevel, maxZ2), maxZ2);
+		for (var i = 0; i < children.length; i++) maxZ2 = mathMax$6(doUpdateZ(children[i], z, zlevel, maxZ2), maxZ2);
 	} else {
 		el.z = z;
 		el.zlevel = zlevel;
-		maxZ2 = mathMax$5(el.z2 || 0, maxZ2);
+		maxZ2 = mathMax$6(el.z2 || 0, maxZ2);
 	}
 	if (label) {
 		label.z = z;
@@ -13645,6 +13648,19 @@ function getFont(opt, ecModel) {
 	].join(" "));
 }
 var labelInner = makeInner();
+function setLabelValueAnimation(label, labelStatesModels, value, getDefaultText) {
+	if (!label) return;
+	var obj = labelInner(label);
+	obj.prevValue = obj.value;
+	obj.value = value;
+	var normalLabelModel = labelStatesModels.normal;
+	obj.valueAnimation = normalLabelModel.get("valueAnimation");
+	if (obj.valueAnimation) {
+		obj.precision = normalLabelModel.get("precision");
+		obj.defaultInterpolatedText = getDefaultText;
+		obj.statesModels = labelStatesModels;
+	}
+}
 /**
 * PENDING: Temporary impl. unify them?
 * @see {LabelCommonOption['textMargin']}
@@ -15444,15 +15460,15 @@ extend(color$1, {
 	axisMinorSplitLine: color$1.neutral05
 });
 for (var key in color$1) if (color$1.hasOwnProperty(key)) {
-	var hex = color$1[key];
+	var hex$1 = color$1[key];
 	if (key === "theme") tokens.darkColor.theme = color$1.theme.slice();
 	else if (key === "highlight") tokens.darkColor.highlight = "rgba(255,231,130,0.4)";
-	else if (key.indexOf("accent") === 0) tokens.darkColor[key] = modifyHSL(hex, null, function(s) {
+	else if (key.indexOf("accent") === 0) tokens.darkColor[key] = modifyHSL(hex$1, null, function(s) {
 		return s * .5;
 	}, function(l) {
 		return Math.min(1, 1.3 - l);
 	});
-	else tokens.darkColor[key] = modifyHSL(hex, null, function(s) {
+	else tokens.darkColor[key] = modifyHSL(hex$1, null, function(s) {
 		return s * .9;
 	}, function(l) {
 		return 1 - Math.pow(l, 1.5);
@@ -25739,7 +25755,7 @@ function extentDiffers(extent1, extent2) {
 }
 function ensureValidSplitNumber(rawSplitNumber, defaultSplitNumber) {
 	rawSplitNumber = rawSplitNumber || defaultSplitNumber;
-	return mathRound(mathMax$5(rawSplitNumber, 1));
+	return mathRound(mathMax$6(rawSplitNumber, 1));
 }
 /**
 * NOTE: The result can have only one item, e.g., when `extent[0] === extent[1]`
@@ -25822,7 +25838,7 @@ var OrdinalScale = function(_super) {
 		var ticksByOrdinal = this._ticksByOrdinalNumber = [];
 		var tickNum = 0;
 		var allCategoryLen = this._ordinalMeta.categories.length;
-		for (var len = mathMin$5(allCategoryLen, infoOrdinalNumbers.length); tickNum < len; ++tickNum) {
+		for (var len = mathMin$6(allCategoryLen, infoOrdinalNumbers.length); tickNum < len; ++tickNum) {
 			var ordinalNumber = ordinalsByTick[tickNum] = infoOrdinalNumbers[tickNum];
 			ticksByOrdinal[ordinalNumber] = tickNum;
 		}
@@ -26012,7 +26028,7 @@ var IntervalScale = function(_super) {
 				if (tick > niceExtent[1] || !isFinite(tick) || !isFinite(niceExtent[1])) break;
 			} else {
 				if (niceTickIdx > intervalCount) break;
-				tick = mathMin$5(tick, niceExtent[1]);
+				tick = mathMin$6(tick, niceExtent[1]);
 				if (niceTickIdx === intervalCount) tick = niceExtent[1];
 			}
 			ticks.push({ value: tick });
@@ -26177,7 +26193,7 @@ function getMinutesAndSecondsInterval(approxInterval, isMinutes) {
 	return approxInterval > 30 ? 30 : approxInterval > 20 ? 20 : approxInterval > 15 ? 15 : approxInterval > 10 ? 10 : approxInterval > 5 ? 5 : approxInterval > 2 ? 2 : 1;
 }
 function getMillisecondsInterval(approxInterval) {
-	return mathMax$5(nice(approxInterval, true), 1);
+	return mathMax$6(nice(approxInterval, true), 1);
 }
 function getFirstTimestampOfUnit(timestamp, unitName, isUTC) {
 	var upperUnitIdx = Math.max(0, indexOf(primaryTimeUnits, unitName) - 1);
@@ -26701,9 +26717,14 @@ var AxisModelCommonMixin = function() {
 	AxisModelCommonMixin.prototype.getCoordSysModel = function() {};
 	return AxisModelCommonMixin;
 }();
-makeCallOnlyOnce();
+//#endregion
+//#region node_modules/echarts/lib/coord/axisStatistics.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+var callOnlyOnce$2 = makeCallOnlyOnce();
 var ecModelCacheFullUpdateInner = makeInner();
-makeInner();
+var ecModelCachePrepareInner = makeInner();
 function getAxisStatPerKeyPerAxis(axis, axisStatKey) {
 	var axisModel = axis.model;
 	var keyed = ecModelCacheFullUpdateInner(getCachePerECFullUpdate(axisModel.ecModel)).keyed;
@@ -26736,12 +26757,34 @@ function eachSeriesOnAxis(axis, cb) {
 	var seriesOnAxisMap = ecModelCacheFullUpdateInner(getCachePerECFullUpdate(ecModel)).axSer;
 	seriesOnAxisMap && eachSeriesDealForAxisStat(ecModel, seriesOnAxisMap.get(axis.model.uid), cb);
 }
+/**
+* NOTE:
+*  - series declaration order is respected (some ec option precedence matters, e.g., bar series).
+*  - series filtered out are excluded.
+*/
+function eachSeriesOnAxisOnKey(axis, axisStatKey, cb) {
+	var perKeyPerAxis = getAxisStatPerKeyPerAxis(axis, axisStatKey);
+	perKeyPerAxis && eachSeriesDealForAxisStat(axis.model.ecModel, perKeyPerAxis.sers, cb);
+}
 function eachSeriesDealForAxisStat(ecModel, seriesList, cb) {
 	if (!seriesList) return;
 	for (var i = 0; i < seriesList.length; i++) {
 		var seriesModel = seriesList[i];
 		if (!ecModel.isSeriesFiltered(seriesModel)) cb(seriesModel);
 	}
+}
+/**
+* NOTICE: Available after `CoordinateSystem['create']` (not included).
+*
+* Query all axes that have at least one associated series (via `associateSeriesWithAxis`)
+* by the given key.
+*/
+function eachAxisOnKey(ecModel, axisStatKey, cb) {
+	var keyed = ecModelCacheFullUpdateInner(getCachePerECFullUpdate(ecModel)).keyed;
+	var perKey = keyed && keyed.get(axisStatKey);
+	perKey && perKey.each(function(perKeyPerAxis) {
+		cb(perKeyPerAxis.axis);
+	});
 }
 /**
 * NOTICE: Available after `CoordinateSystem['create']` (not included).
@@ -26756,6 +26799,22 @@ function eachKeyOnAxis(axis, cb) {
 		cb(axisStatKey);
 	});
 }
+/**
+* NOTICE: this processor may be omitted - it is registered only if required.
+*/
+function performAxisStatisticsOnOverallReset(ecModel) {
+	var ecPrepareCache = ecModelCachePrepareInner(getCachePerECPrepare(ecModel));
+	var ecPrepareCacheKeyed = ecPrepareCache.keyed || (ecPrepareCache.keyed = createHashMap());
+	eachKeyEachAxis(ecModel, function(perKeyPerAxis, axisStatKey, axisModelUid) {
+		var ecPrepareCachePerKey = ecPrepareCacheKeyed.get(axisStatKey) || ecPrepareCacheKeyed.set(axisStatKey, createHashMap());
+		var ecPreparePerKeyPerAxis = ecPrepareCachePerKey.get(axisModelUid) || ecPrepareCachePerKey.set(axisModelUid, {});
+		if (perKeyPerAxis.metrics.liPosMinGap) _metricImpl.liPosMinGap(ecModel, perKeyPerAxis, ecPreparePerKeyPerAxis);
+	});
+}
+function registerMetricImpl(metricType, impl) {
+	_metricImpl[metricType] = impl;
+}
+var _metricImpl = {};
 /**
 * NOTICE:
 *  - It must be called in `CoordinateSystem['create']`, before series filtering.
@@ -26799,6 +26858,18 @@ function associateSeriesWithAxis(axis, seriesModel, coordSysType) {
 */
 function makeClientLookupKey(seriesType, isBaseAxis, coordSysType) {
 	return seriesType + "|&" + retrieve2(isBaseAxis, true) + "|&" + (coordSysType || "");
+}
+/**
+* NOTICE: Can only be called in "install" stage.
+*
+* See `axisSnippets.ts` for some commonly used clients.
+*/
+function requireAxisStatistics(registers, client) {
+	var clientKey = makeClientLookupKey(client.seriesType, client.baseAxis, client.coordSysType);
+	clientsForLookup.set(clientKey, client);
+	callOnlyOnce$2(registers, function() {
+		registers.registerProcessor(registers.PRIORITY.PROCESSOR.AXIS_STATISTICS, { overallReset: performAxisStatisticsOnOverallReset });
+	});
 }
 var clientsForLookup = createHashMap();
 //#endregion
@@ -27072,6 +27143,16 @@ function injectScaleRawExtentInfo(scale, scaleRawExtentInfo, from) {
 	scale.rawExtentInfo = scaleRawExtentInfo;
 	scaleRawExtentInfo.from = from;
 }
+/**
+* See `axisSnippets.ts` for some commonly used handlers.
+*
+* FIXME:
+*  `boundaryGap: true` (i.e., `onBand: true` in code) has long been supported on category axis.
+*  And it is implemented in different code and not merged to this implementation yet.
+*/
+function registerAxisContainShapeHandler(axisStatKey, handler) {
+	axisContainShapeHandlerMap.set(axisStatKey, handler);
+}
 var axisContainShapeHandlerMap = createHashMap();
 /**
 * Prepare axis scale extent before "nice".
@@ -27148,11 +27229,11 @@ function adoptScaleExtentKindMapping(axis, scale, rawExtentResult, ecModel) {
 	if (!linearSupplement) return;
 	var scaleExtent = scale.getExtent();
 	if (isOrdinalScale(scale)) {
-		if (!axis.onBand) scale.setExtent2(1, mathMin$5(scaleExtent[0], scaleExtent[0] + linearSupplement[0]), mathMax$5(scaleExtent[1], scaleExtent[1] + linearSupplement[1]));
+		if (!axis.onBand) scale.setExtent2(1, mathMin$6(scaleExtent[0], scaleExtent[0] + linearSupplement[0]), mathMax$6(scaleExtent[1], scaleExtent[1] + linearSupplement[1]));
 	} else {
 		var scaleExtentExpanded = scaleExtent.slice();
-		if (!rawExtentResult.zoomFixMM[0]) scaleExtentExpanded[0] = mathMin$5(scaleExtentExpanded[0], scale.transformOut(scale.transformIn(scaleExtentExpanded[0], null) + linearSupplement[0], null));
-		if (!rawExtentResult.zoomFixMM[1]) scaleExtentExpanded[1] = mathMax$5(scaleExtentExpanded[1], scale.transformOut(scale.transformIn(scaleExtentExpanded[1], null) + linearSupplement[1], null));
+		if (!rawExtentResult.zoomFixMM[0]) scaleExtentExpanded[0] = mathMin$6(scaleExtentExpanded[0], scale.transformOut(scale.transformIn(scaleExtentExpanded[0], null) + linearSupplement[0], null));
+		if (!rawExtentResult.zoomFixMM[1]) scaleExtentExpanded[1] = mathMax$6(scaleExtentExpanded[1], scale.transformOut(scale.transformIn(scaleExtentExpanded[1], null) + linearSupplement[1], null));
 		if (scaleExtentExpanded[0] < scaleExtent[0] || scaleExtentExpanded[1] > scaleExtent[1]) scale.setExtent2(1, scaleExtentExpanded[0], scaleExtentExpanded[1]);
 	}
 }
@@ -27204,7 +27285,7 @@ function logScaleCalcNiceTicks(intervalStub, opt) {
 	var splitNumber = ensureValidSplitNumber(opt.splitNumber, 10);
 	var intervalExtent = intervalStub.getExtent();
 	var span = getScaleLinearSpanEffective(intervalStub);
-	var interval = mathMax$5(quantity(span), 1);
+	var interval = mathMax$6(quantity(span), 1);
 	if (splitNumber / span * interval <= .5) interval *= 10;
 	var intervalPrecision = getIntervalPrecision(interval);
 	var niceExtent = [round$1(mathCeil(intervalExtent[0] / interval) * interval, intervalPrecision), round$1(mathFloor(intervalExtent[1] / interval) * interval, intervalPrecision)];
@@ -27600,7 +27681,7 @@ function calcBandWidth(axis, opt) {
 	if (isOrdinalScale(scale)) calcBandWidthForCategoryAxis(out, axis, scaleLinearSpan, pxSpan);
 	else if (fromStat) calcBandWidthForNumericAxis(out, axis, scaleLinearSpan, pxSpan, fromStat);
 	else if (min == null) {}
-	if (min != null) out.w = isNullableNumberFinite(out.w) ? mathMax$5(min, out.w) : min;
+	if (min != null) out.w = isNullableNumberFinite(out.w) ? mathMax$6(min, out.w) : min;
 	return out;
 }
 function calcBandWidthForCategoryAxis(out, axis, scaleLinearSpan, pxSpan) {
@@ -28600,6 +28681,7 @@ function isPointIllegal(xOrY, yOrX) {
 //#endregion
 //#region node_modules/echarts/lib/util/vendor.js
 var Float32ArrayCtor = typeof Float32Array !== "undefined" ? Float32Array : void 0;
+var Float64ArrayCtor = typeof Float64Array !== "undefined" ? Float64Array : void 0;
 function createFloat32Array(capacity) {
 	return tryEnsureTypedArray({ ctor: Float32ArrayCtor }, capacity).arr;
 }
@@ -28739,8 +28821,8 @@ function lineAnimationDiff(oldData, newData, oldStackedOnPoints, newStackedOnPoi
 /**
 * AUTO-GENERATED FILE. DO NOT MODIFY.
 */
-var mathMin = Math.min;
-var mathMax = Math.max;
+var mathMin$1 = Math.min;
+var mathMax$1 = Math.max;
 /**
 * Draw smoothed line in non-monotone, in may cause undesired curve in extreme
 * situations. This should be used when points are non-monotone neither in x or
@@ -28840,18 +28922,18 @@ function drawSegment(ctx, points, start, segLen, allLen, dir, smooth, smoothMono
 						cpy1 = y - vy * smooth * (1 - ratioNextSeg);
 						nextCpx0 = x + vx * smooth * ratioNextSeg;
 						nextCpy0 = y + vy * smooth * ratioNextSeg;
-						nextCpx0 = mathMin(nextCpx0, mathMax(nextX, x));
-						nextCpy0 = mathMin(nextCpy0, mathMax(nextY, y));
-						nextCpx0 = mathMax(nextCpx0, mathMin(nextX, x));
-						nextCpy0 = mathMax(nextCpy0, mathMin(nextY, y));
+						nextCpx0 = mathMin$1(nextCpx0, mathMax$1(nextX, x));
+						nextCpy0 = mathMin$1(nextCpy0, mathMax$1(nextY, y));
+						nextCpx0 = mathMax$1(nextCpx0, mathMin$1(nextX, x));
+						nextCpy0 = mathMax$1(nextCpy0, mathMin$1(nextY, y));
 						vx = nextCpx0 - x;
 						vy = nextCpy0 - y;
 						cpx1 = x - vx * lenPrevSeg / lenNextSeg;
 						cpy1 = y - vy * lenPrevSeg / lenNextSeg;
-						cpx1 = mathMin(cpx1, mathMax(prevX, x));
-						cpy1 = mathMin(cpy1, mathMax(prevY, y));
-						cpx1 = mathMax(cpx1, mathMin(prevX, x));
-						cpy1 = mathMax(cpy1, mathMin(prevY, y));
+						cpx1 = mathMin$1(cpx1, mathMax$1(prevX, x));
+						cpy1 = mathMin$1(cpy1, mathMax$1(prevY, y));
+						cpx1 = mathMax$1(cpx1, mathMin$1(prevX, x));
+						cpy1 = mathMax$1(cpy1, mathMin$1(prevY, y));
 						vx = x - cpx1;
 						vy = y - cpy1;
 						nextCpx0 = x + vx * lenNextSeg / lenPrevSeg;
@@ -29069,6 +29151,12 @@ function createPolarClipPath(polar, hasAnimation, seriesModel) {
 		} }, seriesModel);
 	}
 	return clipPath;
+}
+function createClipPath(coordSys, hasAnimation, seriesModel, done, during) {
+	if (!coordSys) return null;
+	else if (coordSys.type === "polar") return createPolarClipPath(coordSys, hasAnimation, seriesModel);
+	else if (coordSys.type === "cartesian2d") return createGridClipPath(coordSys, hasAnimation, seriesModel, done, during);
+	return null;
 }
 //#endregion
 //#region node_modules/echarts/lib/coord/CoordinateSystem.js
@@ -30021,7 +30109,7 @@ function dataSample(seriesType) {
 /**
 * AUTO-GENERATED FILE. DO NOT MODIFY.
 */
-function install$12(registers) {
+function install$13(registers) {
 	registers.registerChartView(LineView);
 	registers.registerSeriesModel(LineSeriesModel);
 	registers.registerLayout(pointsLayout("line", true));
@@ -30972,6 +31060,16 @@ function layout(rect, axisModel, opt) {
 	layout.z2 = 1;
 	return layout;
 }
+/**
+* Note: If pie (or other similar series) use cartesian2d, here
+*  option `seriesModel.get('coordinateSystem') === 'cartesian2d'`
+*  and `seriesModel.coordinateSystem !== cartesian2dCoordSysInstance`
+*  and `seriesModel.boxCoordinateSystem === cartesian2dCoordSysInstance`,
+*  the logic below is probably wrong, therefore skip it temporarily.
+*/
+function isCartesian2DInjectedAsDataCoordSys(seriesModel) {
+	return seriesModel.coordinateSystem && seriesModel.coordinateSystem.type === "cartesian2d";
+}
 function findAxisModels(seriesModel) {
 	var axisModelMap = {
 		xAxisModel: null,
@@ -30999,6 +31097,105 @@ function createCartesianAxisViewCommonPartBuilder(gridRect, cartesians, axisMode
 function updateCartesianAxisViewCommonPartBuilder(axisBuilder, gridRect, axisModel) {
 	var newRaw = layout(gridRect, axisModel);
 	axisBuilder.updateCfg(newRaw);
+}
+//#endregion
+//#region node_modules/echarts/lib/coord/axisStatisticsMetricsImpl.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+function registerMetricImplLiPosMinGap() {
+	registerMetricImpl("liPosMinGap", metricLiPosMinGapImpl);
+}
+function metricLiPosMinGapImpl(ecModel, perKeyPerAxis, ecPreparePerKeyPerAxis) {
+	var newSerUids = createHashMap();
+	var ecPrepareSerUids = ecPreparePerKeyPerAxis.serUids;
+	var ecPrepareLiPosMinGap = ecPreparePerKeyPerAxis.liPosMinGap;
+	var ecPrepareCacheMiss;
+	var axis = perKeyPerAxis.axis;
+	var scale = axis.scale;
+	var needTransform = scale.needTransform();
+	var filter = scale.getFilter ? scale.getFilter() : null;
+	var filterParsed = parseSanitizationFilter(filter);
+	function eachSeries(cb) {
+		eachSeriesDealForAxisStat(ecModel, perKeyPerAxis.sers, function(seriesModel) {
+			var rawData = seriesModel.getRawData();
+			var dimStoreIdx = rawData.getDimensionIndex(rawData.mapDimension(axis.dim));
+			if (dimStoreIdx >= 0) cb(dimStoreIdx, seriesModel, rawData.getStore());
+		});
+	}
+	var bufferCapacity = 0;
+	eachSeries(function(dimStoreIdx, seriesModel, rawDataStore) {
+		newSerUids.set(seriesModel.uid, 1);
+		if (!ecPrepareSerUids || !ecPrepareSerUids.hasKey(seriesModel.uid)) ecPrepareCacheMiss = true;
+		bufferCapacity += rawDataStore.count();
+	});
+	if (!ecPrepareSerUids || ecPrepareSerUids.keys().length !== newSerUids.keys().length) ecPrepareCacheMiss = true;
+	if (!ecPrepareCacheMiss && ecPrepareLiPosMinGap != null) {
+		perKeyPerAxis.liPosMinGap = ecPrepareLiPosMinGap;
+		return;
+	}
+	tryEnsureTypedArray(tmpValueBuffer, bufferCapacity);
+	var writeIdx = 0;
+	eachSeries(function(dimStoreIdx, seriesModel, store) {
+		for (var i = 0, cnt = store.count(); i < cnt; ++i) {
+			var val = store.get(dimStoreIdx, i);
+			if (isFinite(val) && (!filter || passesSanitizationFilter(filterParsed, val))) {
+				if (needTransform) val = scale.transformIn(val, null);
+				tmpValueBuffer.arr[writeIdx++] = val;
+			}
+		}
+	});
+	var tmpValueBufferView = tmpValueBuffer.typed ? tmpValueBuffer.arr.subarray(0, writeIdx) : (tmpValueBuffer.arr.length = writeIdx, tmpValueBuffer.arr);
+	if (tmpValueBuffer.typed) tmpValueBufferView.sort();
+	else asc(tmpValueBufferView);
+	var min = Infinity;
+	for (var j = 1; j < writeIdx; ++j) {
+		var delta = tmpValueBufferView[j] - tmpValueBufferView[j - 1];
+		if (delta > 0 && delta < min) min = delta;
+	}
+	ecPreparePerKeyPerAxis.liPosMinGap = perKeyPerAxis.liPosMinGap = isNullableNumberFinite(min) ? min : writeIdx > 0 ? -2 : -1;
+	ecPreparePerKeyPerAxis.serUids = newSerUids;
+}
+var tmpValueBuffer = tryEnsureTypedArray({ ctor: Float64ArrayCtor }, 50);
+//#endregion
+//#region node_modules/echarts/lib/chart/helper/axisSnippets.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+/**
+* Require `requireAxisStatistics`.
+*
+* Simply expand `Scale` extent by half bandWidth.
+* Do nothing if an `OrdinalScale` has `boundaryGap: true`.
+*/
+function createBandWidthBasedAxisContainShapeHandler(axisStatKey) {
+	return function(axis, ecModel) {
+		var bandWidthResult = calcBandWidth(axis, { fromStat: { key: axisStatKey } });
+		if (isNullableNumberFinite(bandWidthResult.w2)) return [-bandWidthResult.w2 / 2, bandWidthResult.w2 / 2];
+	};
+}
+function makeAxisStatKey2(seriesType, coordSysType) {
+	return seriesType + "|&" + coordSysType;
+}
+/**
+* A pre-built `getMetrics`.
+*/
+function createMetricsNonOrdinalLinearPositiveMinGap(axis) {
+	registerMetricImplLiPosMinGap();
+	return { liPosMinGap: !isOrdinalScale(axis.scale) };
+}
+//#endregion
+//#region node_modules/echarts/lib/layout/barCommon.js
+function requireAxisStatisticsForBaseBar(registers, axisStatKey, seriesType, coordSysType) {
+	requireAxisStatistics(registers, {
+		key: axisStatKey,
+		seriesType,
+		coordSysType,
+		getMetrics: createMetricsNonOrdinalLinearPositiveMinGap
+	});
+}
+function getStartValue(baseAxis) {
+	return baseAxis.scale.rawExtentInfo.makeRenderInfo().startValue;
 }
 //#endregion
 //#region node_modules/echarts/lib/coord/cartesian/GridModel.js
@@ -31049,6 +31246,1351 @@ var GridModel = function(_super) {
 	};
 	return GridModel;
 }(ComponentModel);
+//#endregion
+//#region node_modules/echarts/lib/layout/barGrid.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+var callOnlyOnce$1 = makeCallOnlyOnce();
+var STACK_PREFIX = "__ec_stack_";
+function getSeriesStackId(seriesModel) {
+	return seriesModel.get("stack") || STACK_PREFIX + seriesModel.seriesIndex;
+}
+/**
+* NOTICE: This layout is based on axis pixel extent and scale extent.
+*  It may be used on estimation, where axis pixel extent and scale extent
+*  are approximately set. But the result should not be cached since the
+*  axis pixel extent and scale extent may be changed finally.
+*/
+function makeColumnLayoutOnAxisReal(baseAxis, seriesType) {
+	var seriesInfoListOnAxis = createLayoutInfoListOnAxis(baseAxis, seriesType);
+	seriesInfoListOnAxis.columnMap = calcBarWidthAndOffset(seriesInfoListOnAxis);
+	return seriesInfoListOnAxis;
+}
+function createLayoutInfoListOnAxis(baseAxis, seriesType) {
+	var axisStatKey = makeAxisStatKey2(seriesType, COORD_SYS_TYPE_CARTESIAN_2D);
+	var seriesInfoOnAxis = [];
+	var bandWidthResult = calcBandWidth(baseAxis, {
+		fromStat: { key: axisStatKey },
+		min: 1
+	});
+	eachSeriesOnAxisOnKey(baseAxis, axisStatKey, function(seriesModel) {
+		seriesInfoOnAxis.push({
+			barWidth: parsePercent(seriesModel.get("barWidth"), bandWidthResult.w),
+			barMaxWidth: parsePercent(seriesModel.get("barMaxWidth"), bandWidthResult.w),
+			barMinWidth: parsePercent(seriesModel.get("barMinWidth") || (isInLargeMode(seriesModel) ? .5 : 1), bandWidthResult.w),
+			barGap: seriesModel.get("barGap"),
+			barCategoryGap: seriesModel.get("barCategoryGap"),
+			defaultBarGap: seriesModel.get("defaultBarGap"),
+			stackId: getSeriesStackId(seriesModel)
+		});
+	});
+	return {
+		bandWidthResult,
+		seriesInfo: seriesInfoOnAxis
+	};
+}
+/**
+* CAUTION: When multiple series are laid out on one axis, relevant ec options effect all series.
+* But for historical reason, these options are configured on each series option, which may
+* introduce confliction. The legacy implementation uses some options (e.g., `defaultBarGap`)
+* from the first declared series, and other options (e.g., `barGap`, `barCategoryGap`) from the last declared
+* series. Nevertheless, We remain this design to avoid breaking change.
+*/
+function calcBarWidthAndOffset(seriesInfoOnAxis) {
+	var bandWidth = seriesInfoOnAxis.bandWidthResult.w;
+	var remainedWidth = bandWidth;
+	var autoWidthCount = 0;
+	var barCategoryGapOption;
+	var barGapOption;
+	var stackIdList = [];
+	var stackMap = {};
+	each$4(seriesInfoOnAxis.seriesInfo, function(seriesInfo, idx) {
+		if (!idx) barGapOption = seriesInfo.defaultBarGap || 0;
+		var stackId = seriesInfo.stackId;
+		if (!hasOwn(stackMap, stackId)) autoWidthCount++;
+		var stackItem = stackMap[stackId];
+		if (!stackItem) {
+			stackItem = stackMap[stackId] = {
+				width: 0,
+				maxWidth: 0
+			};
+			stackIdList.push(stackId);
+		}
+		var barWidth = seriesInfo.barWidth;
+		if (barWidth && !stackItem.width) {
+			stackItem.width = barWidth;
+			barWidth = mathMin$6(remainedWidth, barWidth);
+			remainedWidth -= barWidth;
+		}
+		var barMaxWidth = seriesInfo.barMaxWidth;
+		barMaxWidth && (stackItem.maxWidth = barMaxWidth);
+		var barMinWidth = seriesInfo.barMinWidth;
+		barMinWidth && (stackItem.minWidth = barMinWidth);
+		var barGap = seriesInfo.barGap;
+		barGap != null && (barGapOption = barGap);
+		var barCategoryGap = seriesInfo.barCategoryGap;
+		barCategoryGap != null && (barCategoryGapOption = barCategoryGap);
+	});
+	if (barCategoryGapOption == null) barCategoryGapOption = mathMax$6(35 - stackIdList.length * 4, 15) + "%";
+	var barCategoryGapNum = parsePercent(barCategoryGapOption, bandWidth);
+	var barGapPercent = parsePercent(barGapOption, 1);
+	var autoWidth = (remainedWidth - barCategoryGapNum) / (autoWidthCount + (autoWidthCount - 1) * barGapPercent);
+	autoWidth = mathMax$6(autoWidth, 0);
+	each$4(stackIdList, function(stackId) {
+		var column = stackMap[stackId];
+		var maxWidth = column.maxWidth;
+		var minWidth = column.minWidth;
+		if (!column.width) {
+			var finalWidth = autoWidth;
+			if (maxWidth && maxWidth < finalWidth) finalWidth = mathMin$6(maxWidth, remainedWidth);
+			if (minWidth && minWidth > finalWidth) finalWidth = minWidth;
+			if (finalWidth !== autoWidth) {
+				column.width = finalWidth;
+				remainedWidth -= finalWidth + barGapPercent * finalWidth;
+				autoWidthCount--;
+			}
+		} else {
+			var finalWidth = column.width;
+			if (maxWidth) finalWidth = mathMin$6(finalWidth, maxWidth);
+			if (minWidth) finalWidth = mathMax$6(finalWidth, minWidth);
+			column.width = finalWidth;
+			remainedWidth -= finalWidth + barGapPercent * finalWidth;
+			autoWidthCount--;
+		}
+	});
+	autoWidth = (remainedWidth - barCategoryGapNum) / (autoWidthCount + (autoWidthCount - 1) * barGapPercent);
+	autoWidth = mathMax$6(autoWidth, 0);
+	var widthSum = 0;
+	var lastColumn;
+	each$4(stackIdList, function(stackId) {
+		var column = stackMap[stackId];
+		if (!column.width) column.width = autoWidth;
+		lastColumn = column;
+		widthSum += column.width * (1 + barGapPercent);
+	});
+	if (lastColumn) widthSum -= lastColumn.width * barGapPercent;
+	var result = {};
+	var offset = -widthSum / 2;
+	each$4(stackIdList, function(stackId) {
+		var column = stackMap[stackId];
+		result[stackId] = result[stackId] || {
+			bandWidth,
+			offset,
+			width: column.width
+		};
+		offset += column.width * (1 + barGapPercent);
+	});
+	return result;
+}
+function createCrossSeriesLayoutHandler(seriesType) {
+	return {
+		seriesType,
+		overallReset: function(ecModel) {
+			var axisStatKey = makeAxisStatKey2(seriesType, COORD_SYS_TYPE_CARTESIAN_2D);
+			eachAxisOnKey(ecModel, axisStatKey, function(axis) {
+				var columnLayout = makeColumnLayoutOnAxisReal(axis, seriesType);
+				eachSeriesOnAxisOnKey(axis, axisStatKey, function(seriesModel) {
+					var columnLayoutInfo = columnLayout.columnMap[getSeriesStackId(seriesModel)];
+					seriesModel.getData().setLayout({
+						bandWidth: columnLayoutInfo.bandWidth,
+						offset: columnLayoutInfo.offset,
+						size: columnLayoutInfo.width
+					});
+				});
+			});
+		}
+	};
+}
+function createProgressiveLayout(seriesType) {
+	return {
+		seriesType,
+		plan: createRenderPlanner(),
+		reset: function(seriesModel) {
+			if (!isCartesian2DInjectedAsDataCoordSys(seriesModel)) return;
+			var data = seriesModel.getData();
+			var cartesian = seriesModel.coordinateSystem;
+			var baseAxis = cartesian.getBaseAxis();
+			var valueAxis = cartesian.getOtherAxis(baseAxis);
+			var valueDimIdx = data.getDimensionIndex(data.mapDimension(valueAxis.dim));
+			var baseDimIdx = data.getDimensionIndex(data.mapDimension(baseAxis.dim));
+			var drawBackground = seriesModel.get("showBackground", true);
+			var valueDim = data.mapDimension(valueAxis.dim);
+			var stackResultDim = data.getCalculationInfo("stackResultDimension");
+			var stacked = isDimensionStacked(data, valueDim) && !!data.getCalculationInfo("stackedOnSeries");
+			var isValueAxisH = valueAxis.isHorizontal();
+			var valueAxisStart = valueAxis.toGlobalCoord(valueAxis.dataToCoord(getStartValue(valueAxis)));
+			var isLarge = isInLargeMode(seriesModel);
+			var barMinHeight = seriesModel.get("barMinHeight") || 0;
+			var stackedDimIdx = stackResultDim && data.getDimensionIndex(stackResultDim);
+			var columnWidth = data.getLayout("size");
+			var columnOffset = data.getLayout("offset");
+			return { progress: function(params, data) {
+				var count = params.count;
+				var largePoints = isLarge && createFloat32Array(count * 3);
+				var largeBackgroundPoints = isLarge && drawBackground && createFloat32Array(count * 3);
+				var largeDataIndices = isLarge && createFloat32Array(count);
+				var coordLayout = cartesian.master.getRect();
+				var bgSize = isValueAxisH ? coordLayout.width : coordLayout.height;
+				var dataIndex;
+				var store = data.getStore();
+				var idxOffset = 0;
+				while ((dataIndex = params.next()) != null) {
+					var value = store.get(stacked ? stackedDimIdx : valueDimIdx, dataIndex);
+					var baseValue = store.get(baseDimIdx, dataIndex);
+					var baseCoord = valueAxisStart;
+					var stackStartValue = void 0;
+					if (stacked) stackStartValue = +value - store.get(valueDimIdx, dataIndex);
+					var x = void 0;
+					var y = void 0;
+					var width = void 0;
+					var height = void 0;
+					if (isValueAxisH) {
+						var coord = cartesian.dataToPoint([value, baseValue]);
+						if (stacked) baseCoord = cartesian.dataToPoint([stackStartValue, baseValue])[0];
+						x = baseCoord;
+						y = coord[1] + columnOffset;
+						width = coord[0] - baseCoord;
+						height = columnWidth;
+						if (mathAbs$3(width) < barMinHeight) width = (width < 0 ? -1 : 1) * barMinHeight;
+					} else {
+						var coord = cartesian.dataToPoint([baseValue, value]);
+						if (stacked) baseCoord = cartesian.dataToPoint([baseValue, stackStartValue])[1];
+						x = coord[0] + columnOffset;
+						y = baseCoord;
+						width = columnWidth;
+						height = coord[1] - baseCoord;
+						if (mathAbs$3(height) < barMinHeight) height = (height <= 0 ? -1 : 1) * barMinHeight;
+					}
+					if (!isLarge) data.setItemLayout(dataIndex, {
+						x,
+						y,
+						width,
+						height
+					});
+					else {
+						largePoints[idxOffset] = x;
+						largePoints[idxOffset + 1] = y;
+						largePoints[idxOffset + 2] = isValueAxisH ? width : height;
+						if (largeBackgroundPoints) {
+							largeBackgroundPoints[idxOffset] = isValueAxisH ? coordLayout.x : x;
+							largeBackgroundPoints[idxOffset + 1] = isValueAxisH ? y : coordLayout.y;
+							largeBackgroundPoints[idxOffset + 2] = bgSize;
+						}
+						largeDataIndices[dataIndex] = dataIndex;
+					}
+					idxOffset += 3;
+				}
+				if (isLarge) data.setLayout({
+					largePoints,
+					largeDataIndices,
+					largeBackgroundPoints,
+					valueAxisHorizontal: isValueAxisH
+				});
+			} };
+		}
+	};
+}
+function isInLargeMode(seriesModel) {
+	return seriesModel.pipelineContext && seriesModel.pipelineContext.large;
+}
+function barGridCreateAxisContainShapeHandler(seriesType) {
+	return createBandWidthBasedAxisContainShapeHandler(makeAxisStatKey2(seriesType, COORD_SYS_TYPE_CARTESIAN_2D));
+}
+function registerBarGridAxisHandlers(registers) {
+	callOnlyOnce$1(registers, function() {
+		function register(seriesType) {
+			var axisStatKey = makeAxisStatKey2(seriesType, COORD_SYS_TYPE_CARTESIAN_2D);
+			requireAxisStatisticsForBaseBar(registers, axisStatKey, seriesType, COORD_SYS_TYPE_CARTESIAN_2D);
+			registerAxisContainShapeHandler(axisStatKey, barGridCreateAxisContainShapeHandler(seriesType));
+		}
+		register("bar");
+		register("pictorialBar");
+	});
+}
+//#endregion
+//#region node_modules/echarts/lib/chart/bar/BaseBarSeries.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+var BaseBarSeriesModel = function(_super) {
+	__extends(BaseBarSeriesModel, _super);
+	function BaseBarSeriesModel() {
+		var _this = _super !== null && _super.apply(this, arguments) || this;
+		_this.type = BaseBarSeriesModel.type;
+		return _this;
+	}
+	BaseBarSeriesModel.prototype.getInitialData = function(option, ecModel) {
+		return createSeriesData(null, this, { useEncodeDefaulter: true });
+	};
+	BaseBarSeriesModel.prototype.getMarkerPosition = function(value, dims, startingAtTick) {
+		var coordSys = this.coordinateSystem;
+		if (coordSys && coordSys.clampData) {
+			var clampData_1 = coordSys.clampData(value);
+			var pt_1 = coordSys.dataToPoint(clampData_1);
+			if (startingAtTick) each$4(coordSys.getAxes(), function(axis, idx) {
+				if (axis.type === "category" && dims != null) {
+					var tickCoords = axis.getTicksCoords();
+					var alignTicksWithLabel = axis.getTickModel().get("alignWithLabel");
+					var targetTickId = clampData_1[idx];
+					var isEnd = dims[idx] === "x1" || dims[idx] === "y1";
+					if (isEnd && !alignTicksWithLabel) targetTickId += 1;
+					if (tickCoords.length < 2) return;
+					else if (tickCoords.length === 2) {
+						pt_1[idx] = axis.toGlobalCoord(axis.getExtent()[isEnd ? 1 : 0]);
+						return;
+					}
+					var leftCoord = void 0;
+					var coord = void 0;
+					var stepTickValue = 1;
+					for (var i = 0; i < tickCoords.length; i++) {
+						var tickCoord = tickCoords[i].coord;
+						var tickValue = i === tickCoords.length - 1 ? tickCoords[i - 1].tickValue + stepTickValue : tickCoords[i].tickValue;
+						if (tickValue === targetTickId) {
+							coord = tickCoord;
+							break;
+						} else if (tickValue < targetTickId) leftCoord = tickCoord;
+						else if (leftCoord != null && tickValue > targetTickId) {
+							coord = (tickCoord + leftCoord) / 2;
+							break;
+						}
+						if (i === 1) stepTickValue = tickValue - tickCoords[0].tickValue;
+					}
+					if (coord == null) {
+						if (!leftCoord) coord = tickCoords[0].coord;
+						else if (leftCoord) coord = tickCoords[tickCoords.length - 1].coord;
+					}
+					pt_1[idx] = axis.toGlobalCoord(coord);
+				}
+			});
+			else {
+				var data = this.getData();
+				var offset = data.getLayout("offset");
+				var size = data.getLayout("size");
+				var offsetIndex = coordSys.getBaseAxis().isHorizontal() ? 0 : 1;
+				pt_1[offsetIndex] += offset + size / 2;
+			}
+			return pt_1;
+		}
+		return [NaN, NaN];
+	};
+	/**
+	* @implements
+	*/
+	BaseBarSeriesModel.prototype.__requireStartValue = function(axis) {
+		return this.getBaseAxis() !== axis;
+	};
+	BaseBarSeriesModel.type = "series.__base_bar__";
+	BaseBarSeriesModel.defaultOption = {
+		z: 2,
+		coordinateSystem: "cartesian2d",
+		legendHoverLink: true,
+		barMinHeight: 0,
+		barMinAngle: 0,
+		large: false,
+		largeThreshold: 400,
+		progressive: 3e3,
+		progressiveChunkMode: "mod",
+		defaultBarGap: "10%"
+	};
+	return BaseBarSeriesModel;
+}(SeriesModel);
+SeriesModel.registerClass(BaseBarSeriesModel);
+//#endregion
+//#region node_modules/echarts/lib/chart/bar/BarSeries.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+var BarSeriesModel = function(_super) {
+	__extends(BarSeriesModel, _super);
+	function BarSeriesModel() {
+		var _this = _super !== null && _super.apply(this, arguments) || this;
+		_this.type = BarSeriesModel.type;
+		return _this;
+	}
+	BarSeriesModel.prototype.getInitialData = function() {
+		return createSeriesData(null, this, {
+			useEncodeDefaulter: true,
+			createInvertedIndices: !!this.get("realtimeSort", true) || null
+		});
+	};
+	/**
+	* @override
+	*/
+	BarSeriesModel.prototype.getProgressive = function() {
+		return this.get("large") ? this.get("progressive") : false;
+	};
+	/**
+	* @implement
+	*/
+	BarSeriesModel.prototype.__preparePipelineContext = function(view, pipeline) {
+		var context = preparePipelineContext(this, view, pipeline);
+		if (context.progressiveRender) context.large = true;
+		return context;
+	};
+	BarSeriesModel.prototype.brushSelector = function(dataIndex, data, selectors) {
+		return selectors.rect(data.getItemLayout(dataIndex));
+	};
+	BarSeriesModel.type = "series.bar";
+	BarSeriesModel.dependencies = ["grid", "polar"];
+	BarSeriesModel.defaultOption = inheritDefaultOption(BaseBarSeriesModel.defaultOption, {
+		clip: true,
+		roundCap: false,
+		showBackground: false,
+		backgroundStyle: {
+			color: "rgba(180, 180, 180, 0.2)",
+			borderColor: null,
+			borderWidth: 0,
+			borderType: "solid",
+			borderRadius: 0,
+			shadowBlur: 0,
+			shadowColor: null,
+			shadowOffsetX: 0,
+			shadowOffsetY: 0,
+			opacity: 1
+		},
+		select: { itemStyle: {
+			borderColor: tokens.color.primary,
+			borderWidth: 2
+		} },
+		realtimeSort: false
+	});
+	return BarSeriesModel;
+}(BaseBarSeriesModel);
+//#endregion
+//#region node_modules/echarts/lib/util/shape/sausage.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+/**
+* Sausage: similar to sector, but have half circle on both sides
+*/
+var SausageShape = function() {
+	function SausageShape() {
+		this.cx = 0;
+		this.cy = 0;
+		this.r0 = 0;
+		this.r = 0;
+		this.startAngle = 0;
+		this.endAngle = Math.PI * 2;
+		this.clockwise = true;
+	}
+	return SausageShape;
+}();
+var SausagePath = function(_super) {
+	__extends(SausagePath, _super);
+	function SausagePath(opts) {
+		var _this = _super.call(this, opts) || this;
+		_this.type = "sausage";
+		return _this;
+	}
+	SausagePath.prototype.getDefaultShape = function() {
+		return new SausageShape();
+	};
+	SausagePath.prototype.buildPath = function(ctx, shape) {
+		var cx = shape.cx;
+		var cy = shape.cy;
+		var r0 = Math.max(shape.r0 || 0, 0);
+		var r = Math.max(shape.r, 0);
+		var dr = (r - r0) * .5;
+		var rCenter = r0 + dr;
+		var startAngle = shape.startAngle;
+		var endAngle = shape.endAngle;
+		var clockwise = shape.clockwise;
+		var PI2 = Math.PI * 2;
+		var lessThanCircle = clockwise ? endAngle - startAngle < PI2 : startAngle - endAngle < PI2;
+		if (!lessThanCircle) startAngle = endAngle - (clockwise ? PI2 : -PI2);
+		var unitStartX = Math.cos(startAngle);
+		var unitStartY = Math.sin(startAngle);
+		var unitEndX = Math.cos(endAngle);
+		var unitEndY = Math.sin(endAngle);
+		if (lessThanCircle) {
+			ctx.moveTo(unitStartX * r0 + cx, unitStartY * r0 + cy);
+			ctx.arc(unitStartX * rCenter + cx, unitStartY * rCenter + cy, dr, -Math.PI + startAngle, startAngle, !clockwise);
+		} else ctx.moveTo(unitStartX * r + cx, unitStartY * r + cy);
+		ctx.arc(cx, cy, r, startAngle, endAngle, !clockwise);
+		ctx.arc(unitEndX * rCenter + cx, unitEndY * rCenter + cy, dr, endAngle - Math.PI * 2, endAngle - Math.PI, !clockwise);
+		if (r0 !== 0) ctx.arc(cx, cy, r0, endAngle, startAngle, clockwise);
+	};
+	return SausagePath;
+}(Path);
+//#endregion
+//#region node_modules/echarts/lib/label/sectorLabel.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+function createSectorCalculateTextPosition(positionMapping, opts) {
+	opts = opts || {};
+	var isRoundCap = opts.isRoundCap;
+	return function(out, opts, boundingRect) {
+		var textPosition = opts.position;
+		if (!textPosition || textPosition instanceof Array) return calculateTextPosition(out, opts, boundingRect);
+		var mappedSectorPosition = positionMapping(textPosition);
+		var distance = opts.distance != null ? opts.distance : 5;
+		var sector = this.shape;
+		var cx = sector.cx;
+		var cy = sector.cy;
+		var r = sector.r;
+		var r0 = sector.r0;
+		var middleR = (r + r0) / 2;
+		var startAngle = sector.startAngle;
+		var endAngle = sector.endAngle;
+		var middleAngle = (startAngle + endAngle) / 2;
+		var extraDist = isRoundCap ? Math.abs(r - r0) / 2 : 0;
+		var mathCos = Math.cos;
+		var mathSin = Math.sin;
+		var x = cx + r * mathCos(startAngle);
+		var y = cy + r * mathSin(startAngle);
+		var textAlign = "left";
+		var textVerticalAlign = "top";
+		switch (mappedSectorPosition) {
+			case "startArc":
+				x = cx + (r0 - distance) * mathCos(middleAngle);
+				y = cy + (r0 - distance) * mathSin(middleAngle);
+				textAlign = "center";
+				textVerticalAlign = "top";
+				break;
+			case "insideStartArc":
+				x = cx + (r0 + distance) * mathCos(middleAngle);
+				y = cy + (r0 + distance) * mathSin(middleAngle);
+				textAlign = "center";
+				textVerticalAlign = "bottom";
+				break;
+			case "startAngle":
+				x = cx + middleR * mathCos(startAngle) + adjustAngleDistanceX(startAngle, distance + extraDist, false);
+				y = cy + middleR * mathSin(startAngle) + adjustAngleDistanceY(startAngle, distance + extraDist, false);
+				textAlign = "right";
+				textVerticalAlign = "middle";
+				break;
+			case "insideStartAngle":
+				x = cx + middleR * mathCos(startAngle) + adjustAngleDistanceX(startAngle, -distance + extraDist, false);
+				y = cy + middleR * mathSin(startAngle) + adjustAngleDistanceY(startAngle, -distance + extraDist, false);
+				textAlign = "left";
+				textVerticalAlign = "middle";
+				break;
+			case "middle":
+				x = cx + middleR * mathCos(middleAngle);
+				y = cy + middleR * mathSin(middleAngle);
+				textAlign = "center";
+				textVerticalAlign = "middle";
+				break;
+			case "endArc":
+				x = cx + (r + distance) * mathCos(middleAngle);
+				y = cy + (r + distance) * mathSin(middleAngle);
+				textAlign = "center";
+				textVerticalAlign = "bottom";
+				break;
+			case "insideEndArc":
+				x = cx + (r - distance) * mathCos(middleAngle);
+				y = cy + (r - distance) * mathSin(middleAngle);
+				textAlign = "center";
+				textVerticalAlign = "top";
+				break;
+			case "endAngle":
+				x = cx + middleR * mathCos(endAngle) + adjustAngleDistanceX(endAngle, distance + extraDist, true);
+				y = cy + middleR * mathSin(endAngle) + adjustAngleDistanceY(endAngle, distance + extraDist, true);
+				textAlign = "left";
+				textVerticalAlign = "middle";
+				break;
+			case "insideEndAngle":
+				x = cx + middleR * mathCos(endAngle) + adjustAngleDistanceX(endAngle, -distance + extraDist, true);
+				y = cy + middleR * mathSin(endAngle) + adjustAngleDistanceY(endAngle, -distance + extraDist, true);
+				textAlign = "right";
+				textVerticalAlign = "middle";
+				break;
+			default: return calculateTextPosition(out, opts, boundingRect);
+		}
+		out = out || {};
+		out.x = x;
+		out.y = y;
+		out.align = textAlign;
+		out.verticalAlign = textVerticalAlign;
+		return out;
+	};
+}
+function setSectorTextRotation(sector, textPosition, positionMapping, rotateType) {
+	if (isNumber(rotateType)) {
+		sector.setTextConfig({ rotation: rotateType });
+		return;
+	} else if (isArray(textPosition)) {
+		sector.setTextConfig({ rotation: 0 });
+		return;
+	}
+	var shape = sector.shape;
+	var startAngle = shape.clockwise ? shape.startAngle : shape.endAngle;
+	var endAngle = shape.clockwise ? shape.endAngle : shape.startAngle;
+	var middleAngle = (startAngle + endAngle) / 2;
+	var anchorAngle;
+	var mappedSectorPosition = positionMapping(textPosition);
+	switch (mappedSectorPosition) {
+		case "startArc":
+		case "insideStartArc":
+		case "middle":
+		case "insideEndArc":
+		case "endArc":
+			anchorAngle = middleAngle;
+			break;
+		case "startAngle":
+		case "insideStartAngle":
+			anchorAngle = startAngle;
+			break;
+		case "endAngle":
+		case "insideEndAngle":
+			anchorAngle = endAngle;
+			break;
+		default:
+			sector.setTextConfig({ rotation: 0 });
+			return;
+	}
+	var rotate = Math.PI * 1.5 - anchorAngle;
+	/**
+	* TODO: labels with rotate > Math.PI / 2 should be rotate another
+	* half round flipped to increase readability. However, only middle
+	* position supports this for now, because in other positions, the
+	* anchor point is not at the center of the text, so the positions
+	* after rotating is not as expected.
+	*/
+	if (mappedSectorPosition === "middle" && rotate > Math.PI / 2 && rotate < Math.PI * 1.5) rotate -= Math.PI;
+	sector.setTextConfig({ rotation: rotate });
+}
+function adjustAngleDistanceX(angle, distance, isEnd) {
+	return distance * Math.sin(angle) * (isEnd ? -1 : 1);
+}
+function adjustAngleDistanceY(angle, distance, isEnd) {
+	return distance * Math.cos(angle) * (isEnd ? 1 : -1);
+}
+//#endregion
+//#region node_modules/echarts/lib/chart/helper/sectorHelper.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+function getSectorCornerRadius(model, shape, zeroIfNull) {
+	var cornerRadius = model.get("borderRadius");
+	if (cornerRadius == null) return zeroIfNull ? { cornerRadius: 0 } : null;
+	if (!isArray(cornerRadius)) cornerRadius = [
+		cornerRadius,
+		cornerRadius,
+		cornerRadius,
+		cornerRadius
+	];
+	var dr = Math.abs(shape.r || 0 - shape.r0 || 0);
+	return { cornerRadius: map$1(cornerRadius, function(cr) {
+		return parsePercent$1(cr, dr);
+	}) };
+}
+//#endregion
+//#region node_modules/echarts/lib/chart/bar/BarView.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+var mathMax = Math.max;
+var mathMin = Math.min;
+var BarView = function(_super) {
+	__extends(BarView, _super);
+	function BarView() {
+		var _this = _super.call(this) || this;
+		_this.type = "bar";
+		_this._isFirstFrame = true;
+		return _this;
+	}
+	BarView.prototype.render = function(seriesModel, ecModel, api, payload) {
+		this._model = seriesModel;
+		this._removeOnRenderedListener(api);
+		this._updateDrawMode(seriesModel);
+		var coordinateSystemType = seriesModel.get("coordinateSystem");
+		if (coordinateSystemType === "cartesian2d" || coordinateSystemType === "polar") {
+			this._progressiveEls = null;
+			this._isLargeDraw ? this._renderLarge(seriesModel, ecModel, api) : this._renderNormal(seriesModel, ecModel, api, payload);
+		}
+	};
+	BarView.prototype.incrementalPrepareRender = function(seriesModel) {
+		this._clear();
+		this._updateDrawMode(seriesModel);
+		this._updateLargeClip(seriesModel);
+	};
+	BarView.prototype.incrementalRender = function(params, seriesModel) {
+		this._progressiveEls = [];
+		this._incrementalRenderLarge(params, seriesModel);
+	};
+	BarView.prototype.eachRendered = function(cb) {
+		traverseElements(this._progressiveEls || this.group, cb);
+	};
+	BarView.prototype._updateDrawMode = function(seriesModel) {
+		var isLargeDraw = seriesModel.pipelineContext.large;
+		if (this._isLargeDraw == null || isLargeDraw !== this._isLargeDraw) {
+			this._isLargeDraw = isLargeDraw;
+			this._clear();
+		}
+	};
+	BarView.prototype._renderNormal = function(seriesModel, ecModel, api, payload) {
+		var group = this.group;
+		var data = seriesModel.getData();
+		var oldData = this._data;
+		var coord = seriesModel.coordinateSystem;
+		var baseAxis = coord.getBaseAxis();
+		var isHorizontalOrRadial;
+		if (coord.type === "cartesian2d") isHorizontalOrRadial = baseAxis.isHorizontal();
+		else if (coord.type === "polar") isHorizontalOrRadial = baseAxis.dim === "angle";
+		var animationModel = seriesModel.isAnimationEnabled() ? seriesModel : null;
+		var realtimeSortCfg = shouldRealtimeSort(seriesModel, coord);
+		if (realtimeSortCfg) this._enableRealtimeSort(realtimeSortCfg, data, api);
+		var needsClip = seriesModel.get("clip", true) || realtimeSortCfg;
+		var coordSysClipArea = coord.getArea();
+		group.removeClipPath();
+		var roundCap = seriesModel.get("roundCap", true);
+		var drawBackground = seriesModel.get("showBackground", true);
+		var backgroundModel = seriesModel.getModel("backgroundStyle");
+		var barBorderRadius = backgroundModel.get("borderRadius") || 0;
+		var bgEls = [];
+		var oldBgEls = this._backgroundEls;
+		var isInitSort = payload && payload.isInitSort;
+		var isChangeOrder = payload && payload.type === "changeAxisOrder";
+		function createBackground(dataIndex) {
+			var bgLayout = getLayout[coord.type](data, dataIndex);
+			if (!bgLayout) return null;
+			var bgEl = createBackgroundEl(coord, isHorizontalOrRadial, bgLayout);
+			bgEl.useStyle(backgroundModel.getItemStyle());
+			if (coord.type === "cartesian2d") bgEl.setShape("r", barBorderRadius);
+			else bgEl.setShape("cornerRadius", barBorderRadius);
+			bgEls[dataIndex] = bgEl;
+			return bgEl;
+		}
+		data.diff(oldData).add(function(dataIndex) {
+			var itemModel = data.getItemModel(dataIndex);
+			var layout = getLayout[coord.type](data, dataIndex, itemModel);
+			if (!layout) return;
+			if (drawBackground) createBackground(dataIndex);
+			if (!data.hasValue(dataIndex) || !isValidLayout[coord.type](layout)) return;
+			var isClipped = false;
+			if (needsClip) isClipped = clip[coord.type](coordSysClipArea, layout);
+			var el = elementCreator[coord.type](seriesModel, data, dataIndex, layout, isHorizontalOrRadial, animationModel, baseAxis.model, false, roundCap);
+			if (realtimeSortCfg)
+ /**
+			* Force label animation because even if the element is
+			* ignored because it's clipped, it may not be clipped after
+			* changing order. Then, if not using forceLabelAnimation,
+			* the label animation was never started, in which case,
+			* the label will be the final value and doesn't have label
+			* animation.
+			*/
+			el.forceLabelAnimation = true;
+			updateStyle(el, data, dataIndex, itemModel, layout, seriesModel, isHorizontalOrRadial, coord.type === "polar");
+			if (isInitSort) el.attr({ shape: layout });
+			else if (realtimeSortCfg) updateRealtimeAnimation(realtimeSortCfg, animationModel, el, layout, dataIndex, isHorizontalOrRadial, false, false);
+			else initProps(el, { shape: layout }, seriesModel, dataIndex);
+			data.setItemGraphicEl(dataIndex, el);
+			group.add(el);
+			el.ignore = isClipped;
+		}).update(function(newIndex, oldIndex) {
+			var itemModel = data.getItemModel(newIndex);
+			var layout = getLayout[coord.type](data, newIndex, itemModel);
+			if (!layout) return;
+			if (drawBackground) {
+				var bgEl = void 0;
+				if (oldBgEls.length === 0) bgEl = createBackground(oldIndex);
+				else {
+					bgEl = oldBgEls[oldIndex];
+					bgEl.useStyle(backgroundModel.getItemStyle());
+					if (coord.type === "cartesian2d") bgEl.setShape("r", barBorderRadius);
+					else bgEl.setShape("cornerRadius", barBorderRadius);
+					bgEls[newIndex] = bgEl;
+				}
+				var bgLayout = getLayout[coord.type](data, newIndex);
+				var shape = createBackgroundShape(isHorizontalOrRadial, bgLayout, coord);
+				updateProps$1(bgEl, { shape }, animationModel, newIndex);
+			}
+			var el = oldData.getItemGraphicEl(oldIndex);
+			if (!data.hasValue(newIndex) || !isValidLayout[coord.type](layout)) {
+				group.remove(el);
+				return;
+			}
+			var isClipped = false;
+			if (needsClip) {
+				isClipped = clip[coord.type](coordSysClipArea, layout);
+				if (isClipped) group.remove(el);
+			}
+			if (el && (el.type === "sector" && roundCap || el.type === "sausage" && !roundCap)) {
+				el && removeElementWithFadeOut(el, seriesModel, oldIndex);
+				el = null;
+			}
+			if (!el) el = elementCreator[coord.type](seriesModel, data, newIndex, layout, isHorizontalOrRadial, animationModel, baseAxis.model, true, roundCap);
+			else saveOldStyle(el);
+			if (realtimeSortCfg) el.forceLabelAnimation = true;
+			if (isChangeOrder) {
+				var textEl = el.getTextContent();
+				if (textEl) {
+					var labelInnerStore = labelInner(textEl);
+					if (labelInnerStore.prevValue != null)
+ /**
+					* Set preValue to be value so that no new label
+					* should be started, otherwise, it will take a full
+					* `animationDurationUpdate` time to finish the
+					* animation, which is not expected.
+					*/
+					labelInnerStore.prevValue = labelInnerStore.value;
+				}
+			} else updateStyle(el, data, newIndex, itemModel, layout, seriesModel, isHorizontalOrRadial, coord.type === "polar");
+			if (isInitSort) el.attr({ shape: layout });
+			else if (realtimeSortCfg) updateRealtimeAnimation(realtimeSortCfg, animationModel, el, layout, newIndex, isHorizontalOrRadial, true, isChangeOrder);
+			else updateProps$1(el, { shape: layout }, seriesModel, newIndex, null);
+			data.setItemGraphicEl(newIndex, el);
+			el.ignore = isClipped;
+			group.add(el);
+		}).remove(function(dataIndex) {
+			var el = oldData.getItemGraphicEl(dataIndex);
+			el && removeElementWithFadeOut(el, seriesModel, dataIndex);
+		}).execute();
+		var bgGroup = this._backgroundGroup || (this._backgroundGroup = new Group$2());
+		bgGroup.removeAll();
+		for (var i = 0; i < bgEls.length; ++i) bgGroup.add(bgEls[i]);
+		group.add(bgGroup);
+		this._backgroundEls = bgEls;
+		this._data = data;
+	};
+	BarView.prototype._renderLarge = function(seriesModel, ecModel, api) {
+		this._clear();
+		createLarge(seriesModel, this.group);
+		this._updateLargeClip(seriesModel);
+	};
+	BarView.prototype._incrementalRenderLarge = function(params, seriesModel) {
+		this._removeBackground();
+		createLarge(seriesModel, this.group, this._progressiveEls, true);
+	};
+	BarView.prototype._updateLargeClip = function(seriesModel) {
+		var clipPath = seriesModel.get("clip", true) && createClipPath(seriesModel.coordinateSystem, false, seriesModel);
+		var group = this.group;
+		if (clipPath) group.setClipPath(clipPath);
+		else group.removeClipPath();
+	};
+	BarView.prototype._enableRealtimeSort = function(realtimeSortCfg, data, api) {
+		var _this = this;
+		if (!data.count()) return;
+		var baseAxis = realtimeSortCfg.baseAxis;
+		if (this._isFirstFrame) {
+			this._dispatchInitSort(data, realtimeSortCfg, api);
+			this._isFirstFrame = false;
+		} else {
+			var orderMapping_1 = function(idx) {
+				var el = data.getItemGraphicEl(idx);
+				var shape = el && el.shape;
+				return shape && Math.abs(baseAxis.isHorizontal() ? shape.height : shape.width) || 0;
+			};
+			this._onRendered = function() {
+				_this._updateSortWithinSameData(data, orderMapping_1, baseAxis, api);
+			};
+			api.getZr().on("rendered", this._onRendered);
+		}
+	};
+	BarView.prototype._dataSort = function(data, baseAxis, orderMapping) {
+		var info = [];
+		data.each(data.mapDimension(baseAxis.dim), function(ordinalNumber, dataIdx) {
+			var mappedValue = orderMapping(dataIdx);
+			mappedValue = mappedValue == null ? NaN : mappedValue;
+			info.push({
+				dataIndex: dataIdx,
+				mappedValue,
+				ordinalNumber
+			});
+		});
+		info.sort(function(a, b) {
+			return b.mappedValue - a.mappedValue;
+		});
+		return { ordinalNumbers: map$1(info, function(item) {
+			return item.ordinalNumber;
+		}) };
+	};
+	BarView.prototype._isOrderChangedWithinSameData = function(data, orderMapping, baseAxis) {
+		var scale = baseAxis.scale;
+		var ordinalDataDim = data.mapDimension(baseAxis.dim);
+		var lastValue = Number.MAX_VALUE;
+		for (var tickNum = 0, len = scale.getOrdinalMeta().categories.length; tickNum < len; ++tickNum) {
+			var rawIdx = data.rawIndexOf(ordinalDataDim, scale.getRawOrdinalNumber(tickNum));
+			var value = rawIdx < 0 ? Number.MIN_VALUE : orderMapping(data.indexOfRawIndex(rawIdx));
+			if (value > lastValue) return true;
+			lastValue = value;
+		}
+		return false;
+	};
+	BarView.prototype._isOrderDifferentInView = function(orderInfo, baseAxis) {
+		var scale = baseAxis.scale;
+		var extent = scale.getExtent();
+		var tickNum = Math.max(0, extent[0]);
+		var tickMax = Math.min(extent[1], scale.getOrdinalMeta().categories.length - 1);
+		for (; tickNum <= tickMax; ++tickNum) if (orderInfo.ordinalNumbers[tickNum] !== scale.getRawOrdinalNumber(tickNum)) return true;
+	};
+	BarView.prototype._updateSortWithinSameData = function(data, orderMapping, baseAxis, api) {
+		if (!this._isOrderChangedWithinSameData(data, orderMapping, baseAxis)) return;
+		var sortInfo = this._dataSort(data, baseAxis, orderMapping);
+		if (this._isOrderDifferentInView(sortInfo, baseAxis)) {
+			this._removeOnRenderedListener(api);
+			api.dispatchAction({
+				type: "changeAxisOrder",
+				componentType: baseAxis.dim + "Axis",
+				axisId: baseAxis.index,
+				sortInfo
+			});
+		}
+	};
+	BarView.prototype._dispatchInitSort = function(data, realtimeSortCfg, api) {
+		var baseAxis = realtimeSortCfg.baseAxis;
+		var sortResult = this._dataSort(data, baseAxis, function(dataIdx) {
+			return data.get(data.mapDimension(realtimeSortCfg.otherAxis.dim), dataIdx);
+		});
+		api.dispatchAction({
+			type: "changeAxisOrder",
+			componentType: baseAxis.dim + "Axis",
+			isInitSort: true,
+			axisId: baseAxis.index,
+			sortInfo: sortResult
+		});
+	};
+	BarView.prototype.remove = function(ecModel, api) {
+		this._clear(this._model);
+		this._removeOnRenderedListener(api);
+	};
+	BarView.prototype.dispose = function(ecModel, api) {
+		this._removeOnRenderedListener(api);
+	};
+	BarView.prototype._removeOnRenderedListener = function(api) {
+		if (this._onRendered) {
+			api.getZr().off("rendered", this._onRendered);
+			this._onRendered = null;
+		}
+	};
+	BarView.prototype._clear = function(model) {
+		var group = this.group;
+		var data = this._data;
+		if (model && model.isAnimationEnabled() && data && !this._isLargeDraw) {
+			this._removeBackground();
+			this._backgroundEls = [];
+			data.eachItemGraphicEl(function(el) {
+				removeElementWithFadeOut(el, model, getECData(el).dataIndex);
+			});
+		} else group.removeAll();
+		this._data = null;
+		this._isFirstFrame = true;
+	};
+	BarView.prototype._removeBackground = function() {
+		this.group.remove(this._backgroundGroup);
+		this._backgroundGroup = null;
+	};
+	BarView.type = "bar";
+	return BarView;
+}(ChartView);
+var clip = {
+	cartesian2d: function(coordSysClipArea, layout) {
+		var signWidth = layout.width < 0 ? -1 : 1;
+		var signHeight = layout.height < 0 ? -1 : 1;
+		if (signWidth < 0) {
+			layout.x += layout.width;
+			layout.width = -layout.width;
+		}
+		if (signHeight < 0) {
+			layout.y += layout.height;
+			layout.height = -layout.height;
+		}
+		var coordSysX2 = coordSysClipArea.x + coordSysClipArea.width;
+		var coordSysY2 = coordSysClipArea.y + coordSysClipArea.height;
+		var x = mathMax(layout.x, coordSysClipArea.x);
+		var x2 = mathMin(layout.x + layout.width, coordSysX2);
+		var y = mathMax(layout.y, coordSysClipArea.y);
+		var y2 = mathMin(layout.y + layout.height, coordSysY2);
+		var xClipped = x2 < x;
+		var yClipped = y2 < y;
+		layout.x = xClipped && x > coordSysX2 ? x2 : x;
+		layout.y = yClipped && y > coordSysY2 ? y2 : y;
+		layout.width = xClipped ? 0 : x2 - x;
+		layout.height = yClipped ? 0 : y2 - y;
+		if (signWidth < 0) {
+			layout.x += layout.width;
+			layout.width = -layout.width;
+		}
+		if (signHeight < 0) {
+			layout.y += layout.height;
+			layout.height = -layout.height;
+		}
+		return xClipped || yClipped;
+	},
+	polar: function(coordSysClipArea, layout) {
+		var signR = layout.r0 <= layout.r ? 1 : -1;
+		if (signR < 0) {
+			var tmp = layout.r;
+			layout.r = layout.r0;
+			layout.r0 = tmp;
+		}
+		var r = mathMin(layout.r, coordSysClipArea.r);
+		var r0 = mathMax(layout.r0, coordSysClipArea.r0);
+		layout.r = r;
+		layout.r0 = r0;
+		var clipped = r - r0 < 0;
+		if (signR < 0) {
+			var tmp = layout.r;
+			layout.r = layout.r0;
+			layout.r0 = tmp;
+		}
+		return clipped;
+	}
+};
+var elementCreator = {
+	cartesian2d: function(seriesModel, data, newIndex, layout, isHorizontal, animationModel, axisModel, isUpdate, roundCap) {
+		var rect = new Rect$1({
+			shape: extend({}, layout),
+			z2: 1
+		});
+		rect.__dataIndex = newIndex;
+		rect.name = "item";
+		if (animationModel) {
+			var rectShape = rect.shape;
+			var animateProperty = isHorizontal ? "height" : "width";
+			rectShape[animateProperty] = 0;
+		}
+		return rect;
+	},
+	polar: function(seriesModel, data, newIndex, layout, isRadial, animationModel, axisModel, isUpdate, roundCap) {
+		var ShapeClass = !isRadial && roundCap ? SausagePath : Sector;
+		var sector = new ShapeClass({
+			shape: layout,
+			z2: 1
+		});
+		sector.name = "item";
+		sector.calculateTextPosition = createSectorCalculateTextPosition(createPolarPositionMapping(isRadial), { isRoundCap: ShapeClass === SausagePath });
+		if (animationModel) {
+			var sectorShape = sector.shape;
+			var animateProperty = isRadial ? "r" : "endAngle";
+			var animateTarget = {};
+			sectorShape[animateProperty] = isRadial ? layout.r0 : layout.startAngle;
+			animateTarget[animateProperty] = layout[animateProperty];
+			(isUpdate ? updateProps$1 : initProps)(sector, { shape: animateTarget }, animationModel);
+		}
+		return sector;
+	}
+};
+function shouldRealtimeSort(seriesModel, coordSys) {
+	var realtimeSortOption = seriesModel.get("realtimeSort", true);
+	var baseAxis = coordSys.getBaseAxis();
+	if (realtimeSortOption && baseAxis.type === "category" && coordSys.type === "cartesian2d") return {
+		baseAxis,
+		otherAxis: coordSys.getOtherAxis(baseAxis)
+	};
+}
+function updateRealtimeAnimation(realtimeSortCfg, seriesAnimationModel, el, layout, newIndex, isHorizontal, isUpdate, isChangeOrder) {
+	var seriesTarget;
+	var axisTarget;
+	if (isHorizontal) {
+		axisTarget = {
+			x: layout.x,
+			width: layout.width
+		};
+		seriesTarget = {
+			y: layout.y,
+			height: layout.height
+		};
+	} else {
+		axisTarget = {
+			y: layout.y,
+			height: layout.height
+		};
+		seriesTarget = {
+			x: layout.x,
+			width: layout.width
+		};
+	}
+	if (!isChangeOrder) (isUpdate ? updateProps$1 : initProps)(el, { shape: seriesTarget }, seriesAnimationModel, newIndex, null);
+	var axisAnimationModel = seriesAnimationModel ? realtimeSortCfg.baseAxis.model : null;
+	(isUpdate ? updateProps$1 : initProps)(el, { shape: axisTarget }, axisAnimationModel, newIndex);
+}
+function checkPropertiesNotValid(obj, props) {
+	for (var i = 0; i < props.length; i++) if (!isFinite(obj[props[i]])) return true;
+	return false;
+}
+var rectPropties = [
+	"x",
+	"y",
+	"width",
+	"height"
+];
+var polarPropties = [
+	"cx",
+	"cy",
+	"r",
+	"startAngle",
+	"endAngle"
+];
+var isValidLayout = {
+	cartesian2d: function(layout) {
+		return !checkPropertiesNotValid(layout, rectPropties);
+	},
+	polar: function(layout) {
+		return !checkPropertiesNotValid(layout, polarPropties);
+	}
+};
+var getLayout = {
+	cartesian2d: function(data, dataIndex, itemModel) {
+		var layout = data.getItemLayout(dataIndex);
+		if (!layout) return null;
+		var fixedLineWidth = itemModel ? getLineWidth(itemModel, layout) : 0;
+		var signX = layout.width > 0 ? 1 : -1;
+		var signY = layout.height > 0 ? 1 : -1;
+		return {
+			x: layout.x + signX * fixedLineWidth / 2,
+			y: layout.y + signY * fixedLineWidth / 2,
+			width: layout.width - signX * fixedLineWidth,
+			height: layout.height - signY * fixedLineWidth
+		};
+	},
+	polar: function(data, dataIndex, itemModel) {
+		var layout = data.getItemLayout(dataIndex);
+		return {
+			cx: layout.cx,
+			cy: layout.cy,
+			r0: layout.r0,
+			r: layout.r,
+			startAngle: layout.startAngle,
+			endAngle: layout.endAngle,
+			clockwise: layout.clockwise
+		};
+	}
+};
+function isZeroOnPolar(layout) {
+	return layout.startAngle != null && layout.endAngle != null && layout.startAngle === layout.endAngle;
+}
+function createPolarPositionMapping(isRadial) {
+	return function(isRadial) {
+		var arcOrAngle = isRadial ? "Arc" : "Angle";
+		return function(position) {
+			switch (position) {
+				case "start":
+				case "insideStart":
+				case "end":
+				case "insideEnd": return position + arcOrAngle;
+				default: return position;
+			}
+		};
+	}(isRadial);
+}
+function updateStyle(el, data, dataIndex, itemModel, layout, seriesModel, isHorizontalOrRadial, isPolar) {
+	var style = data.getItemVisual(dataIndex, "style");
+	if (!isPolar) {
+		var borderRadius = itemModel.get(["itemStyle", "borderRadius"]) || 0;
+		el.setShape("r", borderRadius);
+	} else if (!seriesModel.get("roundCap")) {
+		var sectorShape = el.shape;
+		extend(sectorShape, getSectorCornerRadius(itemModel.getModel("itemStyle"), sectorShape, true));
+		el.setShape(sectorShape);
+	}
+	el.useStyle(style);
+	var cursorStyle = itemModel.getShallow("cursor");
+	cursorStyle && el.attr("cursor", cursorStyle);
+	var labelPositionOutside = isPolar ? isHorizontalOrRadial ? layout.r >= layout.r0 ? "endArc" : "startArc" : layout.endAngle >= layout.startAngle ? "endAngle" : "startAngle" : isHorizontalOrRadial ? getLabelPositionForHorizontal(layout, seriesModel.coordinateSystem) : getLabelPositionForVertical(layout, seriesModel.coordinateSystem);
+	var labelStatesModels = getLabelStatesModels(itemModel);
+	setLabelStyle(el, labelStatesModels, {
+		labelFetcher: seriesModel,
+		labelDataIndex: dataIndex,
+		defaultText: getDefaultLabel(seriesModel.getData(), dataIndex),
+		inheritColor: style.fill,
+		defaultOpacity: style.opacity,
+		defaultOutsidePosition: labelPositionOutside
+	});
+	var label = el.getTextContent();
+	if (isPolar && label) {
+		var position = itemModel.get(["label", "position"]);
+		el.textConfig.inside = position === "middle" ? true : null;
+		setSectorTextRotation(el, position === "outside" ? labelPositionOutside : position, createPolarPositionMapping(isHorizontalOrRadial), itemModel.get(["label", "rotate"]));
+	}
+	setLabelValueAnimation(label, labelStatesModels, seriesModel.getRawValue(dataIndex), function(value) {
+		return getDefaultInterpolatedLabel(data, value);
+	});
+	var emphasisModel = itemModel.getModel(["emphasis"]);
+	toggleHoverEmphasis(el, emphasisModel.get("focus"), emphasisModel.get("blurScope"), emphasisModel.get("disabled"));
+	setStatesStylesFromModel(el, itemModel);
+	if (isZeroOnPolar(layout)) {
+		el.style.fill = "none";
+		el.style.stroke = "none";
+		each$4(el.states, function(state) {
+			if (state.style) state.style.fill = state.style.stroke = "none";
+		});
+	}
+}
+function getLineWidth(itemModel, rawLayout) {
+	var borderColor = itemModel.get(["itemStyle", "borderColor"]);
+	if (!borderColor || borderColor === "none") return 0;
+	var lineWidth = itemModel.get(["itemStyle", "borderWidth"]) || 0;
+	var width = isNaN(rawLayout.width) ? Number.MAX_VALUE : Math.abs(rawLayout.width);
+	var height = isNaN(rawLayout.height) ? Number.MAX_VALUE : Math.abs(rawLayout.height);
+	return Math.min(lineWidth, width, height);
+}
+var LagePathShape = function() {
+	function LagePathShape() {}
+	return LagePathShape;
+}();
+var LargePath = function(_super) {
+	__extends(LargePath, _super);
+	function LargePath(opts) {
+		var _this = _super.call(this, opts) || this;
+		_this.type = "largeBar";
+		return _this;
+	}
+	LargePath.prototype.getDefaultShape = function() {
+		return new LagePathShape();
+	};
+	LargePath.prototype.buildPath = function(ctx, shape) {
+		var points = shape.points;
+		var baseDimIdx = this.baseDimIdx;
+		var valueDimIdx = 1 - this.baseDimIdx;
+		var startPoint = [];
+		var size = [];
+		var barWidth = this.barWidth;
+		for (var i = 0; i < points.length; i += 3) {
+			size[baseDimIdx] = barWidth;
+			size[valueDimIdx] = points[i + 2];
+			startPoint[baseDimIdx] = points[i + baseDimIdx];
+			startPoint[valueDimIdx] = points[i + valueDimIdx];
+			ctx.rect(startPoint[0], startPoint[1], size[0], size[1]);
+		}
+	};
+	return LargePath;
+}(Path);
+function createLarge(seriesModel, group, progressiveEls, incremental) {
+	var data = seriesModel.getData();
+	var baseDimIdx = data.getLayout("valueAxisHorizontal") ? 1 : 0;
+	var largeDataIndices = data.getLayout("largeDataIndices");
+	var barWidth = data.getLayout("size");
+	var backgroundModel = seriesModel.getModel("backgroundStyle");
+	var bgPoints = data.getLayout("largeBackgroundPoints");
+	var incrementalId = incremental ? getIncrementalId(seriesModel) : 0;
+	if (bgPoints) {
+		var bgEl = new LargePath({
+			shape: { points: bgPoints },
+			incremental: incrementalId,
+			silent: true,
+			z2: 0
+		});
+		bgEl.baseDimIdx = baseDimIdx;
+		bgEl.largeDataIndices = largeDataIndices;
+		bgEl.barWidth = barWidth;
+		bgEl.useStyle(backgroundModel.getItemStyle());
+		group.add(bgEl);
+		progressiveEls && progressiveEls.push(bgEl);
+	}
+	var el = new LargePath({
+		shape: { points: data.getLayout("largePoints") },
+		incremental: incrementalId,
+		ignoreCoarsePointer: true,
+		z2: 1
+	});
+	el.baseDimIdx = baseDimIdx;
+	el.largeDataIndices = largeDataIndices;
+	el.barWidth = barWidth;
+	group.add(el);
+	el.useStyle(data.getVisual("style"));
+	el.style.stroke = null;
+	getECData(el).seriesIndex = seriesModel.seriesIndex;
+	if (!seriesModel.get("silent")) {
+		el.on("mousedown", largePathUpdateDataIndex);
+		el.on("mousemove", largePathUpdateDataIndex);
+	}
+	progressiveEls && progressiveEls.push(el);
+}
+var largePathUpdateDataIndex = throttle(function(event) {
+	var largePath = this;
+	var dataIndex = largePathFindDataIndex(largePath, event.offsetX, event.offsetY);
+	getECData(largePath).dataIndex = dataIndex >= 0 ? dataIndex : null;
+}, 30, false);
+function largePathFindDataIndex(largePath, x, y) {
+	var baseDimIdx = largePath.baseDimIdx;
+	var valueDimIdx = 1 - baseDimIdx;
+	var points = largePath.shape.points;
+	var largeDataIndices = largePath.largeDataIndices;
+	var startPoint = [];
+	var size = [];
+	var barWidth = largePath.barWidth;
+	for (var i = 0, len = points.length / 3; i < len; i++) {
+		var ii = i * 3;
+		size[baseDimIdx] = barWidth;
+		size[valueDimIdx] = points[ii + 2];
+		startPoint[baseDimIdx] = points[ii + baseDimIdx];
+		startPoint[valueDimIdx] = points[ii + valueDimIdx];
+		if (size[valueDimIdx] < 0) {
+			startPoint[valueDimIdx] += size[valueDimIdx];
+			size[valueDimIdx] = -size[valueDimIdx];
+		}
+		if (x >= startPoint[0] && x <= startPoint[0] + size[0] && y >= startPoint[1] && y <= startPoint[1] + size[1]) return largeDataIndices[i];
+	}
+	return -1;
+}
+function createBackgroundShape(isHorizontalOrRadial, layout, coord) {
+	if (isCoordinateSystemType(coord, "cartesian2d")) {
+		var rectShape = layout;
+		var coordLayout = coord.getArea();
+		return {
+			x: isHorizontalOrRadial ? rectShape.x : coordLayout.x,
+			y: isHorizontalOrRadial ? coordLayout.y : rectShape.y,
+			width: isHorizontalOrRadial ? rectShape.width : coordLayout.width,
+			height: isHorizontalOrRadial ? coordLayout.height : rectShape.height
+		};
+	} else {
+		var coordLayout = coord.getArea();
+		var sectorShape = layout;
+		return {
+			cx: coordLayout.cx,
+			cy: coordLayout.cy,
+			r0: isHorizontalOrRadial ? coordLayout.r0 : sectorShape.r0,
+			r: isHorizontalOrRadial ? coordLayout.r : sectorShape.r,
+			startAngle: isHorizontalOrRadial ? sectorShape.startAngle : 0,
+			endAngle: isHorizontalOrRadial ? sectorShape.endAngle : Math.PI * 2
+		};
+	}
+}
+function createBackgroundEl(coord, isHorizontalOrRadial, layout) {
+	return new (coord.type === "polar" ? Sector : Rect$1)({
+		shape: createBackgroundShape(isHorizontalOrRadial, layout, coord),
+		silent: true,
+		z2: 0
+	});
+}
+function getLabelPositionForHorizontal(layout, coordSys) {
+	if (layout.height === 0) return coordSys.getOtherAxis(coordSys.getBaseAxis()).inverse ? "bottom" : "top";
+	return layout.height > 0 ? "bottom" : "top";
+}
+function getLabelPositionForVertical(layout, coordSys) {
+	if (layout.width === 0) return coordSys.getOtherAxis(coordSys.getBaseAxis()).inverse ? "left" : "right";
+	return layout.width >= 0 ? "right" : "left";
+}
+//#endregion
+//#region node_modules/echarts/lib/chart/bar/install.js
+/**
+* AUTO-GENERATED FILE. DO NOT MODIFY.
+*/
+function install$12(registers) {
+	registers.registerChartView(BarView);
+	registers.registerSeriesModel(BarSeriesModel);
+	registers.registerLayout(registers.PRIORITY.VISUAL.LAYOUT, createCrossSeriesLayoutHandler("bar"));
+	registers.registerLayout(registers.PRIORITY.VISUAL.PROGRESSIVE_LAYOUT, createProgressiveLayout("bar"));
+	registers.registerProcessor(registers.PRIORITY.PROCESSOR.STATISTIC, dataSample("bar"));
+	/**
+	* @payload
+	* @property {string} [componentType=series]
+	* @property {number} [dx]
+	* @property {number} [dy]
+	* @property {number} [zoom]
+	* @property {number} [originX]
+	* @property {number} [originY]
+	*/
+	registers.registerAction({
+		type: "changeAxisOrder",
+		event: "changeAxisOrder",
+		update: "update"
+	}, function(payload, ecModel) {
+		var componentType = payload.componentType || "series";
+		ecModel.eachComponent({
+			mainType: componentType,
+			query: payload
+		}, function(componentModel) {
+			if (payload.sortInfo) componentModel.axis.setCategorySortInfo(payload.sortInfo);
+		});
+	});
+	registerBarGridAxisHandlers(registers);
+}
 //#endregion
 //#region node_modules/echarts/lib/coord/cartesian/AxisModel.js
 /**
@@ -31462,7 +33004,7 @@ function scaleCalcAlign(targetAxis, alignToScale) {
 		var loopGuard = 0;
 		for (; loopGuard < LOOP_MAX; loopGuard++) {
 			if (cb()) break;
-			interval = isTargetLogScale ? interval * mathMax$5(targetLogScaleBase, 2) : increaseInterval(interval);
+			interval = isTargetLogScale ? interval * mathMax$6(targetLogScaleBase, 2) : increaseInterval(interval);
 			intervalPrecision = getIntervalPrecision(interval);
 		}
 	}
@@ -31490,7 +33032,7 @@ function scaleCalcAlign(targetAxis, alignToScale) {
 		if (isNullableNumberFinite(intervalPrecision)) interval = round$1(interval, intervalPrecision);
 	} else {
 		var targetSpan = targetExtent[1] - targetExtent[0];
-		interval = isTargetLogScale ? mathMax$5(quantity(targetSpan), 1) : nice(targetSpan / alignToNiceSegCount, 2);
+		interval = isTargetLogScale ? mathMax$6(quantity(targetSpan), 1) : nice(targetSpan / alignToNiceSegCount, 2);
 		intervalPrecision = getIntervalPrecision(interval);
 		if (targetMinMaxFixed[0]) {
 			min = targetExtent[0];
@@ -31957,8 +33499,8 @@ function layOutGridByOuterBounds(outerBoundsRect, outerBoundsContain, outerBound
 		overflow2 = applyProportion(overflow2, proportion);
 		var minIdx = XY_TO_MARGIN_IDX[xyIdx][0];
 		var maxIdx = XY_TO_MARGIN_IDX[xyIdx][1];
-		margin[minIdx] = mathMax$5(margin[minIdx], overflow1);
-		margin[maxIdx] = mathMax$5(margin[maxIdx], overflow2);
+		margin[minIdx] = mathMax$6(margin[minIdx], overflow1);
+		margin[maxIdx] = mathMax$6(margin[maxIdx], overflow2);
 	}
 	function applyProportion(overflow, proportion) {
 		if (overflow > 0 && !eqNaN(proportion) && proportion > 1e-4) overflow /= proportion;
@@ -33395,7 +34937,7 @@ function calcAxisPointerShadowBandWidth(axis, seriesDataIndices, ecModel) {
 * Return a [min, max] in pixel clampped by `axisExtent`.
 */
 function calcAxisPointerShadowEnds(val, axisExtent, bandWidth) {
-	return [mathMax$5(mathMin$5(axisExtent[0], axisExtent[1]), val - bandWidth / 2), mathMin$5(val + bandWidth / 2, mathMax$5(axisExtent[0], axisExtent[1]))];
+	return [mathMax$6(mathMin$6(axisExtent[0], axisExtent[1]), val - bandWidth / 2), mathMin$6(val + bandWidth / 2, mathMax$6(axisExtent[0], axisExtent[1]))];
 }
 //#endregion
 //#region node_modules/echarts/lib/component/axisPointer/CartesianAxisPointer.js
@@ -33450,8 +34992,8 @@ var CartesianAxisPointer = function(_super) {
 		var dimIndex = axis.dim === "x" ? 0 : 1;
 		var currPosition = [transform.x, transform.y];
 		currPosition[dimIndex] += delta[dimIndex];
-		currPosition[dimIndex] = mathMin$5(axisExtent[1], currPosition[dimIndex]);
-		currPosition[dimIndex] = mathMax$5(axisExtent[0], currPosition[dimIndex]);
+		currPosition[dimIndex] = mathMin$6(axisExtent[1], currPosition[dimIndex]);
+		currPosition[dimIndex] = mathMax$6(axisExtent[0], currPosition[dimIndex]);
 		var cursorOtherValue = (otherExtent[1] + otherExtent[0]) / 2;
 		var cursorPoint = [cursorOtherValue, cursorOtherValue];
 		cursorPoint[dimIndex] = currPosition[dimIndex];
@@ -34571,7 +36113,7 @@ var AxisProxy = function() {
 			var idx = _a[0], ceilOrFloor = _a[1];
 			if (!needRound[idx] || !isFinite(precision)) return;
 			valueWindow[idx] = round$1(valueWindow[idx], precision);
-			valueWindow[idx] = mathMin$5(dataExtent[1], mathMax$5(dataExtent[0], valueWindow[idx]));
+			valueWindow[idx] = mathMin$6(dataExtent[1], mathMax$6(dataExtent[0], valueWindow[idx]));
 			if (percentWindow[idx] === percentExtent[idx]) {
 				valueWindow[idx] = dataExtent[idx];
 				if (isScaleOrdinalOrTime) valueWindow[idx] = ceilOrFloor(valueWindow[idx]);
@@ -39595,7 +41137,7 @@ function install(registers) {
 //#endregion
 //#region webview/src/components/Experiment/TimeSeriesChart.tsx
 use([
-	install$12,
+	install$13,
 	install$9,
 	install$8,
 	install$4,
@@ -39603,7 +41145,7 @@ use([
 	install$7,
 	install
 ]);
-var cssVar = (name, fallback) => getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+var cssVar$1 = (name, fallback) => getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
 function TimeSeriesChart({ series, yLabel, height = 240, cursor }) {
 	const host = (0, import_react.useRef)(null);
 	const chart = (0, import_react.useRef)(null);
@@ -39619,8 +41161,8 @@ function TimeSeriesChart({ series, yLabel, height = 240, cursor }) {
 		};
 	}, []);
 	(0, import_react.useEffect)(() => {
-		const fg = cssVar("--vscode-foreground", "#ccc");
-		const border = cssVar("--vscode-widget-border", "#8884");
+		const fg = cssVar$1("--vscode-foreground", "#ccc");
+		const border = cssVar$1("--vscode-widget-border", "#8884");
 		chart.current?.setOption({
 			backgroundColor: "transparent",
 			textStyle: { color: fg },
@@ -39835,6 +41377,543 @@ function RocketAttitude({ accel, gyro, altM }) {
 		})]
 	});
 }
+var BAUD = [
+	9600,
+	38400,
+	115200,
+	460800,
+	921600
+];
+var CHUNK = 40;
+var CAPTURE = 512;
+var PRBS7 = 0;
+var PRBS15 = 1;
+function lfsrBytes(state, order, n) {
+	const mask = (1 << order) - 1;
+	const out = [];
+	for (let k = 0; k < n; k++) {
+		let byte = 0;
+		for (let i = 0; i < 8; i++) {
+			const bit = (state >> order - 1 ^ state >> order - 2) & 1;
+			state = (state << 1 | bit) & mask;
+			byte = byte << 1 | bit;
+		}
+		out.push(byte);
+	}
+	return out;
+}
+function expectedBlock(pattern, seed) {
+	if (pattern === PRBS15) return lfsrBytes(seed & 32767 || 32767, 15, 64);
+	if (pattern === PRBS7) return lfsrBytes(127, 7, 64);
+	return null;
+}
+var toNum = (v) => Number(v ?? 0);
+var LifiState = class {
+	constructor() {
+		this.pending = /* @__PURE__ */ new Map();
+		this.cells = /* @__PURE__ */ new Map();
+		this.hist = new Array(512).fill(0);
+		this.histRounds = 0;
+	}
+	reset() {
+		this.pending.clear();
+		this.latest = void 0;
+		this.cells.clear();
+		this.hist = new Array(512).fill(0);
+		this.histRounds = 0;
+	}
+	addBer(s, tick) {
+		const valid = s.measurement_valid === true || s.measurement_valid === 1;
+		const rxCount = toNum(s.rx_count);
+		const seq = toNum(s.round_seq);
+		const r = {
+			seq,
+			tick,
+			valid,
+			rxCount,
+			rateIndex: toNum(s.rate_index),
+			threshold: toNum(s.threshold),
+			bitErrors: toNum(s.bit_errors),
+			offset: toNum(s.block_offset),
+			seed: toNum(s.seed),
+			pattern: toNum(s.pattern),
+			latencyUs: toNum(s.latency_us),
+			chunkCount: valid ? Math.ceil(Math.min(rxCount, CAPTURE) / CHUNK) : 0,
+			chunks: this.pending.get(seq)?.chunks ?? []
+		};
+		const key = `${r.rateIndex}:${r.threshold}`;
+		const c = this.cells.get(key) ?? {
+			rounds: 0,
+			invalid: 0,
+			errBits: 0,
+			bits: 0
+		};
+		if (valid) {
+			c.rounds++;
+			c.errBits += r.bitErrors;
+			c.bits += toNum(s.bits_sent);
+		} else c.invalid++;
+		this.cells.set(key, c);
+		this.pending.set(seq, r);
+		this.tryFinish(r);
+		this.prune();
+	}
+	addRx(s) {
+		const seq = toNum(s.round_seq);
+		const r = this.pending.get(seq) ?? this.placeholder(seq);
+		r.chunks[toNum(s.chunk_index)] = s.data ?? [];
+		this.pending.set(seq, r);
+		this.tryFinish(r);
+	}
+	placeholder(seq) {
+		return {
+			seq,
+			tick: 0,
+			rateIndex: 0,
+			threshold: 0,
+			valid: false,
+			bitErrors: 0,
+			rxCount: 0,
+			offset: 0,
+			seed: 0,
+			pattern: -1,
+			latencyUs: 0,
+			chunkCount: -1,
+			chunks: []
+		};
+	}
+	tryFinish(r) {
+		if (r.chunkCount < 0) return;
+		for (let i = 0; i < r.chunkCount; i++) if (!r.chunks[i]) return;
+		this.pending.delete(r.seq);
+		if (r.valid) this.score(r);
+		this.latest = r;
+	}
+	score(r) {
+		const exp = expectedBlock(r.pattern, r.seed);
+		if (!exp) return;
+		const received = r.chunks.slice(0, r.chunkCount).flatMap((c) => c ?? []);
+		const bits = [];
+		let missing = 0;
+		for (let i = 0; i < 64; i++) {
+			const got = received[r.offset + i];
+			if (got === void 0) missing++;
+			const diff = got === void 0 ? 255 : got ^ exp[i];
+			for (let b = 0; b < 8; b++) if (diff & 128 >> b) bits.push(i * 8 + b);
+		}
+		r.received = received;
+		r.expected = exp;
+		r.errorBits = bits;
+		r.missingBytes = missing;
+		for (const p of bits) this.hist[p]++;
+		this.histRounds++;
+	}
+	prune() {
+		while (this.pending.size > 32) this.pending.delete(this.pending.keys().next().value);
+	}
+};
+//#endregion
+//#region webview/src/components/Experiment/Lifi.tsx
+use([
+	install$12,
+	install$9,
+	install$8,
+	install
+]);
+var hex = (b) => b === void 0 ? "··" : b.toString(16).padStart(2, "0");
+var pct = (e, bits) => bits ? 100 * e / bits : 0;
+var isDark = () => document.body.classList.contains("vscode-dark") || document.body.classList.contains("vscode-high-contrast");
+var cssVar = (name, fallback) => getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+var SEQ_LIGHT = [
+	"#cde2fb",
+	"#9ec5f4",
+	"#6da7ec",
+	"#3987e5",
+	"#256abf",
+	"#184f95",
+	"#0d366b"
+];
+var SEQ_DARK = [
+	"#0d366b",
+	"#104281",
+	"#184f95",
+	"#1c5cab",
+	"#2a78d6",
+	"#5598e7",
+	"#86b6ef"
+];
+var BINS = [
+	0,
+	1,
+	5,
+	10,
+	25,
+	40
+];
+var BIN_LABEL = [
+	"0",
+	"≤1",
+	"1–5",
+	"5–10",
+	"10–25",
+	"25–40",
+	">40"
+];
+function step(berPct) {
+	if (berPct === 0) return 0;
+	let s = 1;
+	for (let i = 1; i < BINS.length; i++) if (berPct > BINS[i]) s = i + 1;
+	return s;
+}
+function Tiles({ r }) {
+	if (!r) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "muted",
+		children: "waiting for the first round…"
+	});
+	const ok = r.valid && r.bitErrors === 0;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "tiles",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: !r.valid ? "⊘ no measurement" : ok ? "✓ intact" : `✕ ${r.bitErrors} bit errors`
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "l",
+					children: ["round ", r.seq]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: BAUD[r.rateIndex]?.toLocaleString() ?? `#${r.rateIndex}`
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "optical baud"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: r.threshold
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "threshold (DAC)"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: r.valid ? `${pct(r.bitErrors, 512).toFixed(1)} %` : "–"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "BER"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: r.rxCount
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "bytes received"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: r.valid ? r.offset : "–"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "block offset"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "n",
+					children: r.valid ? `${(r.latencyUs / 1e3).toFixed(2)} ms` : "–"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "\\S → ACK"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "tile",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "n",
+					children: ["0x", r.seed.toString(16).padStart(4, "0")]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "l",
+					children: "PRBS-15 seed"
+				})]
+			})
+		]
+	});
+}
+function BitMap({ r }) {
+	if (!r?.expected || !r.errorBits) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "muted",
+		children: "no received block in the latest round"
+	});
+	const err = new Set(r.errorBits);
+	const cells = [];
+	for (let bit = 0; bit < 8; bit++) for (let i = 0; i < 64; i++) {
+		const pos = i * 8 + bit;
+		const got = r.received?.[r.offset + i];
+		const state = got === void 0 ? "missing" : err.has(pos) ? "error" : "ok";
+		cells.push(/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: `lifi-bit ${state}`,
+			title: `bit ${pos} (byte ${i}, bit ${7 - bit})\nsent 0x${hex(r.expected[i])} · got 0x${hex(got)}\n${state}`
+		}, pos));
+	}
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "lifi-bitmap",
+			role: "img",
+			"aria-label": `${r.errorBits.length} of 512 bits wrong`,
+			children: cells
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "lifi-axis",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "byte 0" }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "byte 32" }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "byte 63" })
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "lifi-legend",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", { className: "lifi-bit ok" }), " correct"] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", { className: "lifi-bit error" }), " ✕ wrong"] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", { className: "lifi-bit missing" }), " not received"] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "muted",
+					children: "rows: bit 7 (top) … bit 0 · hover a cell for sent/received"
+				})
+			]
+		})
+	] });
+}
+function RxBytes({ r }) {
+	if (!r?.received?.length) return null;
+	const exp = r.expected ?? [];
+	const rows = [];
+	for (let row = 0; row < r.received.length; row += 32) rows.push(/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "lifi-hexrow",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "lifi-hexaddr",
+			children: row.toString(16).padStart(3, "0")
+		}), r.received.slice(row, row + 32).map((b, k) => {
+			const at = row + k;
+			const inBlock = at >= r.offset && at < r.offset + 64;
+			const bad = inBlock && b !== exp[at - r.offset];
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: `lifi-hex${inBlock ? " in" : ""}${bad ? " bad" : ""}`,
+				title: inBlock ? `rx[${at}] = block byte ${at - r.offset}: sent 0x${hex(exp[at - r.offset])}` : `rx[${at}], outside the block`,
+				children: hex(b)
+			}, at);
+		})]
+	}, row));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "lifi-hex-wrap",
+		children: rows
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "lifi-legend",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", { className: "lifi-hex-key in" }),
+				" scored block (offset ",
+				r.offset,
+				")"
+			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", { className: "lifi-hex-key bad" }), " ✕ differs from the sent byte"] }),
+			r.rxCount > r.received.length && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+				className: "muted",
+				children: [
+					"first ",
+					r.received.length,
+					" of ",
+					r.rxCount,
+					" bytes"
+				]
+			})
+		]
+	})] });
+}
+function Heatmap({ s }) {
+	const rates = [...new Set([...s.cells.keys()].map((k) => Number(k.split(":")[0])))].sort((a, b) => a - b);
+	const thrs = [...new Set([...s.cells.keys()].map((k) => Number(k.split(":")[1])))].sort((a, b) => b - a);
+	if (!rates.length) return null;
+	const ramp = isDark() ? SEQ_DARK : SEQ_LIGHT;
+	const ink = (st) => (isDark() ? st <= 3 : st >= 4) ? "#ffffff" : "#0b0b0b";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+		className: "lifi-heat",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: "baud \\ threshold" }), thrs.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: t }, t))] }) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: rates.map((ri) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", { children: BAUD[ri]?.toLocaleString() ?? ri }), thrs.map((t) => {
+			const c = s.cells.get(`${ri}:${t}`);
+			if (!c || c.rounds === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+				className: "lifi-heat-empty",
+				title: c ? `${c.invalid} rounds, none valid` : "no round yet",
+				children: c ? `– · ${c.invalid}✕` : "–"
+			}, t);
+			const p = pct(c.errBits, c.bits);
+			const st = step(p);
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+				style: {
+					background: ramp[st],
+					color: ink(st)
+				},
+				title: `${BAUD[ri]} Bd, threshold ${t}\n${c.errBits} of ${c.bits} bits wrong over ${c.rounds} rounds${c.invalid ? `\n${c.invalid} rounds without measurement` : ""}`,
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", { children: [p.toFixed(p > 0 && p < 1 ? 2 : 1), " %"] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "lifi-heat-n",
+					children: [
+						"n=",
+						c.rounds,
+						c.invalid ? ` · ${c.invalid}⊘` : ""
+					]
+				})]
+			}, t);
+		})] }, ri)) })]
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "lifi-legend",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "muted",
+				children: "BER %"
+			}),
+			BIN_LABEL.map((l, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+					className: "lifi-swatch",
+					style: { background: ramp[i] }
+				}),
+				" ",
+				l
+			] }, l)),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "muted",
+				children: "⊘ rounds without a measurement"
+			})
+		]
+	})] });
+}
+function PositionHistogram({ s, rev }) {
+	const host = (0, import_react.useRef)(null);
+	const chart = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		if (!host.current) return;
+		chart.current = init(host.current, null, { renderer: "canvas" });
+		const onResize = () => chart.current?.resize();
+		window.addEventListener("resize", onResize);
+		return () => {
+			window.removeEventListener("resize", onResize);
+			chart.current?.dispose();
+			chart.current = null;
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		const fg = cssVar("--vscode-foreground", "#ccc");
+		const border = cssVar("--vscode-widget-border", "#8884");
+		const bar = isDark() ? "#3987e5" : "#2a78d6";
+		chart.current?.setOption({
+			backgroundColor: "transparent",
+			textStyle: { color: fg },
+			animation: false,
+			grid: {
+				left: 48,
+				right: 12,
+				top: 12,
+				bottom: 36
+			},
+			tooltip: {
+				trigger: "axis",
+				axisPointer: { type: "shadow" },
+				formatter: (ps) => {
+					const p = ps[0];
+					return `bit ${p.dataIndex} (byte ${p.dataIndex >> 3}, bit ${7 - (p.dataIndex & 7)})<br/>${p.value} errors in ${s.histRounds} rounds`;
+				}
+			},
+			xAxis: {
+				type: "category",
+				data: Array.from({ length: 512 }, (_, i) => i),
+				name: "bit position in the block",
+				nameLocation: "middle",
+				nameGap: 22,
+				axisLabel: {
+					color: fg,
+					interval: 63
+				},
+				axisLine: { lineStyle: { color: border } },
+				axisTick: { show: false }
+			},
+			yAxis: {
+				type: "value",
+				minInterval: 1,
+				axisLabel: { color: fg },
+				splitLine: { lineStyle: {
+					color: border,
+					opacity: .4
+				} }
+			},
+			series: [{
+				type: "bar",
+				data: s.hist,
+				itemStyle: {
+					color: bar,
+					borderRadius: [
+						2,
+						2,
+						0,
+						0
+					]
+				},
+				barCategoryGap: "20%"
+			}]
+		});
+	}, [rev]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		ref: host,
+		style: {
+			width: "100%",
+			height: 200
+		}
+	});
+}
+function LifiPanel({ state, rev }) {
+	const r = state.latest;
+	const errRounds = state.hist.some((v) => v > 0);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "LiFi · latest round" }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tiles, { r }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Bit map · latest round" }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(BitMap, { r }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Received bytes · latest round" }),
+		r?.received?.length ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RxBytes, { r }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "muted",
+			children: "nothing received in the latest round"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "BER by baud and threshold · since the view opened" }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Heatmap, { s: state }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", { children: [
+			"Error positions · ",
+			state.histRounds,
+			" valid rounds"
+		] }),
+		errRounds ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PositionHistogram, {
+			s: state,
+			rev
+		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "muted",
+			children: "no bit error yet"
+		})
+	] });
+}
 //#endregion
 //#region webview/src/components/Experiment/Experiment.tsx
 var GAINS = [
@@ -39915,6 +41994,7 @@ function Experiment() {
 	const [speed, setSpeed] = (0, import_react.useState)(1);
 	const [spec, setSpec] = (0, import_react.useState)();
 	const buf = (0, import_react.useRef)(emptyBuf());
+	const lifi = (0, import_react.useRef)(new LifiState());
 	const lastRender = (0, import_react.useRef)(0);
 	const lastImu = (0, import_react.useRef)(null);
 	const ground = (0, import_react.useRef)(null);
@@ -39967,11 +42047,15 @@ function Experiment() {
 				lastP.current = pr;
 				push(buf.current.press, [t, pr], cap);
 			}
-		} else if (s.kind === "ber") push(buf.current.ber, [t, Number(s.ber) * 100], cap);
+		} else if (s.kind === "ber") {
+			lifi.current.addBer(s, tick);
+			if (s.measurement_valid === true) push(buf.current.ber, [t, Number(s.ber) * 100], cap);
+		} else if (s.kind === "rx") lifi.current.addRx(s);
 		else if (name.endsWith("spectrum")) setSpec(s);
 	};
 	const reset = () => {
 		clearBuffers();
+		lifi.current.reset();
 		setSpec(void 0);
 		setMode("live");
 		setPlaying(false);
@@ -40147,7 +42231,11 @@ function Experiment() {
 				cursor
 			})
 		] }),
-		b.ber.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Bit error rate (%)" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TimeSeriesChart, {
+		source === "exp2" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LifiPanel, {
+			state: lifi.current,
+			rev
+		}),
+		b.ber.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Bit error rate (%) over time" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TimeSeriesChart, {
 			series: s.ber,
 			yLabel: "%",
 			cursor
@@ -40163,7 +42251,7 @@ function Experiment() {
 			height: 180,
 			cursor
 		})] })] }),
-		!hasImu && !hasEnv && b.ber.length === 0 && source !== "exp1" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		!hasImu && !hasEnv && b.ber.length === 0 && source !== "exp1" && source !== "exp2" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "muted",
 			children: "no data yet"
 		})

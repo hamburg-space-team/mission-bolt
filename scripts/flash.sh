@@ -6,8 +6,16 @@
 #
 #   scripts/flash.sh <btc|exp1|exp2|exp3> [Debug|Release]
 #
-# Deliberately one board per invocation: with a single probe, a batch mode
-# would only invite flashing the wrong board
+# With more than one probe on the station, the right one is chosen for you:
+# the station reads each target's chip UID and says which board it sits on,
+# so naming a board picks its probe. Naming a board no probe reaches only
+# ever proceeds after you say so - that is the case where a flash would
+# land on the wrong hardware.
+#
+# Deliberately one board per invocation: a batch mode would only invite
+# flashing the wrong board.
+#
+#   BOLT_PROBE=2   force a probe instead of resolving by board
 #
 # Station host: $BOLT_STATION (default bolt-station.local); ports follow
 # the map in tools/debug-station/README.md.
@@ -23,9 +31,7 @@ CFG="${2:-Debug}"
 usage() { echo "usage: flash.sh <btc|exp1|exp2|exp3> [Debug|Release]"; exit 2; }
 command -v "${GDB}" >/dev/null || { echo "error: ${GDB} not found"; exit 1; }
 
-# Single probe: one gdb port; WHICH board gets flashed is decided by where
-# the probe physically sits - put it on the board you name here
-PORT=3401
+DEFAULT_PORT=3401
 declare -A MAP=(
     [btc]="btc"
     [exp1]="exp1-space-disco"
@@ -33,9 +39,72 @@ declare -A MAP=(
     [exp3]="exp3-floaty-boi"
 )
 
+# Ask the station which board each probe is sitting on. Prints
+# "<id> <gdb port> <board>" per probe; empty when the API is unreachable,
+# which is not fatal - we fall back to the single-probe port.
+probe_table() {
+    curl -fsS --max-time 5 "http://${HOST}:8080/api/debugger" 2>/dev/null |
+        python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for p in d.get("probe", {}).get("probes", []):
+    print(p["id"], p["gdb_port"], p.get("board") or "-")
+' 2>/dev/null
+}
+
+# Resolve <board> -> gdb port, and refuse to be silently wrong about it.
+resolve_port() {
+    local node="$1" table id port board
+    table="$(probe_table)"
+
+    if [ -n "${BOLT_PROBE:-}" ]; then
+        port="$(awk -v want="${BOLT_PROBE}" '$1 == want {print $2}' <<<"${table}")"
+        [ -n "${port}" ] || { echo "error: no probe '${BOLT_PROBE}' on the station" >&2; return 1; }
+        echo "   probe ${BOLT_PROBE} forced via BOLT_PROBE (gdb ${port})" >&2
+        echo "${port}"
+        return 0
+    fi
+
+    if [ -z "${table}" ]; then
+        echo "   note: station API unreachable - using the default gdb port ${DEFAULT_PORT}" >&2
+        echo "${DEFAULT_PORT}"
+        return 0
+    fi
+
+    # a probe already sitting on the board we were asked for
+    port="$(awk -v want="${node}" '$3 == want {print $2; exit}' <<<"${table}")"
+    if [ -n "${port}" ]; then
+        echo "${port}"
+        return 0
+    fi
+
+    # none: whatever we flash now is NOT the board that was named
+    echo "" >&2
+    echo "   !! no probe is on ${node}. The station sees:" >&2
+    while read -r id port board; do
+        [ -n "${id}" ] || continue
+        echo "      probe ${id} (gdb ${port}) -> ${board}" >&2
+    done <<<"${table}"
+    echo "" >&2
+    echo "   Flashing now would write the ${node} image to whatever the probe" >&2
+    echo "   below is actually touching." >&2
+    id="$(awk 'NR == 1 {print $1}' <<<"${table}")"
+    port="$(awk 'NR == 1 {print $2}' <<<"${table}")"
+    board="$(awk 'NR == 1 {print $3}' <<<"${table}")"
+    read -r -p "   Write ${node} via probe ${id} (on ${board})? [y/N] " reply
+    case "${reply}" in
+    y | Y | yes | YES) echo "${port}" ;;
+    *) echo "   aborted" >&2; return 1 ;;
+    esac
+}
+
 # The station retries OpenOCD every 2 s while the probe is unplugged or
 # mid-move; wait for the port instead of failing into that window
 wait_for_station() {
+    local PORT="$1"
     for _ in $(seq 1 15); do
         if (exec 3<>"/dev/tcp/${HOST}/${PORT}") 2>/dev/null; then
             exec 3>&- 3<&-
@@ -51,7 +120,7 @@ wait_for_station() {
 flash_one() {
     local node="$1" tgt port elf
     tgt="${MAP[${node}]}"
-    port="${PORT}"
+    port="$(resolve_port "${node}")" || return 1
     elf="${FSW}/out/${node}/${tgt}/${CFG}/${node}.elf"
 
     # incremental cbuild is seconds; flashing a stale ELF costs a bench trip
@@ -65,7 +134,7 @@ flash_one() {
     [ -f "${elf}" ] || { echo "error: ${elf} missing"; return 1; }
 
     echo "== ${node}: ${elf#"${FSW}"/} -> ${HOST}:${port} (probe must sit on ${node}!)"
-    wait_for_station || return 1
+    wait_for_station "${port}" || return 1
 
     # Fresh flash = fresh mission state: zero the .noinit magic so BootState
     # takes the cold path and the board comes up in TEST mode. A plain NRST

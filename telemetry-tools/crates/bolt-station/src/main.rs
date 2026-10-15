@@ -60,9 +60,10 @@ pub struct Config {
     #[arg(long, default_value = "/etc/bolt-station/uids.conf")]
     pub uid_map: String,
 
-    /// OpenOCD TCL RPC address for debugger-side reads
-    #[arg(long, default_value = "127.0.0.1:6601")]
-    pub openocd_tcl: String,
+    /// Probe table: "<id> <openocd tcl host:port> <gdb port>" per line.
+    /// Missing falls back to the single-probe bench on 6601/3401
+    #[arg(long, default_value = "/etc/bolt-station/probes.conf")]
+    pub probes: String,
 
     /// .noinit base address (hex), the fallback when uids.conf carries none
     #[arg(long, value_parser = parse_hex)]
@@ -133,7 +134,7 @@ fn main() -> Result<()> {
             tracker: tracker.clone(),
             uplink: uplink.clone(),
             cmd_seq: Arc::new(Mutex::new(0u8)),
-            noinit_at: Arc::new(Mutex::new(None)),
+            noinit_at: Arc::new(Mutex::new(std::collections::HashMap::new())),
             lo: lo.clone(),
         };
         let listen = cfg.http.clone();

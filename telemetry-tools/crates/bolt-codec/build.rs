@@ -158,6 +158,10 @@ fn main() {
             "#[derive(Debug, Clone, Copy, Serialize)]\npub struct {rname} {{\n"
         ));
         for fld in fields {
+            // serde derives Serialize for arrays only up to 32 elements
+            if u(fld, "count") > 32 {
+                pg.push_str("    #[serde(serialize_with = \"ser_array\")]\n");
+            }
             pg.push_str(&format!(
                 "    pub {}: {},\n",
                 s(fld, "name"),

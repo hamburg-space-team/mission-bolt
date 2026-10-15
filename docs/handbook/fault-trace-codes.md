@@ -118,6 +118,18 @@ is the `Step` enum in
 | 0x80 | PKT_BUILD | packet payload too large |
 | 0x81 | CAN_TX_RING | CAN TX frame ring latched (never drains) |
 | 0x82 | UART_TX_RING | RS-422 TX byte ring latched (never drains) |
+| **0x9x** | | **LiFi transceiver host driver (ICD-008)** |
+| 0x90 | LIFI_LINK_WRITE | host UART TX ring refused the command script |
+| 0x91 | LIFI_REPLY | reply judged: NAK = PROTOCOL_ERROR, stray byte = BUS_ERROR, no reply in time = TIMEOUT |
+| 0x92 | LIFI_CONFIGURE | role setup script (sender 4 ACKs, receiver 7 ACKs) |
+| 0x93 | LIFI_SET_RATE | optical baud change |
+| 0x94 | LIFI_LOAD_SEND | `\s` block `\S` |
+| 0x95 | LIFI_PING | `\P` probe (self-test) |
+| 0x96 | LIFI_ROUND | EXP2 measurement: 3 BER rounds in a row ended in a NAK or a missing ACK |
+
+A LiFi trace reads `[LIFI_REPLY, LIFI_CONFIGURE]`: the reply to the
+setup script was judged bad, and `error_code` says how (NAK, stray byte
+or silence). `LIFI_ROUND` is synthesized by EXP2 itself with `line = 0`.
 
 ## Reporting rules
 

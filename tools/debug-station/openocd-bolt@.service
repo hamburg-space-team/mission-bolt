@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenOCD for BOLT debug probe %i
+After=network.target
+# never trip the start-rate limit: a probe that is unplugged for an hour
+# must not leave the unit permanently dead
+StartLimitIntervalSec=0
+
+[Service]
+# probe-%i.cfg picks the adapter, its ports and the speeds its model has;
+# station.cfg is shared by every instance
+ExecStart=/usr/bin/openocd -f /etc/bolt-station/probe-%i.cfg -f /etc/bolt-station/station.cfg
+# Probes get unplugged and moved between boards as a matter of course;
+# OpenOCD exits whenever its target vanishes. Retry forever, every 2 s
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -7,6 +7,7 @@ layer:
     - ./comms
     - ./core
     - ./led
+    - ./lifi
     - ./sensors
     - ./storage
     - ./timing
@@ -27,6 +28,7 @@ layer:
       files:
         - file: comms/bxcan_transport.cpp
         - file: comms/can_reassembler.cpp
+        - file: comms/cmsis_uart_link.cpp
 
     - group: Core
       files:
@@ -38,6 +40,10 @@ layer:
     - group: LED
       files:
         - file: led/lp5810.cpp
+
+    - group: LiFi
+      files:
+        - file: lifi/lifi_transceiver.cpp
 
     - group: Sensors
       files:

@@ -35,7 +35,7 @@ export class StationTree implements vscode.TreeDataProvider<Node> {
     if (!s.reachable) {
       return [head];
     }
-    return [head, this.lo(), this.signals(), this.boards(), this.probe()];
+    return [head, this.lo(), this.signals(), this.boards(), ...this.probes()];
   }
 
   /** The row that both shows and switches the line. */
@@ -84,14 +84,28 @@ export class StationTree implements vscode.TreeDataProvider<Node> {
     return n;
   }
 
-  private probe(): Node {
+  /// One row per probe, because with two adapters "where is the debugger"
+  /// has two answers and flash.sh picks between them by board.
+  private probes(): Node[] {
     const s = this.station.state;
-    const n = new Node("Probe");
-    n.description = !s.probePresent ? "not plugged in" : (s.probeBoard ?? "unmapped chip");
-    n.iconPath = new vscode.ThemeIcon(s.probePresent ? "plug" : "circle-slash");
-    n.tooltip = s.probeBoard
-      ? `The ST-Link sits on ${s.probeBoard} (chip UID mapped in /etc/bolt-station/uids.conf).`
-      : "Which board the ST-Link sits on, read from the chip's unique ID.";
-    return n;
+    if (!s.probes.length) {
+      const n = new Node("Probes");
+      n.description = s.probePresent ? "none configured" : "none plugged in";
+      n.iconPath = new vscode.ThemeIcon("circle-slash");
+      return [n];
+    }
+    return s.probes.map((p) => {
+      const n = new Node(`Probe ${p.id}`);
+      n.description = !p.reachable ? "no target" : (p.board ?? "unmapped chip");
+      n.iconPath = new vscode.ThemeIcon(p.reachable ? "plug" : "circle-slash");
+      n.contextValue = `bolt.probe.${p.id}`;
+      n.tooltip = p.board
+        ? `Sits on ${p.board}; gdb on port ${p.gdbPort}. flash.sh ${p.board} picks this one.`
+        : p.reachable
+          ? "Reaches a chip that uids.conf does not know. Assign it a board to make flash.sh resolve it."
+          : "Reaches no target - unplugged, or the board it sits on is unpowered.";
+      n.command = { command: "bolt.probe.assign", title: "Assign board", arguments: [p.id] };
+      return n;
+    });
   }
 }
