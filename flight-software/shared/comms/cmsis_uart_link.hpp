@@ -69,8 +69,8 @@ class CmsisUartLink final : public UartLink {
             instances_g[Slot]->on_event(event);
         }
     }
-    static constexpr std::array<ARM_USART_SignalEvent_t, MAX_LINKS> TRAMPOLINES = {
-        &trampoline<0U>, &trampoline<1U>, &trampoline<2U>, &trampoline<3U>};
+    static constexpr std::array<ARM_USART_SignalEvent_t, MAX_LINKS> TRAMPOLINES = {&trampoline<0U>, &trampoline<1U>,
+                                                                                   &trampoline<2U>, &trampoline<3U>};
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     static inline std::array<CmsisUartLink*, MAX_LINKS> instances_g{};
 

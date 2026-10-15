@@ -21,3 +21,7 @@ devcontainer-lock.json
 
 # release payload (scripts/package-release.sh)
 dist/
+
+# Python bytecode (tools/*.py)
+__pycache__/
+*.pyc
