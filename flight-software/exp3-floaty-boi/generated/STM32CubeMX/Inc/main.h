@@ -61,6 +61,8 @@ void MX_USART1_UART_Init(void);
 
 /* Private defines -----------------------------------------------------------*/
 #define I2C1_PERIPH_CLOCK_FREQ 4000000
+#define LED_ERR_Pin GPIO_PIN_4
+#define LED_ERR_GPIO_Port GPIOC
 #define LED_CAN_Pin GPIO_PIN_5
 #define LED_CAN_GPIO_Port GPIOC
 #define LASER_PWM_Pin GPIO_PIN_5
