@@ -49,7 +49,7 @@ I2C_HandleTypeDef hi2c1;
 
 IWDG_HandleTypeDef hiwdg;
 
-SD_HandleTypeDef hsd1;
+QSPI_HandleTypeDef hqspi;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
@@ -67,6 +67,7 @@ static void MX_IWDG_Init(void);
 static void MX_UART4_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_CRC_Init(void);
+static void MX_QUADSPI_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -111,6 +112,7 @@ int main(void)
   MX_UART4_Init();
   MX_USART2_UART_Init();
   MX_CRC_Init();
+  MX_QUADSPI_Init();
   /* USER CODE BEGIN 2 */
     app_main();
 
@@ -321,38 +323,35 @@ static void MX_IWDG_Init(void)
 }
 
 /**
-  * @brief SDMMC1 Initialization Function
+  * @brief QUADSPI Initialization Function
   * @param None
   * @retval None
   */
-void MX_SDMMC1_SD_Init(void)
+static void MX_QUADSPI_Init(void)
 {
 
-  /* USER CODE BEGIN SDMMC1_Init 0 */
+  /* USER CODE BEGIN QUADSPI_Init 0 */
 
-  /* USER CODE END SDMMC1_Init 0 */
+  /* USER CODE END QUADSPI_Init 0 */
 
-  /* USER CODE BEGIN SDMMC1_Init 1 */
+  /* USER CODE BEGIN QUADSPI_Init 1 */
 
-  /* USER CODE END SDMMC1_Init 1 */
-  hsd1.Instance = SDMMC1;
-  hsd1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
-  hsd1.Init.ClockBypass = SDMMC_CLOCK_BYPASS_DISABLE;
-  hsd1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
-  hsd1.Init.BusWide = SDMMC_BUS_WIDE_4B;
-  hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
-  hsd1.Init.ClockDiv = 0;
-  if (HAL_SD_Init(&hsd1) != HAL_OK)
+  /* USER CODE END QUADSPI_Init 1 */
+  /* QUADSPI parameter configuration*/
+  hqspi.Instance = QUADSPI;
+  hqspi.Init.ClockPrescaler = 255;
+  hqspi.Init.FifoThreshold = 1;
+  hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_NONE;
+  hqspi.Init.FlashSize = 1;
+  hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
+  hqspi.Init.ClockMode = QSPI_CLOCK_MODE_0;
+  if (HAL_QSPI_Init(&hqspi) != HAL_OK)
   {
     Error_Handler();
   }
-  if (HAL_SD_ConfigWideBusOperation(&hsd1, SDMMC_BUS_WIDE_4B) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SDMMC1_Init 2 */
+  /* USER CODE BEGIN QUADSPI_Init 2 */
 
-  /* USER CODE END SDMMC1_Init 2 */
+  /* USER CODE END QUADSPI_Init 2 */
 
 }
 
@@ -444,7 +443,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
