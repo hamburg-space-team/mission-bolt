@@ -51,7 +51,6 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-void MX_SDMMC1_SD_Init(void);
 
 /* USER CODE BEGIN EFP */
 
@@ -59,20 +58,18 @@ void MX_SDMMC1_SD_Init(void);
 
 /* Private defines -----------------------------------------------------------*/
 #define I2C1_PERIPH_CLOCK_FREQ 4000000
+#define LO_Pin GPIO_PIN_0
+#define LO_GPIO_Port GPIOA
+#define SOE_Pin GPIO_PIN_1
+#define SOE_GPIO_Port GPIOA
+#define SODS_Pin GPIO_PIN_2
+#define SODS_GPIO_Port GPIOA
 #define LED_ERR_Pin GPIO_PIN_4
 #define LED_ERR_GPIO_Port GPIOC
 #define LED_CAN_Pin GPIO_PIN_5
 #define LED_CAN_GPIO_Port GPIOC
-#define SODS_Pin GPIO_PIN_0
-#define SODS_GPIO_Port GPIOB
-#define SOE_Pin GPIO_PIN_1
-#define SOE_GPIO_Port GPIOB
-#define LO_Pin GPIO_PIN_2
-#define LO_GPIO_Port GPIOB
-#define LO_EXTI_IRQn EXTI2_IRQn
-#define IMU_INT1_Pin GPIO_PIN_11
+#define IMU_INT1_Pin GPIO_PIN_5
 #define IMU_INT1_GPIO_Port GPIOB
-#define IMU_INT1_EXTI_IRQn EXTI15_10_IRQn
 
 /* USER CODE BEGIN Private defines */
 
