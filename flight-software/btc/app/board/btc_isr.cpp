@@ -10,9 +10,6 @@ namespace {
     // The bound computer
     BtcComputer* instance_g = nullptr;
 
-    // PB11 = IMU_INT1
-    constexpr uint16_t IMU_INT1_PIN = GPIO_PIN_11;
-
 } // namespace
 
 void BtcIsr::bind(BtcComputer& computer) noexcept {
@@ -38,7 +35,7 @@ extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if (GPIO_Pin == LO_Pin) {
         instance_g->notify_lo_edge();
     }
-    if (GPIO_Pin == IMU_INT1_PIN) {
+    if (GPIO_Pin == IMU_INT1_Pin) {
         instance_g->notify_imu_drdy(Timing::us_now());
     }
 }

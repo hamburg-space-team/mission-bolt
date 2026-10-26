@@ -53,6 +53,6 @@ layer:
         - file: sensors/ms5611.cpp
         - file: sensors/tmp117.cpp
 
-    - group: Storage
-      files:
-        - file: storage/sd_store.cpp
+    # storage/sd_store.cpp is out of the build: the FM boards replaced
+    # SDMMC1 with QUADSPI, and main.cpp uses NullStore until a QSPI
+    # flash backend exists.
